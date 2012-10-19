@@ -1,7 +1,7 @@
 # Mock for the redis-py client library
 
-To allow for testing of code using the redis-py[redis-py] library without
-the need to install a redis-server[redis].
+To allow for testing of code using the [redis-py][redis-py] library without
+the need to install a [redis-server][redis].
 
 ## Usage
 
@@ -9,7 +9,7 @@ the need to install a redis-server[redis].
 
 ## Attribution
 
-This code is shamelessly derived from work by John DeRosa[john].
+This code is shamelessly derived from work by [John DeRosa][john].
 
 [redis-py]: https://github.com/andymccurdy/redis-py
 [redis]:    http://redis.io
