@@ -78,7 +78,7 @@ class MockRedis(object):
             del self.redis[key]
 
     def exists(self, key):
-        """Emulate get."""
+        """Emulate exists."""
 
         return key in self.redis
 

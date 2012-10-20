@@ -1,7 +1,7 @@
 # Mock for the redis-py client library
 
-To allow for testing of code using the [redis-py][redis-py] library without
-the need to install a [redis-server][redis].
+Supports writing tests for code using the [redis-py][redis-py] library 
+without requiring a a [redis-server][redis] install.
 
 ## Usage
 
