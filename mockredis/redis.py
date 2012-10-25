@@ -20,7 +20,7 @@ class MockRedis(object):
     # The pipeline
     pipe = None
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         pass
 
     def type(self, key):
@@ -38,7 +38,7 @@ class MockRedis(object):
     def get(self, key):
 
         # Override the default dict
-        result = '' if key not in self.redis else self.redis[key]
+        result = None if key not in self.redis else self.redis[key]
         return result
 
     def set(self, key, value):
@@ -81,6 +81,14 @@ class MockRedis(object):
         """Emulate exists."""
 
         return key in self.redis
+
+    def decr(self, key):
+        """Emulate decr."""
+
+        if not key in self.redis:
+            self.redis[key] = 0
+        self.redis[key] -= 1
+        return self.redis[key]
 
     def execute(self):
         """Emulate the execute method. All piped commands are executed immediately
@@ -183,10 +191,31 @@ class MockRedis(object):
         # Does the set at this key already exist?
         if key in self.redis:
             # Yes, add this to the list
-            return self.redis[key][start:stop + 1]
+            return self.redis[key][start:stop + 1 if stop != -1 else None]
         else:
             # No, override the defaultdict's default and create the list
             self.redis[key] = list([])
+
+    def lindex(self, key, index):
+        """Emulate lindex."""
+
+        if not key in self.redis:
+            self.redis[key] = list([])
+        try:
+            return self.redis[key][index]
+        except (IndexError):
+            # Redis returns nil if the index doesn't exist
+            pass
+
+    def lpop(self, key):
+        """Emulate lpop."""
+
+        if key in self.redis:
+            try:
+                self.redis[key].pop(0)
+            except (IndexError):
+                # Redis returns nil if popping from an empty list
+                pass
 
     def rpush(self, key, *args):
         """Emulate rpush."""
@@ -234,10 +263,10 @@ class MockRedis(object):
         self.timeouts.clear()
 
 
-def mock_redis_client():
+def mock_redis_client(**kwargs):
     """
     Mock common.util.redis_client so we
     can return a MockRedis object
     instead of a Redis object.
     """
-    return MockRedis()
+    return MockRedis(**kwargs)
