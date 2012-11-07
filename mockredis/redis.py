@@ -226,16 +226,16 @@ class MockRedis(object):
         for arg in args:
             self.redis[key].append(arg)
 
-    def sadd(self, key, value):
+    def sadd(self, key, *values):
         """Emulate sadd."""
 
         # Does the set at this key already exist?
         if key in self.redis:
             # Yes, add this to the set
-            self.redis[key].add(value)
+            self.redis[key].update(values)
         else:
             # No, override the defaultdict's default and create the set
-            self.redis[key] = set([value])
+            self.redis[key] = set(values)
 
     def srem(self, key, member):
         """Emulate a srem."""
