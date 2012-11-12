@@ -8,7 +8,7 @@ class TestRedis(TestCase):
         self.redis.flushdb()
 
     def test_get(self):
-        self.assertEqual('', self.redis.get('key'))
+        self.assertEqual(None, self.redis.get('key'))
 
         self.redis.redis['key'] = 'value'
         self.assertEqual('value', self.redis.get('key'))
