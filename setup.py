@@ -9,9 +9,6 @@ setup(name='mockredis',
       url='http://www.github.com/locationlabs/mockredis',
       license='Apache2',
       packages=find_packages(exclude=['*.tests']),
-      namespace_packages=[
-          'mockredis'
-      ],
       setup_requires=[
           'nose>=1.0'
       ],
