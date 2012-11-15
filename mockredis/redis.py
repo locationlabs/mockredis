@@ -82,18 +82,18 @@ class MockRedis(object):
 
         return key in self.redis
 
-    def decr(self, key):
+    def decr(self, key, decrement=1):
         """Emulate decr."""
 
         if not key in self.redis:
-            self.redis[key] = 0
-        self.redis[key] -= 1
-        return self.redis[key]
+            self.redis[key] = str(0 - decrement)
+        self.redis[key] = str(long(self.redis[key]) - decrement)
+        return long(self.redis[key])
 
     def incr(self, key, increment=1):
 
         if not key in self.redis:
-            self.redis[key] = str(0)
+            self.redis[key] = str(increment)
         self.redis[key] = str(long(self.redis[key]) + increment)
         return long(self.redis[key])
 

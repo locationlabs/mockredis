@@ -54,7 +54,7 @@ class TestRedis(TestCase):
 
             self.redis.flushdb()
 
-    def test_incrby(self):
+    def test_incr(self):
 
         values = list([
             (1, '2'),
@@ -74,3 +74,5 @@ class TestRedis(TestCase):
             self.assertEqual(value[1],
                              self.redis.hget('hkey', 'attr'),
                              "redis.hincrby")
+
+            self.redis.flushdb()
