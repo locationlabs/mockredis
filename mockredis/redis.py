@@ -43,7 +43,7 @@ class MockRedis(object):
 
     def set(self, key, value):
 
-        self.redis[key] = value
+        self.redis[key] = str(value)
 
     def keys(self, pattern):
         """Emulate keys."""
@@ -135,7 +135,13 @@ class MockRedis(object):
     def hset(self, key, attribute, value):
         """Emulate hset."""
 
-        self.redis[key][attribute] = value
+        if key not in self.redis:
+            self.redis['key'] = {}
+        else:
+            if type(self.redis[key]) != dict:
+                raise ValueError("Type mismatch for key={key}".format(key=key))
+
+        self.redis[key][attribute] = str(value)
 
     def hincrby(self, key, attribute, increment):
 
@@ -231,11 +237,12 @@ class MockRedis(object):
 
         # Does the set at this key already exist?
         if key in self.redis:
-            # Yes, add this to the set
-            self.redis[key].update(values)
+            # Yes, add this to the set converting values
+            # to string
+            self.redis[key].update(map(str, values))
         else:
             # No, override the defaultdict's default and create the set
-            self.redis[key] = set(values)
+            self.redis[key] = set(map(str, values))
 
     def srem(self, key, member):
         """Emulate a srem."""
