@@ -172,7 +172,7 @@ class MockRedis(object):
         """
 
         self.do_expire(currenttime)
-        return None if key not in self.timeouts else (currenttime - self.timeouts[key]).seconds
+        return -1 if key not in self.timeouts else (self.timeouts[key] - currenttime).seconds
 
     def do_expire(self, currenttime=datetime.now()):
         """

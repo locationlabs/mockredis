@@ -76,3 +76,10 @@ class TestRedis(TestCase):
                              "redis.hincrby")
 
             self.redis.flushdb()
+
+    def test_ttl(self):
+        self.redis.set('key', 'key')
+        self.redis.expire('key', 30)
+
+        assert self.redis.ttl('key') <= 30
+        self.assertEqual(self.redis.ttl('invalid_key'), -1)
