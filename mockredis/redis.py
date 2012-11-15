@@ -160,9 +160,8 @@ class MockRedis(object):
         """Emulate expire"""
 
         if key in self.redis:
-            self.timeouts[key] = currenttime.now() + timedelta(seconds=seconds)
+            self.timeouts[key] = currenttime + timedelta(seconds=seconds)
             return 1
-
         return 0
 
     def ttl(self, key, currenttime=datetime.now()):
@@ -172,7 +171,7 @@ class MockRedis(object):
         """
 
         self.do_expire(currenttime)
-        return -1 if key not in self.timeouts else (self.timeouts[key] - currenttime).seconds
+        return -1 if key not in self.timeouts else (self.timeouts[key] - currenttime).total_seconds()
 
     def do_expire(self, currenttime=datetime.now()):
         """
@@ -204,7 +203,7 @@ class MockRedis(object):
         # Does the set at this key already exist?
         if key in self.redis:
             # Yes, add this to the list
-            return self.redis[key][start:stop + 1 if stop != -1 else None]
+            return map(str, self.redis[key][start:stop + 1 if stop != -1 else None])
         else:
             # No, override the defaultdict's default and create the list
             self.redis[key] = list([])
@@ -225,7 +224,7 @@ class MockRedis(object):
 
         if key in self.redis:
             try:
-                self.redis[key].pop(0)
+                return str(self.redis[key].pop(0))
             except (IndexError):
                 # Redis returns nil if popping from an empty list
                 pass
