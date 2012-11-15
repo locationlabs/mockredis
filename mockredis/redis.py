@@ -90,6 +90,13 @@ class MockRedis(object):
         self.redis[key] -= 1
         return self.redis[key]
 
+    def incr(self, key, increment=1):
+
+        if not key in self.redis:
+            self.redis[key] = str(0)
+        self.redis[key] = str(long(self.redis[key]) + increment)
+        return long(self.redis[key])
+
     def execute(self):
         """Emulate the execute method. All piped commands are executed immediately
         in this mock, so this is a no-op."""
@@ -143,11 +150,11 @@ class MockRedis(object):
 
         self.redis[key][attribute] = str(value)
 
-    def hincrby(self, key, attribute, increment):
+    def hincrby(self, key, attribute, increment=1):
 
         if attribute in self.redis[key]:
-            self.redis[key][attribute] = self.redis[key][attribute] + increment
-            return self.redis[key][attribute]
+            self.redis[key][attribute] = str(long(self.redis[key][attribute]) + increment)
+            return long(self.redis[key][attribute])
 
     def expire(self, key, seconds, currenttime=datetime.now()):
         """Emulate expire"""

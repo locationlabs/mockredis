@@ -53,3 +53,24 @@ class TestRedis(TestCase):
                              self.redis.smembers('skey'))
 
             self.redis.flushdb()
+
+    def test_incrby(self):
+
+        values = list([
+            (1, '2'),
+            ('1', '2'),
+        ])
+
+        for value in values:
+            self.redis.set('key', value[0])
+            self.redis.incr('key')
+            self.assertEqual(value[1],
+                             self.redis.get('key'),
+                             "redis.incr")
+
+            self.redis.hset('hkey', 'attr', value[0])
+            self.redis.hincrby('hkey', 'attr')
+            print self.redis.hget('hkey', 'attr')
+            self.assertEqual(value[1],
+                             self.redis.hget('hkey', 'attr'),
+                             "redis.hincrby")
