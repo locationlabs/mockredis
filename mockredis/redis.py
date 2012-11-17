@@ -158,6 +158,10 @@ class MockRedis(object):
         self.redis[key][attribute] = str(value)
 
     def hincrby(self, key, attribute, increment=1):
+        # Set it to 0 first if it doesn't exist.
+        # (http://redis.io/commands/hincrby)
+        if not attribute in self.redis[key]:
+            self.redis[key] = 0
 
         if attribute in self.redis[key]:
             self.redis[key][attribute] = str(long(self.redis[key][attribute]) + increment)
