@@ -158,14 +158,9 @@ class MockRedis(object):
         self.redis[key][attribute] = str(value)
 
     def hincrby(self, key, attribute, increment=1):
-        # Set it to 0 first if it doesn't exist.
-        # (http://redis.io/commands/hincrby)
-        if not attribute in self.redis[key]:
-            self.redis[key] = 0
-
-        if attribute in self.redis[key]:
-            self.redis[key][attribute] = str(long(self.redis[key][attribute]) + increment)
-            return long(self.redis[key][attribute])
+        previous_value = long(self.redis[key].get(attribute, '0'))
+        self.redis[key][attribute] = str(previous_value + increment)
+        return long(self.redis[key][attribute])
 
     def expire(self, key, seconds, currenttime=datetime.now()):
         """Emulate expire"""
