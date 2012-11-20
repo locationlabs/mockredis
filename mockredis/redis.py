@@ -35,6 +35,9 @@ class MockRedis(object):
             return 'list'
         return None
 
+    def echo(self, msg):
+        return msg
+
     def get(self, key):
 
         # Override the default dict
@@ -113,7 +116,7 @@ class MockRedis(object):
 
         # Return '' if the attribute does not exist
         result = self.redis[hashkey][attribute] if attribute in self.redis[hashkey] \
-            else ''
+            else None
         return result
 
     def hgetall(self, hashkey):
@@ -269,7 +272,10 @@ class MockRedis(object):
     def smembers(self, key):
         """Emulate smembers."""
 
-        return self.redis[key]
+        if key not in self.redis:
+            return set([])
+        else:
+            return self.redis[key]
 
     def flushdb(self):
         self.redis.clear()

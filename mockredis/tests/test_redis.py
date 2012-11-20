@@ -22,6 +22,8 @@ class TestRedis(TestCase):
 
     def test_get_types(self):
         '''
+        testing type coversions for set/get, hset/hget, sadd/smembers
+
         Python bools, lists, dicts are returned as strings by
         redis-py/redis.
         '''
