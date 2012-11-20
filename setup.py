@@ -4,7 +4,9 @@ from setuptools import setup, find_packages
 import os
 
 setup(name='mockredis',
-      version='1.0' + os.environ.get('BUILD_SUFFIX', ''),
+      # releases for mockredis are matched
+      # with the most recent redis-py version supported
+      version='2.7.2' + os.environ.get('BUILD_SUFFIX', ''),
       description='Mock for redis-py',
       url='http://www.github.com/locationlabs/mockredis',
       license='Apache2',
@@ -15,6 +17,7 @@ setup(name='mockredis',
       install_requires=[
       ],
       tests_require=[
+          'redis>=2.7.2'
       ],
       test_suite='mockredis.tests',
       )
