@@ -1,11 +1,14 @@
 from unittest import TestCase, skipUnless, skip
 from mockredis import MockRedis
 
-try:
-    from redis import Redis, RedisError
-    Redis(db=15).echo("test")
-except (ImportError, RedisError):
-    Redis = False  # NOQA
+
+def redis_exists():
+    try:
+        from redis import StrictRedis as Redis, RedisError
+        Redis(db=15).echo("test")
+        return True
+    except (ImportError, RedisError):
+        return False
 
 
 key = 'MOCKREDIS-key-{test}'
@@ -74,10 +77,12 @@ redis_reads = dict(
 )
 
 
-@skipUnless(Redis, "redis-py or localbost redis-server not found")
+@skipUnless(redis_exists(), "redis-py or localbost redis-server not found")
 class TestReads(TestCase):
 
     def setUp(self):
+        from redis import StrictRedis as Redis
+
         self.redis = Redis(db=15)
         self.mockredis = MockRedis()
 
