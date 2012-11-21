@@ -92,16 +92,14 @@ class MockRedis(object):
     def decr(self, key, decrement=1):
         """Emulate decr."""
 
-        if not key in self.redis:
-            self.redis[key] = str(0 - decrement)
-        self.redis[key] = str(long(self.redis[key]) - decrement)
+        previous_value = long(self.redis.get(key, '0'))
+        self.redis[key] = str(previous_value - decrement)
         return long(self.redis[key])
 
     def incr(self, key, increment=1):
 
-        if not key in self.redis:
-            self.redis[key] = str(increment)
-        self.redis[key] = str(long(self.redis[key]) + increment)
+        previous_value = long(self.redis.get(key, '0'))
+        self.redis[key] = str(previous_value + increment)
         return long(self.redis[key])
 
     def execute(self):
@@ -158,7 +156,12 @@ class MockRedis(object):
         self.redis[key][attribute] = str(value)
 
     def hincrby(self, key, attribute, increment=1):
+
+        # inititalize hset and value if required
+        if key not in self.redis:
+            self.redis['key'] = {}
         previous_value = long(self.redis[key].get(attribute, '0'))
+
         self.redis[key][attribute] = str(previous_value + increment)
         return long(self.redis[key][attribute])
 

@@ -55,6 +55,9 @@ class TestRedis(TestCase):
             self.redis.flushdb()
 
     def test_incr(self):
+        '''
+        incr, hincr when keys exist
+        '''
 
         values = list([
             (1, '2'),
@@ -70,12 +73,25 @@ class TestRedis(TestCase):
 
             self.redis.hset('hkey', 'attr', value[0])
             self.redis.hincrby('hkey', 'attr')
-            print self.redis.hget('hkey', 'attr')
             self.assertEqual(value[1],
                              self.redis.hget('hkey', 'attr'),
                              "redis.hincrby")
 
             self.redis.flushdb()
+
+    def test_incr_init(self):
+        '''
+        incr, hincr, decr when keys do NOT exist
+        '''
+
+        self.redis.incr('key')
+        self.assertEqual('1', self.redis.get('key'))
+
+        self.redis.hincrby('hkey', 'attr')
+        self.assertEqual('1', self.redis.hget('hkey', 'attr'))
+
+        self.redis.decr('dkey')
+        self.assertEqual('-1', self.redis.get('dkey'))
 
     def test_ttl(self):
         self.redis.set('key', 'key')
