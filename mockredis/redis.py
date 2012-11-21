@@ -5,6 +5,13 @@ from collections import defaultdict
 from mockredis.lock import MockRedisLock
 
 
+def _get_total_seconds(td):
+    """
+    for python 2.6 support
+    """
+    return (td.microseconds + (td.seconds + td.days * 24 * 3600) * 1e6) / 1e6
+
+
 class MockRedis(object):
     """
     A Mock for a redis-py Redis object
@@ -171,7 +178,7 @@ class MockRedis(object):
         """
 
         self.do_expire(currenttime)
-        return -1 if key not in self.timeouts else (self.timeouts[key] - currenttime).total_seconds()
+        return -1 if key not in self.timeouts else _get_total_seconds(self.timeouts[key] - currenttime)
 
     def do_expire(self, currenttime=datetime.now()):
         """
