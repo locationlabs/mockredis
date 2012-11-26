@@ -54,6 +54,7 @@ class MockRedis(object):
     def set(self, key, value):
 
         self.redis[key] = str(value)
+        return True
 
     def keys(self, pattern):
         """Emulate keys."""

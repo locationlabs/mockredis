@@ -1,5 +1,8 @@
-from unittest import TestCase, skipUnless, skip
+from test_configuration import *
 from mockredis import MockRedis
+
+from unittest import TestCase, skipUnless
+import logging
 
 
 def redis_exists():
@@ -11,72 +14,6 @@ def redis_exists():
         return False
 
 
-key = 'MOCKREDIS-key-{test}'
-attr = 'attr-{test}'
-
-values = [
-    1,
-    '1',
-    '12.123123',
-    -123,
-    -122,
-    "-1234.123",
-    "some text",
-    [1, 3, 5, '12312', 'help'],
-    {'key':'value', 'key2':12}
-]
-
-
-redis_writes = dict(
-
-    set=dict(
-        params=[
-            ["{key}", "{value}"],
-        ],
-        keys=["simple"],
-        values=values
-    ),
-    hset=dict(
-        params=[
-            ["{key}", "{attr}", "{value}"],
-        ],
-        keys=["hashset"],
-        values=values,
-        attr=[str(r) for r in range(10)]
-    ),
-    sadd=dict(
-        params=[
-            ["{key}", "{value}"],
-        ],
-        keys=["set"],
-        values=values
-    )
-)
-
-redis_reads = dict(
-
-    get=dict(
-        params=[
-            ["{key}"]
-        ],
-        keys=["simple"]  # keys to read from
-    ),
-    hget=dict(
-        params=[
-            ["{key}", "{attr}"]
-        ],
-        keys=["hashset"],
-        attr=[str(r) for r in range(10)]
-    ),
-    smembers=dict(
-        params=[
-            ["{key}"]
-        ],
-        keys=["set", "empty"]
-    )
-)
-
-
 @skipUnless(redis_exists(), "redis-py or localbost redis-server not found")
 class TestReads(TestCase):
 
@@ -85,12 +22,14 @@ class TestReads(TestCase):
 
         self.redis = Redis(db=15)
         self.mockredis = MockRedis()
+        self.logger = logging.getLogger("mockredis.TestReads")
 
     def tearDown(self):
 
         test_keys = self.redis.keys("MOCKREDIS*")
         if len(test_keys) > 0:
             self.redis.delete(*test_keys)
+        self.mockredis.flushdb()
 
     def connections(self):
         self.assertEqual("testing_redis",
@@ -112,13 +51,15 @@ class TestReads(TestCase):
         for redis and mockredis
         '''
 
+        self.logger.debug("method={method},params={params}"
+                          .format(method=method, params=params))
         self.assertEqual(
             getattr(self.redis, method)(*params),
             getattr(self.mockredis, method)(*params),
             "testing {method}".format(method=method)
         )
 
-    def test_write(self):
+    def write(self):
         '''
         successful writes for redis/mockredis (responses NOT compared)
         '''
@@ -132,7 +73,7 @@ class TestReads(TestCase):
         equality of responses for redis/mockredis
         '''
 
-        self.test_write()
+        self.write()
 
         for method, details in redis_reads.items():
             for m, params in self.gather_params(method, details):
@@ -141,24 +82,19 @@ class TestReads(TestCase):
     def gather_params(self, method, details):
         for param in details["params"]:
             for use_key in details["keys"]:
+                if "values" in details:
+                    values = details["values"]
+                else:
+                    values = [""]
+                for i in range(len(values)):
+                    param = [p.format(key=key.format(test=use_key),
+                                      attr=attr.format(test=use_key),
+                                      value=values[i],
+                                      index=i)
+                             for p in param]
 
-                param = [p.format(key=key.format(test=use_key),
-                                  attr=attr.format(test=use_key))
-                         for p in param]
+                    yield method, param
 
-                yield method, param
-
-    def gather_read_params(self, method, details):
-        for param in details["params"]:
-            for use_key in details["keys"]:
-
-                param = [p.format(key=key.format(test=use_key),
-                                  attr=attr.format(test=use_key))
-                         for p in param]
-
-                yield method, param
-
-    @skip("issue with using yeild in tests")
     def test_reads_clean(self):
         '''
         equality of responses on clean db for redis/mockredis
