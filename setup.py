@@ -18,7 +18,6 @@ setup(name='mockredis',
           'nose==1.2.1'
       ],
       install_requires=[
-          'bintrees==1.0.1'
       ],
       tests_require=[
           'redis>=2.7.2'
