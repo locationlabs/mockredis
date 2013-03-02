@@ -291,6 +291,58 @@ class MockRedis(object):
         self.redis.clear()
         self.timeouts.clear()
 
+    #### SORTED SET COMMANDS ####
+    def zadd(self, name, *args, **kwargs):
+        pass
+
+    def zcard(self, name):
+        pass
+
+    def zcount(self, name, min, max):
+        pass
+
+    def zincrby(self, name, value, amount=1):
+        pass
+
+    def zinterstore(self, dest, keys, aggregate=None):
+        pass
+
+    def zrange(self, name, start, end, desc=False, withscores=False,
+               score_cast_func=float):
+        pass
+
+    def zrangebyscore(self, name, min, max, start=None, num=None,
+                      withscores=False, score_cast_func=float):
+        pass
+
+    def zrank(self, name, value):
+        pass
+
+    def zrem(self, name, *values):
+        pass
+
+    def zremrangebyrank(self, name, min, max):
+        pass
+
+    def zremrangebyscore(self, name, min, max):
+        pass
+
+    def zrevrange(self, name, start, num, withscores=False,
+                  score_cast_func=float):
+        pass
+
+    def zrevrangebyscore(self, name, max, min, start=None, num=None,
+                         withscores=False, score_cast_func=float):
+        pass
+
+    def zrevrank(self, name, value):
+        pass
+
+    def zscore(self, name, value):
+        pass
+
+    def zunionstore(self, dest, keys, aggregate=None):
+        pass
 
 def mock_redis_client(**kwargs):
     """
