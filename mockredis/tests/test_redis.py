@@ -149,3 +149,13 @@ class TestRedis(TestCase):
         key = "zset"
         kwargs = {"one": 1, "uno": 1, "two": 2, "three": 3}
         self.assertEquals(4, self.redis.zadd(key, **kwargs))
+
+    def test_zcard(self):
+        key = "zset"
+        self.assertEquals(0, self.redis.zcard(key))
+        self.redis.zadd(key, "one", 1)
+        self.assertEquals(1, self.redis.zcard(key))
+        self.redis.zadd(key, "one", 2)
+        self.assertEquals(1, self.redis.zcard(key))
+        self.redis.zadd(key, "two", 2)
+        self.assertEquals(2, self.redis.zcard(key))

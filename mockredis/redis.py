@@ -320,7 +320,9 @@ class MockRedis(object):
         return count
 
     def zcard(self, name):
-        pass
+        if name not in self.redis:
+            return 0
+        return len(self.redis[name])
 
     def zcount(self, name, min, max):
         pass
