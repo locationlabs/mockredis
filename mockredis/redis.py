@@ -297,6 +297,9 @@ class MockRedis(object):
     def zadd(self, name, *args, **kwargs):
         if name not in self.redis:
             self.redis[name] = SortedSet()
+        elif type(self.redis[name]) is not SortedSet:
+            raise TypeError("ZADD requires a sorted set")
+
         pieces = []
         # args
         if args:
@@ -322,13 +325,24 @@ class MockRedis(object):
     def zcard(self, name):
         if name not in self.redis:
             return 0
+        elif type(self.redis[name]) is not SortedSet:
+            raise TypeError("ZCARD requires a sorted set")
+
         return len(self.redis[name])
 
     def zcount(self, name, min, max):
         pass
 
     def zincrby(self, name, value, amount=1):
-        pass
+        if name not in self.redis:
+            self.redis[name] = SortedSet()
+        elif type(self.redis[name]) is not SortedSet:
+            raise TypeError("ZINCRBY requires a sorted set")
+
+        score = self.redis[name].score(value) or 0.0
+        score += float(amount)
+        self.redis[name][value] = score
+        return score
 
     def zinterstore(self, dest, keys, aggregate=None):
         pass

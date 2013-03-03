@@ -129,6 +129,12 @@ class TestRedis(TestCase):
         self.assertEquals(1, self.redis.zadd(key, "one", 1.0))
         self.assertEquals(0, self.redis.zadd(key, "one", 2.0))
 
+    def test_zadd_wrong_type(self):
+        key = "zset"
+        self.redis.set(key, "value")
+        with self.assertRaises(Exception):
+            self.redis.zadd(key, "one", 2.0)
+
     def test_zadd_multiple_bad_args(self):
         key = "zset"
         args = ["one", 1, "two"]
@@ -159,3 +165,9 @@ class TestRedis(TestCase):
         self.assertEquals(1, self.redis.zcard(key))
         self.redis.zadd(key, "two", 2)
         self.assertEquals(2, self.redis.zcard(key))
+
+    def test_zincrby(self):
+        key = "zset"
+        self.assertEquals(1.0, self.redis.zincrby(key, "value1"))
+        self.assertEquals(2.0, self.redis.zincrby(key, "value2", 2))
+        self.assertEquals(-1.0, self.redis.zincrby(key, "value1", -2))
