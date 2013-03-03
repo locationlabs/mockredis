@@ -1,8 +1,8 @@
-import random
-from datetime import datetime, timedelta
 from collections import defaultdict
-
-from mockredis.lock import MockRedisLock
+from datetime import datetime, timedelta
+from random import randint
+from .lock import MockRedisLock
+from .sortedset import SortedSet
 
 
 def _get_total_seconds(td):
@@ -27,19 +27,21 @@ class MockRedis(object):
     # The pipeline
     pipe = None
 
-    def __init__(self, **kwargs):
-        pass
+    def __init__(self, strict=False):
+        self.strict = strict
 
     def type(self, key):
         _type = type(self.redis[key])
-        if _type == dict:
+        if _type is dict:
             return 'hash'
-        elif _type == str:
+        elif _type is str:
             return 'string'
-        elif _type == set:
+        elif _type is set:
             return 'set'
-        elif _type == list:
+        elif _type is list:
             return 'list'
+        elif _type is SortedSet:
+            return 'zset'
         return None
 
     def echo(self, msg):
@@ -272,7 +274,7 @@ class MockRedis(object):
     def srandmember(self, key):
         """Emulate a srandmember."""
         length = len(self.redis[key])
-        rand_index = random.randint(0, length - 1)
+        rand_index = randint(0, length - 1)
 
         i = 0
         for set_item in self.redis[key]:
@@ -293,7 +295,29 @@ class MockRedis(object):
 
     #### SORTED SET COMMANDS ####
     def zadd(self, name, *args, **kwargs):
-        pass
+        if name not in self.redis:
+            self.redis[name] = SortedSet()
+        pieces = []
+        # args
+        if args:
+            if len(args) % 2 != 0:
+                raise ValueError("ZADD requires an equal number of "
+                                 "values and scores")
+            for i in xrange(len(args) / 2):
+                # interpretation of args order depends on whether Redis
+                # or StrictRedis is used
+                score = args[2 * i + (0 if self.strict else 1)]
+                member = args[2 * i + (1 if self.strict else 0)]
+                pieces.append((member, score))
+
+        # kwargs
+        pieces.extend(kwargs.items())
+
+        count = 0
+        for member, score in pieces:
+            if self.redis[name].insert(member, float(score)):
+                count += 1
+        return count
 
     def zcard(self, name):
         pass
@@ -343,6 +367,7 @@ class MockRedis(object):
 
     def zunionstore(self, dest, keys, aggregate=None):
         pass
+
 
 def mock_redis_client(**kwargs):
     """

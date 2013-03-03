@@ -18,8 +18,8 @@ class TestSortedSet(TestCase):
         Insertion maintains order and uniqueness.
         """
         # insert two values
-        self.zset["one"] = 1.0
-        self.zset["two"] = 2.0
+        self.assertTrue(self.zset.insert("one", 1.0))
+        self.assertTrue(self.zset.insert("two", 2.0))
 
         # validate insertion
         self.assertEquals(2, len(self.zset))
@@ -39,7 +39,7 @@ class TestSortedSet(TestCase):
         self.assertEquals(None, self.zset.rank(2.0))
 
         # re-insert a value
-        self.assertTrue(self.zset.insert("one", 3.0))
+        self.assertFalse(self.zset.insert("one", 3.0))
 
         # validate the update
         self.assertEquals(2, len(self.zset))

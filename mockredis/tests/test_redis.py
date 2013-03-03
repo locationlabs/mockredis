@@ -109,3 +109,43 @@ class TestRedis(TestCase):
             self.redis.rpush(key, v)
             self.assertEquals(self.redis.lpop(key),
                               str(v))
+
+    def test_zadd(self):
+        key = "zset"
+        values = [("one", 1), ("uno", 1), ("two", 2), ("three", 3)]
+        for member, score in values:
+            self.assertEquals(1, self.redis.zadd(key, member, score))
+
+    def test_zadd_strict(self):
+        """Argument order for zadd depends on strictness"""
+        self.redis.strict = True
+        key = "zset"
+        values = [("one", 1), ("uno", 1), ("two", 2), ("three", 3)]
+        for member, score in values:
+            self.assertEquals(1, self.redis.zadd(key, score, member))
+
+    def test_zadd_duplicate_key(self):
+        key = "zset"
+        self.assertEquals(1, self.redis.zadd(key, "one", 1.0))
+        self.assertEquals(0, self.redis.zadd(key, "one", 2.0))
+
+    def test_zadd_multiple_bad_args(self):
+        key = "zset"
+        args = ["one", 1, "two"]
+        with self.assertRaises(Exception):
+            self.redis.zadd(key, *args)
+
+    def test_zadd_multiple_bad_score(self):
+        key = "zset"
+        with self.assertRaises(Exception):
+            self.redis.zadd(key, "one", "two")
+
+    def test_zadd_multiple_args(self):
+        key = "zset"
+        args = ["one", 1, "uno", 1, "two", 2, "three", 3]
+        self.assertEquals(4, self.redis.zadd(key, *args))
+
+    def test_zadd_multiple_kwargs(self):
+        key = "zset"
+        kwargs = {"one": 1, "uno": 1, "two": 2, "three": 3}
+        self.assertEquals(4, self.redis.zadd(key, **kwargs))

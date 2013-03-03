@@ -79,7 +79,7 @@ class SortedSet(object):
         index = bisect_left(self._scores, (score, member))
         self._scores.insert(index, (score, member))
         self._members[member] = score
-        return found
+        return not found
 
     def remove(self, member):
         """
