@@ -5,10 +5,15 @@ class SortedSet(object):
     """
     Redis-style SortedSet implementation.
 
-    Maintains two mappings, one from member to score and one from score to member.
+    Maintains two internal data structures:
 
-    Insertion and removal are O(N). The bisect operations are O(N log N), but insertion
-    and removal for a list are O(N).
+    1. A multimap from score to member implemented using a sorted list of (score, member) pairs.
+    2. A dictionary from member to score.
+
+    Insertion and removal are O(N). The bisect operations used to maintain the multimap are
+    O(N log N), but insertion into and removal from a list are O(N). A balanced tree implementation
+    (see: bintrees) would be more efficient, but doesn't provide multimapping and the simple
+    workaround of mapping keys to other collections makes the rank() operation more complex.
     """
     def __init__(self):
         """
@@ -32,14 +37,43 @@ class SortedSet(object):
         return member in self._members
 
     def __str__(self):
+        return self.__repr__()
+
+    def __repr__(self):
         return "SortedSet({})".format(self._scores)
 
-    def insert(self, score, member):
+    def __setitem__(self, member, score):
         """
-        Insert member at score. If member is already present in the
+        Insert member with score. If member is already present in the
         set, update its score.
+        """
+        self.insert(member, score)
 
-        Return whether a member was inserted (True) or updated (False)
+    def __delitem__(self, member):
+        """
+        Remove member from the set.
+        """
+        self.remove(member)
+
+    def __getitem__(self, member):
+        """
+        Get the score for a member.
+        """
+        return self._members[member]
+
+    def __iter__(self):
+        return self._scores.__iter__()
+
+    def __reversed__(self):
+        return self._scores.__reversed__()
+
+    def __getslice__(self, i, j):
+        return self._scores[i:j]
+
+    def insert(self, member, score):
+        """
+        Identical to __setitem, but returns whether a member was
+        inserted (True) or updated (False)
         """
         found = self.remove(member)
         index = bisect_left(self._scores, (score, member))
@@ -49,9 +83,7 @@ class SortedSet(object):
 
     def remove(self, member):
         """
-        Remove member from the set.
-
-        Return whether a member was removed.
+        Identical to __delitem__, but returns whether a member was removed.
         """
         if member not in self:
             return False
@@ -63,7 +95,8 @@ class SortedSet(object):
 
     def score(self, member):
         """
-        Get the score for a member.
+        Identical to __getitem__, but returns None instead of raising
+        KeyError if member is not found.
         """
         return self._members.get(member)
 
