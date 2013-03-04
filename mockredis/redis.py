@@ -356,7 +356,27 @@ class MockRedis(object):
         return score
 
     def zinterstore(self, dest, keys, aggregate=None):
-        pass
+        aggregate_func = self._aggregate_func(aggregate)
+
+        members = {}
+
+        for key in keys:
+            if key not in self.redis:
+                continue
+            if type(self.redis[key]) is not SortedSet:
+                raise TypeError("ZINTERSTORE requires a sorted set")
+            for score, member in self.redis[key]:
+                members.setdefault(member, []).append(score)
+
+        intersection = SortedSet()
+        for member, scores in members.iteritems():
+            if len(scores) != len(keys):
+                continue
+            intersection[member] = reduce(aggregate_func, scores)
+
+        # always override existing keys
+        self.redis[dest] = intersection
+        return len(intersection)
 
     def zrange(self, name, start, end, desc=False, withscores=False,
                score_cast_func=float):

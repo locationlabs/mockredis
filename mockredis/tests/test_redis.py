@@ -400,3 +400,49 @@ class TestRedis(TestCase):
         self.assertEquals(3, self.redis.zunionstore(key, ["zset1", "zset2"], aggregate="max"))
         self.assertEquals([("one", 1.0), ("two", 2.5), ("three", 3.0)],
                           self.redis.zrange(key, 0, -1, withscores=True))
+
+    def test_zinterstore(self):
+        key = "zset"
+
+        # no keys
+        self.assertEquals(0, self.redis.zinterstore(key, ["zset1", "zset2"]))
+
+        self.redis.zadd("zset1", "one", 1.0)
+        self.redis.zadd("zset1", "two", 2.0)
+        self.redis.zadd("zset2", "two", 2.5)
+        self.redis.zadd("zset2", "three", 3.0)
+
+        # sum (default)
+        self.assertEquals(1, self.redis.zinterstore(key, ["zset1", "zset2"]))
+        self.assertEquals([("two", 4.5)],
+                          self.redis.zrange(key, 0, -1, withscores=True))
+
+        self.redis.zadd("zset1", "one", 1.0)
+        self.redis.zadd("zset1", "two", 2.0)
+        self.redis.zadd("zset2", "two", 2.5)
+        self.redis.zadd("zset2", "three", 3.0)
+
+        # sum (explicit)
+        self.assertEquals(1, self.redis.zinterstore(key, ["zset1", "zset2"], aggregate="sum"))
+        self.assertEquals([("two", 4.5)],
+                          self.redis.zrange(key, 0, -1, withscores=True))
+
+        self.redis.zadd("zset1", "one", 1.0)
+        self.redis.zadd("zset1", "two", 2.0)
+        self.redis.zadd("zset2", "two", 2.5)
+        self.redis.zadd("zset2", "three", 3.0)
+
+        # min
+        self.assertEquals(1, self.redis.zinterstore(key, ["zset1", "zset2"], aggregate="min"))
+        self.assertEquals([("two", 2.0)],
+                          self.redis.zrange(key, 0, -1, withscores=True))
+
+        self.redis.zadd("zset1", "one", 1.0)
+        self.redis.zadd("zset1", "two", 2.0)
+        self.redis.zadd("zset2", "two", 2.5)
+        self.redis.zadd("zset2", "three", 3.0)
+
+        # max
+        self.assertEquals(1, self.redis.zinterstore(key, ["zset1", "zset2"], aggregate="max"))
+        self.assertEquals([("two", 2.5)],
+                          self.redis.zrange(key, 0, -1, withscores=True))
