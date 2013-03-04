@@ -117,9 +117,20 @@ class SortedSet(object):
         else:
             return self._scores[rank]
 
+    def range(self, start, end):
+        """
+        Return (score, member) pairs between min and max ranks.
+        """
+        if not self:
+            return []
+
+        end += 1
+
+        return self._scores[start:end]
+
     def scorerange(self, start, end):
         """
-        Map between min and max scores.
+        Return (score, member) pairs between min and max scores.
         """
         if not self:
             return []

@@ -413,11 +413,41 @@ class MockRedis(object):
                 count += 1
         return count
 
-    def zremrangebyrank(self, name, min, max):
-        pass
+    def zremrangebyrank(self, name, start, end):
+        if name not in self.redis:
+            return 0
+        elif type(self.redis[name]) is not SortedSet:
+            raise TypeError("ZREMRANGEBYRANK requires a sorted set")
 
-    def zremrangebyscore(self, name, min, max):
-        pass
+        len_ = len(self.redis[name])
+        if len_ == 0:
+            return 0
+
+        start, end = self._translate_range(len_, start, end)
+
+        count = 0
+        for score, member in self.redis[name].range(start, end):
+            print 'removing', member
+            if self.redis[name].remove(member):
+                count += 1
+        return count
+
+    def zremrangebyscore(self, name, min_, max_):
+        if name not in self.redis:
+            return 0
+        elif type(self.redis[name]) is not SortedSet:
+            raise TypeError("ZREMRANGEBYSCORE requires a sorted set")
+
+        if len(self.redis[name]) == 0:
+            return 0
+
+        min_, max_ = self._translate_score_range(name, min_, max_)
+
+        count = 0
+        for score, member in self.redis[name].scorerange(min_, max_):
+            if self.redis[name].remove(member):
+                count += 1
+        return count
 
     def zrevrange(self, name, start, end, withscores=False,
                   score_cast_func=float):
@@ -507,7 +537,6 @@ class MockRedis(object):
             return lambda (score, member): (member, score_cast_func(score))
         else:
             return lambda (score, member): member
-
 
 
 def mock_redis_client(**kwargs):
