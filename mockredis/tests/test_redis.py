@@ -288,3 +288,12 @@ class TestRedis(TestCase):
                           self.redis.zrangebyscore(key, 1.0, 3.5, start=1, num=4))
         self.assertEquals([],
                           self.redis.zrangebyscore(key, 1.0, 3.5, start=3, num=4))
+
+    def test_zremrank(self):
+        key = "zset"
+        self.assertEquals(None, self.redis.zrevrank(key, "two"))
+
+        self.redis.zadd(key, "one", 1.0)
+        self.redis.zadd(key, "two", 2.0)
+        self.assertEquals(1, self.redis.zrevrank(key, "one"))
+        self.assertEquals(0, self.redis.zrevrank(key, "two"))
