@@ -7,19 +7,20 @@ class SortedSet(object):
 
     Maintains two internal data structures:
 
-    1. A multimap from score to member implemented using a sorted list of (score, member) pairs.
+    1. A multimap from score to member
     2. A dictionary from member to score.
 
-    Insertion and removal are O(N). The bisect operations used to maintain the multimap are
-    O(log N), but insertion into and removal from a list are O(N). A balanced tree implementation
-    (see: bintrees) would be more efficient, but doesn't provide multimapping and the simple
-    workaround of mapping keys to other collections makes the rank() operation more complex.
+    The multimap is implemented using a sorted list of (score, member) pairs. The bisect operations
+    used to maintain the multimap are O(log N), but insertion into and removal from a list are O(N),
+    so insertion and removal O(N). It would be possible to use a balanced tree implementation
+    (see: bintrees) with (score, member) pairs as keys, but at the expense of a more complex
+    rank(), range(), and scorerange() function.
     """
     def __init__(self):
         """
         Create an empty sorted set.
         """
-        # sorted list of score to member
+        # sorted list of (score, member)
         self._scores = []
         # dictionary from member to score
         self._members = {}
@@ -115,6 +116,7 @@ class SortedSet(object):
         if not self:
             return []
 
+        # end is inclusive
         end += 1
 
         if desc:
@@ -131,6 +133,8 @@ class SortedSet(object):
 
         left = bisect_left(self._scores, (start,))
         right = bisect_right(self._scores, (end,))
+
+        # end is inclusive
         while right < len(self) and self._scores[right][0] == end:
             right += 1
 
