@@ -240,3 +240,24 @@ class TestRedis(TestCase):
         self.redis.zadd(key, "two", 2.0)
         self.assertEquals(0, self.redis.zrank(key, "one"))
         self.assertEquals(1, self.redis.zrank(key, "two"))
+
+    def test_zcount(self):
+        key = "zset"
+        self.assertEquals(0, self.redis.zcount(key, '-inf', 'inf'))
+
+        self.redis.zadd(key, "one", 1.0)
+        self.redis.zadd(key, "two", 2.0)
+
+        self.assertEquals(2, self.redis.zcount(key, '-inf', 'inf'))
+        self.assertEquals(1, self.redis.zcount(key, '-inf', 1.0))
+        self.assertEquals(1, self.redis.zcount(key, '-inf', 1.5))
+        self.assertEquals(2, self.redis.zcount(key, '-inf', 2.0))
+        self.assertEquals(2, self.redis.zcount(key, '-inf', 2.5))
+        self.assertEquals(1, self.redis.zcount(key, 0.5, 1.0))
+        self.assertEquals(1, self.redis.zcount(key, 0.5, 1.5))
+        self.assertEquals(2, self.redis.zcount(key, 0.5, 2.0))
+        self.assertEquals(2, self.redis.zcount(key, 0.5, 2.5))
+        self.assertEquals(2, self.redis.zcount(key, 0.5, 'inf'))
+
+        self.assertEquals(0, self.redis.zcount(key, 'inf', '-inf'))
+        self.assertEquals(0, self.redis.zcount(key, 2.0, 0.5))

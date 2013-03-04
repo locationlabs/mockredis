@@ -331,7 +331,25 @@ class MockRedis(object):
         return len(self.redis[name])
 
     def zcount(self, name, min, max):
-        pass
+        if name not in self.redis:
+            return 0
+        elif type(self.redis[name]) is not SortedSet:
+            raise TypeError("ZCOUNT requires a sorted set")
+
+        if len(self.redis[name]) == 0:
+            return 0
+
+        if min == '-inf':
+            min = self.redis[name].min_score()
+        elif min == 'inf':
+            min = self.redis[name].max_score()
+
+        if max == '-inf':
+            max = self.redis[name].min_score()
+        elif max == 'inf':
+            max = self.redis[name].max_score()
+
+        return len(self.redis[name].scorerange(min, max))
 
     def zincrby(self, name, value, amount=1):
         if name not in self.redis:

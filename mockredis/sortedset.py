@@ -1,4 +1,4 @@
-from bisect import bisect_left
+from bisect import bisect_left, bisect_right
 
 
 class SortedSet(object):
@@ -116,3 +116,23 @@ class SortedSet(object):
             return self._scores[len(self) - rank - 1]
         else:
             return self._scores[rank]
+
+    def scorerange(self, start, end):
+        """
+        Map between min and max scores.
+        """
+        if not self:
+            return []
+
+        left = bisect_left(self._scores, (start,))
+        right = bisect_right(self._scores, (end,))
+        while right < len(self) and self._scores[right][0] == end:
+            right += 1
+
+        return self._scores[left:right]
+
+    def min_score(self):
+        return self._scores[0][0]
+
+    def max_score(self):
+        return self._scores[-1][0]
