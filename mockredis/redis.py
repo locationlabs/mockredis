@@ -349,10 +349,6 @@ class MockRedis(object):
 
     def zrange(self, name, start, end, desc=False, withscores=False,
                score_cast_func=float):
-        if desc:
-            return self.zrevrange(name, start, end, withscores,
-                                  score_cast_func)
-
         if name not in self.redis:
             self.redis[name] = SortedSet()
         elif type(self.redis[name]) is not SortedSet:
@@ -376,8 +372,7 @@ class MockRedis(object):
         else:
             func = lambda (score, member): member
 
-        print start, end
-        return [func(zset.at(rank)) for rank in xrange(start, 1 + end)]
+        return [func(zset.at(rank, desc)) for rank in xrange(start, 1 + end)]
 
     def zrangebyscore(self, name, min, max, start=None, num=None,
                       withscores=False, score_cast_func=float):
@@ -404,9 +399,9 @@ class MockRedis(object):
     def zremrangebyscore(self, name, min, max):
         pass
 
-    def zrevrange(self, name, start, num, withscores=False,
+    def zrevrange(self, name, start, end, withscores=False,
                   score_cast_func=float):
-        pass
+        return self.zrange(name, start, end, True, withscores, score_cast_func)
 
     def zrevrangebyscore(self, name, max, min, start=None, num=None,
                          withscores=False, score_cast_func=float):

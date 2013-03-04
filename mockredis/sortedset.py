@@ -108,8 +108,11 @@ class SortedSet(object):
             return None
         return bisect_left(self._scores, (score, member))
 
-    def at(self, rank):
+    def at(self, rank, desc=False):
         """
         Get a (score, member) pair at rank.
         """
-        return self._scores[rank]
+        if desc:
+            return self._scores[len(self) - rank - 1]
+        else:
+            return self._scores[rank]
