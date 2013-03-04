@@ -37,6 +37,8 @@ class MockRedis(object):
         self.strict = strict
 
     def type(self, key):
+        if key not in self.redis:
+            return 'none'
         _type = type(self.redis[key])
         if _type is dict:
             return 'hash'
@@ -48,7 +50,7 @@ class MockRedis(object):
             return 'list'
         elif _type is SortedSet:
             return 'zset'
-        return None
+        return 'none'
 
     def echo(self, msg):
         return msg
