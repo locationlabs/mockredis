@@ -1,5 +1,6 @@
 from collections import defaultdict
 from datetime import datetime, timedelta
+from operator import add
 from random import randint
 from .lock import MockRedisLock
 from .sortedset import SortedSet
@@ -489,7 +490,23 @@ class MockRedis(object):
         return self.redis[name].score(value)
 
     def zunionstore(self, dest, keys, aggregate=None):
-        pass
+        union = SortedSet()
+        aggregate_func = self._aggregate_func(aggregate)
+
+        for key in keys:
+            if key not in self.redis:
+                continue
+            if type(self.redis[key]) is not SortedSet:
+                raise TypeError("ZINTERSTORE requires a sorted set")
+            for score, member in self.redis[key]:
+                if member in union:
+                    union[member] = aggregate_func(union[member], score)
+                else:
+                    union[member] = score
+
+        # always override existing keys
+        self.redis[dest] = union
+        return len(union)
 
     def _translate_score_range(self, name, min_, max_):
         """
@@ -537,6 +554,19 @@ class MockRedis(object):
             return lambda (score, member): (member, score_cast_func(score))
         else:
             return lambda (score, member): member
+
+    def _aggregate_func(self, aggregate):
+        """
+        Return a suitable aggregate score function.
+        """
+        if not aggregate or aggregate == 'sum':
+            return add
+        elif aggregate == 'min':
+            return min
+        elif aggregate == 'max':
+            return max
+        else:
+            raise TypeError("Unsupported aggregate: {}".format(aggregate))
 
 
 def mock_redis_client(**kwargs):

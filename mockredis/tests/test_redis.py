@@ -243,38 +243,38 @@ class TestRedis(TestCase):
 
     def test_zcount(self):
         key = "zset"
-        self.assertEquals(0, self.redis.zcount(key, '-inf', 'inf'))
+        self.assertEquals(0, self.redis.zcount(key, "-inf", "inf"))
 
         self.redis.zadd(key, "one", 1.0)
         self.redis.zadd(key, "two", 2.0)
 
-        self.assertEquals(2, self.redis.zcount(key, '-inf', 'inf'))
-        self.assertEquals(1, self.redis.zcount(key, '-inf', 1.0))
-        self.assertEquals(1, self.redis.zcount(key, '-inf', 1.5))
-        self.assertEquals(2, self.redis.zcount(key, '-inf', 2.0))
-        self.assertEquals(2, self.redis.zcount(key, '-inf', 2.5))
+        self.assertEquals(2, self.redis.zcount(key, "-inf", "inf"))
+        self.assertEquals(1, self.redis.zcount(key, "-inf", 1.0))
+        self.assertEquals(1, self.redis.zcount(key, "-inf", 1.5))
+        self.assertEquals(2, self.redis.zcount(key, "-inf", 2.0))
+        self.assertEquals(2, self.redis.zcount(key, "-inf", 2.5))
         self.assertEquals(1, self.redis.zcount(key, 0.5, 1.0))
         self.assertEquals(1, self.redis.zcount(key, 0.5, 1.5))
         self.assertEquals(2, self.redis.zcount(key, 0.5, 2.0))
         self.assertEquals(2, self.redis.zcount(key, 0.5, 2.5))
-        self.assertEquals(2, self.redis.zcount(key, 0.5, 'inf'))
+        self.assertEquals(2, self.redis.zcount(key, 0.5, "inf"))
 
-        self.assertEquals(0, self.redis.zcount(key, 'inf', '-inf'))
+        self.assertEquals(0, self.redis.zcount(key, "inf", "-inf"))
         self.assertEquals(0, self.redis.zcount(key, 2.0, 0.5))
 
     def test_zrangebyscore(self):
         key = "zset"
-        self.assertEquals([], self.redis.zrangebyscore(key, '-inf', 'inf'))
+        self.assertEquals([], self.redis.zrangebyscore(key, "-inf", "inf"))
         self.redis.zadd(key, "one", 1.5)
         self.redis.zadd(key, "two", 2.5)
         self.redis.zadd(key, "three", 3.5)
 
         self.assertEquals(["one", "two", "three"],
-                          self.redis.zrangebyscore(key, '-inf', 'inf'))
+                          self.redis.zrangebyscore(key, "-inf", "inf"))
         self.assertEquals([("one", 1.5), ("two", 2.5), ("three", 3.5)],
-                          self.redis.zrangebyscore(key, '-inf', 'inf', withscores=True))
+                          self.redis.zrangebyscore(key, "-inf", "inf", withscores=True))
         self.assertEquals([("one", 1), ("two", 2), ("three", 3)],
-                          self.redis.zrangebyscore(key, '-inf', 'inf', withscores=True, score_cast_func=int))
+                          self.redis.zrangebyscore(key, "-inf", "inf", withscores=True, score_cast_func=int))
 
         self.assertEquals(["one"],
                           self.redis.zrangebyscore(key, 1.0, 2.0))
@@ -300,17 +300,17 @@ class TestRedis(TestCase):
 
     def test_zrevrangebyscore(self):
         key = "zset"
-        self.assertEquals([], self.redis.zrevrangebyscore(key, 'inf', '-inf'))
+        self.assertEquals([], self.redis.zrevrangebyscore(key, "inf", "-inf"))
         self.redis.zadd(key, "one", 1.5)
         self.redis.zadd(key, "two", 2.5)
         self.redis.zadd(key, "three", 3.5)
 
         self.assertEquals(["three", "two", "one"],
-                          self.redis.zrevrangebyscore(key, 'inf', '-inf'))
+                          self.redis.zrevrangebyscore(key, "inf", "-inf"))
         self.assertEquals([("three", 3.5), ("two", 2.5), ("one", 1.5)],
-                          self.redis.zrevrangebyscore(key, 'inf', '-inf', withscores=True))
+                          self.redis.zrevrangebyscore(key, "inf", "-inf", withscores=True))
         self.assertEquals([("three", 3), ("two", 2), ("one", 1)],
-                          self.redis.zrevrangebyscore(key, 'inf', '-inf', withscores=True, score_cast_func=int))
+                          self.redis.zrevrangebyscore(key, "inf", "-inf", withscores=True, score_cast_func=int))
 
         self.assertEquals(["one"],
                           self.redis.zrevrangebyscore(key, 2.0, 1.0))
@@ -342,7 +342,7 @@ class TestRedis(TestCase):
 
     def test_zremrangebyscore(self):
         key = "zset"
-        self.assertEquals(0, self.redis.zremrangebyscore(key, '-inf', 'inf'))
+        self.assertEquals(0, self.redis.zremrangebyscore(key, "-inf", "inf"))
 
         self.redis.zadd(key, "one", 1.0)
         self.redis.zadd(key, "two", 2.0)
@@ -351,6 +351,52 @@ class TestRedis(TestCase):
         self.assertEquals(1, self.redis.zremrangebyscore(key, 0, 1))
 
         self.assertEquals(["two", "three"], self.redis.zrange(key, 0, -1))
-        self.assertEquals(2, self.redis.zremrangebyscore(key, 2.0, 'inf'))
+        self.assertEquals(2, self.redis.zremrangebyscore(key, 2.0, "inf"))
 
         self.assertEquals([], self.redis.zrange(key, 0, -1))
+
+    def test_zunionstore(self):
+        key = "zset"
+
+        # no keys
+        self.assertEquals(0, self.redis.zunionstore(key, ["zset1", "zset2"]))
+
+        self.redis.zadd("zset1", "one", 1.0)
+        self.redis.zadd("zset1", "two", 2.0)
+        self.redis.zadd("zset2", "two", 2.5)
+        self.redis.zadd("zset2", "three", 3.0)
+
+        # sum (default)
+        self.assertEquals(3, self.redis.zunionstore(key, ["zset1", "zset2"]))
+        self.assertEquals([("one", 1.0), ("three", 3.0), ("two", 4.5)],
+                          self.redis.zrange(key, 0, -1, withscores=True))
+
+        self.redis.zadd("zset1", "one", 1.0)
+        self.redis.zadd("zset1", "two", 2.0)
+        self.redis.zadd("zset2", "two", 2.5)
+        self.redis.zadd("zset2", "three", 3.0)
+
+        # sum (explicit)
+        self.assertEquals(3, self.redis.zunionstore(key, ["zset1", "zset2"], aggregate="sum"))
+        self.assertEquals([("one", 1.0), ("three", 3.0), ("two", 4.5)],
+                          self.redis.zrange(key, 0, -1, withscores=True))
+
+        self.redis.zadd("zset1", "one", 1.0)
+        self.redis.zadd("zset1", "two", 2.0)
+        self.redis.zadd("zset2", "two", 2.5)
+        self.redis.zadd("zset2", "three", 3.0)
+
+        # min
+        self.assertEquals(3, self.redis.zunionstore(key, ["zset1", "zset2"], aggregate="min"))
+        self.assertEquals([("one", 1.0), ("two", 2.0), ("three", 3.0)],
+                          self.redis.zrange(key, 0, -1, withscores=True))
+
+        self.redis.zadd("zset1", "one", 1.0)
+        self.redis.zadd("zset1", "two", 2.0)
+        self.redis.zadd("zset2", "two", 2.5)
+        self.redis.zadd("zset2", "three", 3.0)
+
+        # max
+        self.assertEquals(3, self.redis.zunionstore(key, ["zset1", "zset2"], aggregate="max"))
+        self.assertEquals([("one", 1.0), ("two", 2.5), ("three", 3.0)],
+                          self.redis.zrange(key, 0, -1, withscores=True))
