@@ -416,7 +416,12 @@ class MockRedis(object):
         pass
 
     def zscore(self, name, value):
-        pass
+        if name not in self.redis:
+            return None
+        elif type(self.redis[name]) is not SortedSet:
+            raise TypeError("ZSCORE requires a sorted set")
+
+        return self.redis[name].score(value)
 
     def zunionstore(self, dest, keys, aggregate=None):
         pass

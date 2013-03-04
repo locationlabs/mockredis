@@ -219,3 +219,10 @@ class TestRedis(TestCase):
 
         self.assertTrue(self.redis.zrem(key, "one"))
         self.assertEquals(0, self.redis.zcard(key))
+
+    def test_zscore(self):
+        key = "zset"
+        self.assertEquals(None, self.redis.zscore(key, "one"))
+
+        self.redis.zadd(key, "one", 1.0)
+        self.assertEquals(1.0, self.redis.zscore(key, "one"))
