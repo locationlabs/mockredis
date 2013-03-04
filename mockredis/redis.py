@@ -387,7 +387,16 @@ class MockRedis(object):
         pass
 
     def zrem(self, name, *values):
-        pass
+        if name not in self.redis:
+            return 0
+        elif type(self.redis[name]) is not SortedSet:
+            raise TypeError("ZREM requires a sorted set")
+
+        count = 0
+        for value in values:
+            if self.redis[name].remove(value):
+                count += 1
+        return count
 
     def zremrangebyrank(self, name, min, max):
         pass

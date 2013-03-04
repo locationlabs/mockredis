@@ -209,3 +209,13 @@ class TestRedis(TestCase):
         self.assertEquals(["two", "three"], self.redis.zrange(key, -2, -1))
         self.assertEquals(["one", "two", "three"], self.redis.zrange(key, -3, -1))
         self.assertEquals(["one", "two", "three"], self.redis.zrange(key, -4, -1))
+
+    def test_zrem(self):
+        key = "zset"
+        self.assertFalse(self.redis.zrem(key, "two"))
+
+        self.redis.zadd(key, "one", 1.0)
+        self.assertEquals(1, self.redis.zcard(key))
+
+        self.assertTrue(self.redis.zrem(key, "one"))
+        self.assertEquals(0, self.redis.zcard(key))
