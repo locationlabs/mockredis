@@ -231,3 +231,12 @@ class TestRedis(TestCase):
 
         self.redis.zadd(key, "one", 1.0)
         self.assertEquals(1.0, self.redis.zscore(key, "one"))
+
+    def test_zrank(self):
+        key = "zset"
+        self.assertEquals(None, self.redis.zrank(key, "two"))
+
+        self.redis.zadd(key, "one", 1.0)
+        self.redis.zadd(key, "two", 2.0)
+        self.assertEquals(0, self.redis.zrank(key, "one"))
+        self.assertEquals(1, self.redis.zrank(key, "two"))
