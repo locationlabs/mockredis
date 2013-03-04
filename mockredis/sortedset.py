@@ -59,6 +59,8 @@ class SortedSet(object):
         """
         Get the score for a member.
         """
+        if type(member) is slice:
+            raise TypeError("Slicing not supported")
         return self._members[member]
 
     def __iter__(self):
@@ -66,9 +68,6 @@ class SortedSet(object):
 
     def __reversed__(self):
         return self._scores.__reversed__()
-
-    def __getslice__(self, i, j):
-        return self._scores[i:j]
 
     def insert(self, member, score):
         """
@@ -108,3 +107,9 @@ class SortedSet(object):
         if score is None:
             return None
         return bisect_left(self._scores, (score, member))
+
+    def at(self, rank):
+        """
+        Get a (score, member) pair at rank.
+        """
+        return self._scores[rank]

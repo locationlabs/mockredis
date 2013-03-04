@@ -168,6 +168,44 @@ class TestRedis(TestCase):
 
     def test_zincrby(self):
         key = "zset"
-        self.assertEquals(1.0, self.redis.zincrby(key, "value1"))
-        self.assertEquals(2.0, self.redis.zincrby(key, "value2", 2))
-        self.assertEquals(-1.0, self.redis.zincrby(key, "value1", -2))
+        self.assertEquals(1.0, self.redis.zincrby(key, "member1"))
+        self.assertEquals(2.0, self.redis.zincrby(key, "member2", 2))
+        self.assertEquals(-1.0, self.redis.zincrby(key, "member1", -2))
+
+    def test_zrange(self):
+        key = "zset"
+        self.assertEquals([], self.redis.zrange(key, 0, -1))
+        self.redis.zadd(key, "one", 1.5)
+        self.redis.zadd(key, "two", 2.5)
+        self.redis.zadd(key, "three", 3.5)
+
+        # full range
+        self.assertEquals(["one", "two", "three"],
+                          self.redis.zrange(key, 0, -1))
+        # withscores
+        self.assertEquals([("one", 1.5), ("two", 2.5), ("three", 3.5)],
+                          self.redis.zrange(key, 0, -1, withscores=True))
+        # score_cast_func
+        self.assertEquals([("one", 1), ("two", 2), ("three", 3)],
+                          self.redis.zrange(key, 0, -1, withscores=True, score_cast_func=int))
+
+        # positive ranges
+        self.assertEquals(["one"], self.redis.zrange(key, 0, 0))
+        self.assertEquals(["one", "two"], self.redis.zrange(key, 0, 1))
+        self.assertEquals(["one", "two", "three"], self.redis.zrange(key, 0, 2))
+        self.assertEquals(["one", "two", "three"], self.redis.zrange(key, 0, 3))
+        self.assertEquals(["two", "three"], self.redis.zrange(key, 1, 2))
+        self.assertEquals(["three"], self.redis.zrange(key, 2, 3))
+
+        # negative ends
+        self.assertEquals(["one", "two", "three"], self.redis.zrange(key, 0, -1))
+        self.assertEquals(["one", "two"], self.redis.zrange(key, 0, -2))
+        self.assertEquals(["one"], self.redis.zrange(key, 0, -3))
+        self.assertEquals([], self.redis.zrange(key, 0, -4))
+
+        # negative starts
+        self.assertEquals([], self.redis.zrange(key, -1, 0))
+        self.assertEquals(["three"], self.redis.zrange(key, -1, -1))
+        self.assertEquals(["two", "three"], self.redis.zrange(key, -2, -1))
+        self.assertEquals(["one", "two", "three"], self.redis.zrange(key, -3, -1))
+        self.assertEquals(["one", "two", "three"], self.redis.zrange(key, -4, -1))
