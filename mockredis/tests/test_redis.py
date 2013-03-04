@@ -297,3 +297,30 @@ class TestRedis(TestCase):
         self.redis.zadd(key, "two", 2.0)
         self.assertEquals(1, self.redis.zrevrank(key, "one"))
         self.assertEquals(0, self.redis.zrevrank(key, "two"))
+
+    def test_zrevrangebyscore(self):
+        key = "zset"
+        self.assertEquals([], self.redis.zrevrangebyscore(key, 'inf', '-inf'))
+        self.redis.zadd(key, "one", 1.5)
+        self.redis.zadd(key, "two", 2.5)
+        self.redis.zadd(key, "three", 3.5)
+
+        self.assertEquals(["three", "two", "one"],
+                          self.redis.zrevrangebyscore(key, 'inf', '-inf'))
+        self.assertEquals([("three", 3.5), ("two", 2.5), ("one", 1.5)],
+                          self.redis.zrevrangebyscore(key, 'inf', '-inf', withscores=True))
+        self.assertEquals([("three", 3), ("two", 2), ("one", 1)],
+                          self.redis.zrevrangebyscore(key, 'inf', '-inf', withscores=True, score_cast_func=int))
+
+        self.assertEquals(["one"],
+                          self.redis.zrevrangebyscore(key, 2.0, 1.0))
+        self.assertEquals(["two", "one"],
+                          self.redis.zrevrangebyscore(key, 3.0, 1.0))
+        self.assertEquals(["two"],
+                          self.redis.zrevrangebyscore(key, 3.0, 1.0, start=0, num=1))
+        self.assertEquals(["one"],
+                          self.redis.zrevrangebyscore(key, 3.0, 1.0, start=1, num=1))
+        self.assertEquals(["two", "one"],
+                          self.redis.zrevrangebyscore(key, 3.5, 1.0, start=1, num=4))
+        self.assertEquals([],
+                          self.redis.zrevrangebyscore(key, 3.5, 1.0, start=3, num=4))
