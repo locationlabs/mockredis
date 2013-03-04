@@ -29,6 +29,11 @@ class MockRedis(object):
     pipe = None
 
     def __init__(self, strict=False):
+        """
+        Initialize as either StrictRedis or Redis.
+
+        Defaults to non-strict.
+        """
         self.strict = strict
 
     def type(self, key):
@@ -317,11 +322,8 @@ class MockRedis(object):
         # kwargs
         pieces.extend(kwargs.items())
 
-        count = 0
-        for member, score in pieces:
-            if self.redis[name].insert(member, float(score)):
-                count += 1
-        return count
+        insert_count = lambda member, score: 1 if self.redis[name].insert(member, float(score)) else 0
+        return sum((insert_count(member, score) for member, score in pieces))
 
     def zcard(self, name):
         if name not in self.redis:
@@ -428,11 +430,8 @@ class MockRedis(object):
         elif type(self.redis[name]) is not SortedSet:
             raise TypeError("ZREM requires a sorted set")
 
-        count = 0
-        for value in values:
-            if self.redis[name].remove(value):
-                count += 1
-        return count
+        remove_count = lambda value: 1 if self.redis[name].remove(value) else 0
+        return sum((remove_count(value) for value in values))
 
     def zremrangebyrank(self, name, start, end):
         if name not in self.redis:
@@ -446,12 +445,8 @@ class MockRedis(object):
 
         start, end = self._translate_range(len_, start, end)
 
-        count = 0
-        for score, member in self.redis[name].range(start, end):
-            print 'removing', member
-            if self.redis[name].remove(member):
-                count += 1
-        return count
+        remove_count = lambda score, member: 1 if self.redis[name].remove(member) else 0
+        return sum((remove_count(score, member) for score, member in self.redis[name].range(start, end)))
 
     def zremrangebyscore(self, name, min_, max_):
         if name not in self.redis:
@@ -464,11 +459,8 @@ class MockRedis(object):
 
         min_, max_ = self._translate_score_range(name, min_, max_)
 
-        count = 0
-        for score, member in self.redis[name].scorerange(min_, max_):
-            if self.redis[name].remove(member):
-                count += 1
-        return count
+        remove_count = lambda score, member: 1 if self.redis[name].remove(member) else 0
+        return sum((remove_count(score, member) for score, member in self.redis[name].scorerange(min_, max_)))
 
     def zrevrange(self, name, start, end, withscores=False,
                   score_cast_func=float):

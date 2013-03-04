@@ -11,7 +11,7 @@ class SortedSet(object):
     2. A dictionary from member to score.
 
     Insertion and removal are O(N). The bisect operations used to maintain the multimap are
-    O(N log N), but insertion into and removal from a list are O(N). A balanced tree implementation
+    O(log N), but insertion into and removal from a list are O(N). A balanced tree implementation
     (see: bintrees) would be more efficient, but doesn't provide multimapping and the simple
     workaround of mapping keys to other collections makes the rank() operation more complex.
     """
