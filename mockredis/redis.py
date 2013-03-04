@@ -330,7 +330,7 @@ class MockRedis(object):
 
         return len(self.redis[name])
 
-    def zcount(self, name, min, max):
+    def zcount(self, name, min_, max_):
         if name not in self.redis:
             return 0
         elif type(self.redis[name]) is not SortedSet:
@@ -339,17 +339,17 @@ class MockRedis(object):
         if len(self.redis[name]) == 0:
             return 0
 
-        if min == '-inf':
-            min = self.redis[name].min_score()
-        elif min == 'inf':
-            min = self.redis[name].max_score()
+        if min_ == '-inf':
+            min_ = self.redis[name].min_score()
+        elif min_ == 'inf':
+            min_ = self.redis[name].max_score()
 
-        if max == '-inf':
-            max = self.redis[name].min_score()
-        elif max == 'inf':
-            max = self.redis[name].max_score()
+        if max_ == '-inf':
+            max_ = self.redis[name].min_score()
+        elif max_ == 'inf':
+            max_ = self.redis[name].max_score()
 
-        return len(self.redis[name].scorerange(min, max))
+        return len(self.redis[name].scorerange(min_, max_))
 
     def zincrby(self, name, value, amount=1):
         if name not in self.redis:
@@ -392,9 +392,38 @@ class MockRedis(object):
 
         return [func(zset.at(rank, desc)) for rank in xrange(start, 1 + end)]
 
-    def zrangebyscore(self, name, min, max, start=None, num=None,
+    def zrangebyscore(self, name, min_, max_, start=None, num=None,
                       withscores=False, score_cast_func=float):
-        pass
+        if (start is None and num is not None) or (start is not None and num is None):
+            raise TypeError('`start` and `num` must both be specified')
+
+        if name not in self.redis:
+            return []
+        elif type(self.redis[name]) is not SortedSet:
+            raise TypeError("ZRANGEBYSCORE requires a sorted set")
+
+        if min_ == '-inf':
+            min_ = self.redis[name].min_score()
+        elif min_ == 'inf':
+            min_ = self.redis[name].max_score()
+
+        if max_ == '-inf':
+            max_ = self.redis[name].min_score()
+        elif max_ == 'inf':
+            max_ = self.redis[name].max_score()
+
+        if withscores:
+            func = lambda (score, member): (member, score_cast_func(score))
+        else:
+            func = lambda (score, member): member
+
+        scorerange = self.redis[name].scorerange(min_, max_)
+        if start is not None and num is not None:
+            if start > len(scorerange) or num <= 0:
+                return []
+            start = min(start, len(scorerange))
+            scorerange = scorerange[start:start + num]
+        return [func(item) for item in scorerange]
 
     def zrank(self, name, value):
         if name not in self.redis:
