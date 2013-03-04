@@ -393,7 +393,7 @@ class MockRedis(object):
             return []
 
         func = self._range_func(withscores, score_cast_func)
-        return [func(zset.at(rank, desc)) for rank in xrange(start, 1 + end)]
+        return [func(item) for item in self.redis[name].range(start, end, desc)]
 
     def zrangebyscore(self, name, min_, max_, start=None, num=None,
                       withscores=False, score_cast_func=float):

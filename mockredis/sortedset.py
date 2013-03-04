@@ -108,16 +108,7 @@ class SortedSet(object):
             return None
         return bisect_left(self._scores, (score, member))
 
-    def at(self, rank, desc=False):
-        """
-        Get a (score, member) pair at rank.
-        """
-        if desc:
-            return self._scores[len(self) - rank - 1]
-        else:
-            return self._scores[rank]
-
-    def range(self, start, end):
+    def range(self, start, end, desc=False):
         """
         Return (score, member) pairs between min and max ranks.
         """
@@ -126,7 +117,10 @@ class SortedSet(object):
 
         end += 1
 
-        return self._scores[start:end]
+        if desc:
+            return [self._scores[len(self) - rank - 1] for rank in xrange(start, end)]
+        else:
+            return self._scores[start:end]
 
     def scorerange(self, start, end):
         """
