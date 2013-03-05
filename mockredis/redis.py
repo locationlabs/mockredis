@@ -370,7 +370,10 @@ class MockRedis(object):
 
     def zrange(self, name, start, end, desc=False, withscores=False,
                score_cast_func=float):
-        zset = self._get_zset(name, "ZRANGE", create=True)
+        zset = self._get_zset(name, "ZRANGE")
+
+        if not zset:
+            return []
 
         start, end = self._translate_range(len(zset), start, end)
         if start == len(zset) or end < start:
@@ -381,7 +384,7 @@ class MockRedis(object):
 
     def zrangebyscore(self, name, min_, max_, start=None, num=None,
                       withscores=False, score_cast_func=float):
-        if (start is None and num is not None) or (start is not None and num is None):
+        if (start is None) ^ (num is None):
             raise TypeError('`start` and `num` must both be specified')
 
         zset = self._get_zset(name, "ZRANGEBYSCORE")
@@ -428,8 +431,8 @@ class MockRedis(object):
             return 0
 
         remove_count = lambda score, member: 1 if zset.remove(member) else 0
-        return sum((remove_count(score, member) for score, member in zset.scorerange(float(min_),
-                                                                                     float(max_))))
+        return sum((remove_count(score, member)
+                    for score, member in zset.scorerange(float(min_), float(max_))))
 
     def zrevrange(self, name, start, end, withscores=False,
                   score_cast_func=float):
