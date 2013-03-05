@@ -115,13 +115,10 @@ class SortedSet(object):
         if not self:
             return []
 
-        # end is inclusive
-        end += 1
-
         if desc:
-            return [self._scores[len(self) - rank - 1] for rank in xrange(start, end)]
+            return reversed(self._scores[len(self) - end - 1:len(self) - start])
         else:
-            return self._scores[start:end]
+            return self._scores[start:end + 1]
 
     def scorerange(self, start, end):
         """
