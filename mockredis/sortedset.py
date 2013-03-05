@@ -12,9 +12,8 @@ class SortedSet(object):
 
     The multimap is implemented using a sorted list of (score, member) pairs. The bisect operations
     used to maintain the multimap are O(log N), but insertion into and removal from a list are O(N),
-    so insertion and removal O(N). It would be possible to use a balanced tree implementation
-    (see: bintrees) with (score, member) pairs as keys, but at the expense of a more complex
-    rank(), range(), and scorerange() function.
+    so insertion and removal O(N). It should be possible to swap in an indexable skip list to get
+    the expected O(log N) behavior.
     """
     def __init__(self):
         """
@@ -60,7 +59,7 @@ class SortedSet(object):
         """
         Get the score for a member.
         """
-        if type(member) is slice:
+        if isinstance(member, slice):
             raise TypeError("Slicing not supported")
         return self._members[member]
 
@@ -72,7 +71,7 @@ class SortedSet(object):
 
     def insert(self, member, score):
         """
-        Identical to __setitem, but returns whether a member was
+        Identical to __setitem__, but returns whether a member was
         inserted (True) or updated (False)
         """
         found = self.remove(member)
