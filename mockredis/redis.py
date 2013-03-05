@@ -335,8 +335,7 @@ class MockRedis(object):
         if not zset:
             return 0
 
-        min_, max_ = self._translate_score_range(name, min_, max_)
-        return len(zset.scorerange(min_, max_))
+        return len(zset.scorerange(float(min_), float(max_)))
 
     def zincrby(self, name, value, amount=1):
         zset = self._get_zset(name, "ZINCRBY", create=True)
@@ -390,10 +389,9 @@ class MockRedis(object):
         if not zset:
             return []
 
-        min_, max_ = self._translate_score_range(name, min_, max_)
         func = self._range_func(withscores, score_cast_func)
 
-        scorerange = zset.scorerange(min_, max_)
+        scorerange = zset.scorerange(float(min_), float(max_))
         if start is not None and num is not None:
             start, num = self._translate_limit(len(scorerange), start, num)
             scorerange = scorerange[start:start + num]
@@ -429,9 +427,9 @@ class MockRedis(object):
         if not zset:
             return 0
 
-        min_, max_ = self._translate_score_range(name, min_, max_)
         remove_count = lambda score, member: 1 if zset.remove(member) else 0
-        return sum((remove_count(score, member) for score, member in zset.scorerange(min_, max_)))
+        return sum((remove_count(score, member) for score, member in zset.scorerange(float(min_),
+                                                                                     float(max_))))
 
     def zrevrange(self, name, start, end, withscores=False,
                   score_cast_func=float):
@@ -447,17 +445,17 @@ class MockRedis(object):
         if not zset:
             return []
 
-        min_, max_ = self._translate_score_range(name, min_, max_)
         func = self._range_func(withscores, score_cast_func)
 
-        scorerange = [x for x in reversed(zset.scorerange(min_, max_))]
+        scorerange = [x for x in reversed(zset.scorerange(float(min_), float(max_)))]
         if start is not None and num is not None:
             start, num = self._translate_limit(len(scorerange), start, num)
             scorerange = scorerange[start:start + num]
         return [func(item) for item in scorerange]
 
     def zrevrank(self, name, value):
-        zset = self._get_zset(name, "ZREMRANK")
+        zset = self._get_zset(name, "ZREVRANK")
+
         if zset is None:
             return None
 
@@ -497,22 +495,6 @@ class MockRedis(object):
         elif not isinstance(self.redis[name], SortedSet):
             raise TypeError("{} requires a sorted set".format(operation))
         return self.redis.get(name)
-
-    def _translate_score_range(self, name, min_, max_):
-        """
-        Translate min and max scores to valid bounds.
-        """
-        if min_ == '-inf':
-            min_ = self.redis[name].min_score()
-        elif min_ == 'inf':
-            min_ = self.redis[name].max_score()
-
-        if max_ == '-inf':
-            max_ = self.redis[name].min_score()
-        elif max_ == 'inf':
-            max_ = self.redis[name].max_score()
-
-        return min_, max_
 
     def _translate_range(self, len_, start, end):
         """
