@@ -1,8 +1,9 @@
-import random
-from datetime import datetime, timedelta
 from collections import defaultdict
-
-from mockredis.lock import MockRedisLock
+from datetime import datetime, timedelta
+from operator import add
+from random import randint
+from .lock import MockRedisLock
+from .sortedset import SortedSet
 
 
 def _get_total_seconds(td):
@@ -27,20 +28,29 @@ class MockRedis(object):
     # The pipeline
     pipe = None
 
-    def __init__(self, **kwargs):
-        pass
+    def __init__(self, strict=False):
+        """
+        Initialize as either StrictRedis or Redis.
+
+        Defaults to non-strict.
+        """
+        self.strict = strict
 
     def type(self, key):
+        if key not in self.redis:
+            return 'none'
         _type = type(self.redis[key])
-        if _type == dict:
+        if _type is dict:
             return 'hash'
-        elif _type == str:
+        elif _type is str:
             return 'string'
-        elif _type == set:
+        elif _type is set:
             return 'set'
-        elif _type == list:
+        elif _type is list:
             return 'list'
-        return None
+        elif _type is SortedSet:
+            return 'zset'
+        return 'none'
 
     def echo(self, msg):
         return msg
@@ -272,7 +282,7 @@ class MockRedis(object):
     def srandmember(self, key):
         """Emulate a srandmember."""
         length = len(self.redis[key])
-        rand_index = random.randint(0, length - 1)
+        rand_index = randint(0, length - 1)
 
         i = 0
         for set_item in self.redis[key]:
@@ -290,6 +300,248 @@ class MockRedis(object):
     def flushdb(self):
         self.redis.clear()
         self.timeouts.clear()
+
+    #### SORTED SET COMMANDS ####
+    def zadd(self, name, *args, **kwargs):
+        zset = self._get_zset(name, "ZADD", create=True)
+
+        pieces = []
+
+        # args
+        if len(args) % 2 != 0:
+            raise ValueError("ZADD requires an equal number of "
+                             "values and scores")
+        for i in xrange(len(args) / 2):
+            # interpretation of args order depends on whether Redis
+            # or StrictRedis is used
+            score = args[2 * i + (0 if self.strict else 1)]
+            member = args[2 * i + (1 if self.strict else 0)]
+            pieces.append((member, score))
+
+        # kwargs
+        pieces.extend(kwargs.items())
+
+        insert_count = lambda member, score: 1 if zset.insert(member, float(score)) else 0
+        return sum((insert_count(member, score) for member, score in pieces))
+
+    def zcard(self, name):
+        zset = self._get_zset(name, "ZCARD")
+
+        return len(zset) if zset is not None else 0
+
+    def zcount(self, name, min_, max_):
+        zset = self._get_zset(name, "ZCOUNT")
+
+        if not zset:
+            return 0
+
+        return len(zset.scorerange(float(min_), float(max_)))
+
+    def zincrby(self, name, value, amount=1):
+        zset = self._get_zset(name, "ZINCRBY", create=True)
+
+        score = zset.score(value) or 0.0
+        score += float(amount)
+        zset[value] = score
+        return score
+
+    def zinterstore(self, dest, keys, aggregate=None):
+        aggregate_func = self._aggregate_func(aggregate)
+
+        members = {}
+
+        for key in keys:
+            zset = self._get_zset(key, "ZINTERSTORE")
+            if not zset:
+                return 0
+
+            for score, member in zset:
+                members.setdefault(member, []).append(score)
+
+        intersection = SortedSet()
+        for member, scores in members.iteritems():
+            if len(scores) != len(keys):
+                continue
+            intersection[member] = reduce(aggregate_func, scores)
+
+        # always override existing keys
+        self.redis[dest] = intersection
+        return len(intersection)
+
+    def zrange(self, name, start, end, desc=False, withscores=False,
+               score_cast_func=float):
+        zset = self._get_zset(name, "ZRANGE")
+
+        if not zset:
+            return []
+
+        start, end = self._translate_range(len(zset), start, end)
+        if start == len(zset) or end < start:
+            return []
+
+        func = self._range_func(withscores, score_cast_func)
+        return [func(item) for item in zset.range(start, end, desc)]
+
+    def zrangebyscore(self, name, min_, max_, start=None, num=None,
+                      withscores=False, score_cast_func=float):
+        if (start is None) ^ (num is None):
+            raise TypeError('`start` and `num` must both be specified')
+
+        zset = self._get_zset(name, "ZRANGEBYSCORE")
+
+        if not zset:
+            return []
+
+        func = self._range_func(withscores, score_cast_func)
+
+        scorerange = zset.scorerange(float(min_), float(max_))
+        if start is not None and num is not None:
+            start, num = self._translate_limit(len(scorerange), start, num)
+            scorerange = scorerange[start:start + num]
+        return [func(item) for item in scorerange]
+
+    def zrank(self, name, value):
+        zset = self._get_zset(name, "ZRANK")
+
+        return zset.rank(value) if zset else None
+
+    def zrem(self, name, *values):
+        zset = self._get_zset(name, "ZREM")
+
+        if not zset:
+            return 0
+
+        remove_count = lambda value: 1 if zset.remove(value) else 0
+        return sum((remove_count(value) for value in values))
+
+    def zremrangebyrank(self, name, start, end):
+        zset = self._get_zset(name, "ZREMRANGEBYRANK")
+
+        if not zset:
+            return 0
+
+        start, end = self._translate_range(len(zset), start, end)
+        remove_count = lambda score, member: 1 if zset.remove(member) else 0
+        return sum((remove_count(score, member) for score, member in zset.range(start, end)))
+
+    def zremrangebyscore(self, name, min_, max_):
+        zset = self._get_zset(name, "ZREMRANGEBYSCORE")
+
+        if not zset:
+            return 0
+
+        remove_count = lambda score, member: 1 if zset.remove(member) else 0
+        return sum((remove_count(score, member)
+                    for score, member in zset.scorerange(float(min_), float(max_))))
+
+    def zrevrange(self, name, start, end, withscores=False,
+                  score_cast_func=float):
+        return self.zrange(name, start, end,
+                           desc=True, withscores=withscores, score_cast_func=score_cast_func)
+
+    def zrevrangebyscore(self, name, max_, min_, start=None, num=None,
+                         withscores=False, score_cast_func=float):
+        if (start is None) ^ (num is None):
+            raise TypeError('`start` and `num` must both be specified')
+
+        zset = self._get_zset(name, "ZREVRANGEBYSCORE")
+        if not zset:
+            return []
+
+        func = self._range_func(withscores, score_cast_func)
+
+        scorerange = [x for x in reversed(zset.scorerange(float(min_), float(max_)))]
+        if start is not None and num is not None:
+            start, num = self._translate_limit(len(scorerange), start, num)
+            scorerange = scorerange[start:start + num]
+        return [func(item) for item in scorerange]
+
+    def zrevrank(self, name, value):
+        zset = self._get_zset(name, "ZREVRANK")
+
+        if zset is None:
+            return None
+
+        return len(zset) - zset.rank(value) - 1
+
+    def zscore(self, name, value):
+        zset = self._get_zset(name, "ZSCORE")
+
+        return zset.score(value) if zset is not None else None
+
+    def zunionstore(self, dest, keys, aggregate=None):
+        union = SortedSet()
+        aggregate_func = self._aggregate_func(aggregate)
+
+        for key in keys:
+            zset = self._get_zset(key, "ZUNIONSTORE")
+            if not zset:
+                continue
+
+            for score, member in zset:
+                if member in union:
+                    union[member] = aggregate_func(union[member], score)
+                else:
+                    union[member] = score
+
+        # always override existing keys
+        self.redis[dest] = union
+        return len(union)
+
+    def _get_zset(self, name, operation, create=False):
+        """
+        Get (and maybe create) a sorted set by name.
+        """
+        if name not in self.redis:
+            if create:
+                self.redis[name] = SortedSet()
+        elif not isinstance(self.redis[name], SortedSet):
+            raise TypeError("{} requires a sorted set".format(operation))
+        return self.redis.get(name)
+
+    def _translate_range(self, len_, start, end):
+        """
+        Translate range to valid bounds.
+        """
+        if start < 0:
+            start = len_ + max(start, -len_)
+        elif start > 0:
+            start = min(start, len_)
+        if end < 0:
+            end = len_ + max(end, -(len_ + 1))
+        elif end > 0:
+            end = min(end, len_ - 1)
+        return start, end
+
+    def _translate_limit(self, len_, start, num):
+        """
+        Translate limit to valid bounds.
+        """
+        if start > len_ or num <= 0:
+            return 0, 0
+        return min(start, len_), num
+
+    def _range_func(self, withscores, score_cast_func):
+        """
+        Return a suitable function from (score, member)
+        """
+        if withscores:
+            return lambda (score, member): (member, score_cast_func(score))
+        else:
+            return lambda (score, member): member
+
+    def _aggregate_func(self, aggregate):
+        """
+        Return a suitable aggregate score function.
+        """
+        if not aggregate or aggregate == 'sum':
+            return add
+        elif aggregate == 'min':
+            return min
+        elif aggregate == 'max':
+            return max
+        else:
+            raise TypeError("Unsupported aggregate: {}".format(aggregate))
 
 
 def mock_redis_client(**kwargs):
