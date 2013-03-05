@@ -303,60 +303,47 @@ class MockRedis(object):
 
     #### SORTED SET COMMANDS ####
     def zadd(self, name, *args, **kwargs):
-        if name not in self.redis:
-            self.redis[name] = SortedSet()
-        elif type(self.redis[name]) is not SortedSet:
-            raise TypeError("ZADD requires a sorted set")
+        zset = self._get_zset(name, "ZADD", create=True)
 
         pieces = []
+
         # args
-        if args:
-            if len(args) % 2 != 0:
-                raise ValueError("ZADD requires an equal number of "
-                                 "values and scores")
-            for i in xrange(len(args) / 2):
-                # interpretation of args order depends on whether Redis
-                # or StrictRedis is used
-                score = args[2 * i + (0 if self.strict else 1)]
-                member = args[2 * i + (1 if self.strict else 0)]
-                pieces.append((member, score))
+        if len(args) % 2 != 0:
+            raise ValueError("ZADD requires an equal number of "
+                             "values and scores")
+        for i in xrange(len(args) / 2):
+            # interpretation of args order depends on whether Redis
+            # or StrictRedis is used
+            score = args[2 * i + (0 if self.strict else 1)]
+            member = args[2 * i + (1 if self.strict else 0)]
+            pieces.append((member, score))
 
         # kwargs
         pieces.extend(kwargs.items())
 
-        insert_count = lambda member, score: 1 if self.redis[name].insert(member, float(score)) else 0
+        insert_count = lambda member, score: 1 if zset.insert(member, float(score)) else 0
         return sum((insert_count(member, score) for member, score in pieces))
 
     def zcard(self, name):
-        if name not in self.redis:
-            return 0
-        elif type(self.redis[name]) is not SortedSet:
-            raise TypeError("ZCARD requires a sorted set")
+        zset = self._get_zset(name, "ZCARD")
 
-        return len(self.redis[name])
+        return len(zset) if zset is not None else 0
 
     def zcount(self, name, min_, max_):
-        if name not in self.redis:
-            return 0
-        elif type(self.redis[name]) is not SortedSet:
-            raise TypeError("ZCOUNT requires a sorted set")
+        zset = self._get_zset(name, "ZCOUNT")
 
-        if len(self.redis[name]) == 0:
+        if not zset:
             return 0
 
         min_, max_ = self._translate_score_range(name, min_, max_)
-
-        return len(self.redis[name].scorerange(min_, max_))
+        return len(zset.scorerange(min_, max_))
 
     def zincrby(self, name, value, amount=1):
-        if name not in self.redis:
-            self.redis[name] = SortedSet()
-        elif type(self.redis[name]) is not SortedSet:
-            raise TypeError("ZINCRBY requires a sorted set")
+        zset = self._get_zset(name, "ZINCRBY", create=True)
 
-        score = self.redis[name].score(value) or 0.0
+        score = zset.score(value) or 0.0
         score += float(amount)
-        self.redis[name][value] = score
+        zset[value] = score
         return score
 
     def zinterstore(self, dest, keys, aggregate=None):
@@ -365,11 +352,11 @@ class MockRedis(object):
         members = {}
 
         for key in keys:
-            if key not in self.redis:
-                continue
-            if type(self.redis[key]) is not SortedSet:
-                raise TypeError("ZINTERSTORE requires a sorted set")
-            for score, member in self.redis[key]:
+            zset = self._get_zset(key, "ZINTERSTORE")
+            if not zset:
+                return 0
+
+            for score, member in zset:
                 members.setdefault(member, []).append(score)
 
         intersection = SortedSet()
@@ -384,135 +371,113 @@ class MockRedis(object):
 
     def zrange(self, name, start, end, desc=False, withscores=False,
                score_cast_func=float):
-        if name not in self.redis:
-            self.redis[name] = SortedSet()
-        elif type(self.redis[name]) is not SortedSet:
-            raise TypeError("ZRANGE requires a sorted set")
+        zset = self._get_zset(name, "ZRANGE", create=True)
 
-        zset = self.redis[name]
-        len_ = len(zset)
-        start, end = self._translate_range(len_, start, end)
-
-        if start == len_ or end < start:
+        start, end = self._translate_range(len(zset), start, end)
+        if start == len(zset) or end < start:
             return []
 
         func = self._range_func(withscores, score_cast_func)
-        return [func(item) for item in self.redis[name].range(start, end, desc)]
+        return [func(item) for item in zset.range(start, end, desc)]
 
     def zrangebyscore(self, name, min_, max_, start=None, num=None,
                       withscores=False, score_cast_func=float):
         if (start is None and num is not None) or (start is not None and num is None):
             raise TypeError('`start` and `num` must both be specified')
 
-        if name not in self.redis:
+        zset = self._get_zset(name, "ZRANGEBYSCORE")
+
+        if not zset:
             return []
-        elif type(self.redis[name]) is not SortedSet:
-            raise TypeError("ZRANGEBYSCORE requires a sorted set")
 
         min_, max_ = self._translate_score_range(name, min_, max_)
         func = self._range_func(withscores, score_cast_func)
 
-        scorerange = self.redis[name].scorerange(min_, max_)
+        scorerange = zset.scorerange(min_, max_)
         if start is not None and num is not None:
             start, num = self._translate_limit(len(scorerange), start, num)
             scorerange = scorerange[start:start + num]
         return [func(item) for item in scorerange]
 
     def zrank(self, name, value):
-        if name not in self.redis:
-            return None
-        elif type(self.redis[name]) is not SortedSet:
-            raise TypeError("ZRANK requires a sorted set")
+        zset = self._get_zset(name, "ZRANK")
 
-        return self.redis[name].rank(value)
+        return zset.rank(value) if zset else None
 
     def zrem(self, name, *values):
-        if name not in self.redis:
-            return 0
-        elif type(self.redis[name]) is not SortedSet:
-            raise TypeError("ZREM requires a sorted set")
+        zset = self._get_zset(name, "ZREM")
 
-        remove_count = lambda value: 1 if self.redis[name].remove(value) else 0
+        if not zset:
+            return 0
+
+        remove_count = lambda value: 1 if zset.remove(value) else 0
         return sum((remove_count(value) for value in values))
 
     def zremrangebyrank(self, name, start, end):
-        if name not in self.redis:
-            return 0
-        elif type(self.redis[name]) is not SortedSet:
-            raise TypeError("ZREMRANGEBYRANK requires a sorted set")
+        zset = self._get_zset(name, "ZREMRANGEBYRANK")
 
-        len_ = len(self.redis[name])
-        if len_ == 0:
+        if not zset:
             return 0
 
-        start, end = self._translate_range(len_, start, end)
-
-        remove_count = lambda score, member: 1 if self.redis[name].remove(member) else 0
-        return sum((remove_count(score, member) for score, member in self.redis[name].range(start, end)))
+        start, end = self._translate_range(len(zset), start, end)
+        remove_count = lambda score, member: 1 if zset.remove(member) else 0
+        return sum((remove_count(score, member) for score, member in zset.range(start, end)))
 
     def zremrangebyscore(self, name, min_, max_):
-        if name not in self.redis:
-            return 0
-        elif type(self.redis[name]) is not SortedSet:
-            raise TypeError("ZREMRANGEBYSCORE requires a sorted set")
+        zset = self._get_zset(name, "ZREMRANGEBYSCORE")
 
-        if len(self.redis[name]) == 0:
+        if not zset:
             return 0
 
         min_, max_ = self._translate_score_range(name, min_, max_)
-
-        remove_count = lambda score, member: 1 if self.redis[name].remove(member) else 0
-        return sum((remove_count(score, member) for score, member in self.redis[name].scorerange(min_, max_)))
+        remove_count = lambda score, member: 1 if zset.remove(member) else 0
+        return sum((remove_count(score, member) for score, member in zset.scorerange(min_, max_)))
 
     def zrevrange(self, name, start, end, withscores=False,
                   score_cast_func=float):
-        return self.zrange(name, start, end, True, withscores, score_cast_func)
+        return self.zrange(name, start, end,
+                           desc=True, withscores=withscores, score_cast_func=score_cast_func)
 
     def zrevrangebyscore(self, name, max_, min_, start=None, num=None,
                          withscores=False, score_cast_func=float):
-        if (start is None and num is not None) or (start is not None and num is None):
+        if (start is None) ^ (num is None):
             raise TypeError('`start` and `num` must both be specified')
 
-        if name not in self.redis:
+        zset = self._get_zset(name, "ZREVRANGEBYSCORE")
+        if not zset:
             return []
-        elif type(self.redis[name]) is not SortedSet:
-            raise TypeError("ZREVRANGEBYSCORE requires a sorted set")
 
         min_, max_ = self._translate_score_range(name, min_, max_)
         func = self._range_func(withscores, score_cast_func)
 
-        scorerange = [x for x in reversed(self.redis[name].scorerange(min_, max_))]
+        scorerange = [x for x in reversed(zset.scorerange(min_, max_))]
         if start is not None and num is not None:
             start, num = self._translate_limit(len(scorerange), start, num)
             scorerange = scorerange[start:start + num]
         return [func(item) for item in scorerange]
 
     def zrevrank(self, name, value):
-        if name not in self.redis:
+        zset = self._get_zset(name, "ZREMRANK")
+        if zset is None:
             return None
-        elif type(self.redis[name]) is not SortedSet:
-            raise TypeError("ZREMRANK requires a sorted set")
 
-        return len(self.redis[name]) - self.redis[name].rank(value) - 1
+        return len(zset) - zset.rank(value) - 1
 
     def zscore(self, name, value):
-        if name not in self.redis:
-            return None
-        elif type(self.redis[name]) is not SortedSet:
-            raise TypeError("ZSCORE requires a sorted set")
+        zset = self._get_zset(name, "ZSCORE")
 
-        return self.redis[name].score(value)
+        return zset.score(value) if zset is not None else None
 
     def zunionstore(self, dest, keys, aggregate=None):
         union = SortedSet()
         aggregate_func = self._aggregate_func(aggregate)
 
         for key in keys:
-            if key not in self.redis:
+            zset = self._get_zset(key, "ZUNIONSTORE")
+            if not zset:
                 continue
-            if type(self.redis[key]) is not SortedSet:
-                raise TypeError("ZINTERSTORE requires a sorted set")
-            for score, member in self.redis[key]:
+
+            for score, member in zset:
                 if member in union:
                     union[member] = aggregate_func(union[member], score)
                 else:
@@ -521,6 +486,17 @@ class MockRedis(object):
         # always override existing keys
         self.redis[dest] = union
         return len(union)
+
+    def _get_zset(self, name, operation, create=False):
+        """
+        Get (and maybe create) a sorted set by name.
+        """
+        if name not in self.redis:
+            if create:
+                self.redis[name] = SortedSet()
+        elif not isinstance(self.redis[name], SortedSet):
+            raise TypeError("{} requires a sorted set".format(operation))
+        return self.redis.get(name)
 
     def _translate_score_range(self, name, min_, max_):
         """
