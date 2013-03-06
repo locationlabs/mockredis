@@ -1,5 +1,20 @@
 from unittest import TestCase
-from mockredis import MockRedis
+from mockredis import MockRedis, mock_redis_client, mock_strict_redis_client
+
+
+class TestFactories(TestCase):
+
+    def test_mock_redis_client(self):
+        """
+        Test that we can pass kwargs to the Redis mock/patch target.
+        """
+        self.assertFalse(mock_redis_client(host="localhost", port=6379).strict)
+
+    def test_mock_strict_redis_client(self):
+        """
+        Test that we can pass kwargs to the StrictRedis mock/patch target.
+        """
+        self.assertTrue(mock_strict_redis_client(host="localhost", port=6379).strict)
 
 
 class TestRedis(TestCase):

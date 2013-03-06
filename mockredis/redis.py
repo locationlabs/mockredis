@@ -28,7 +28,7 @@ class MockRedis(object):
     # The pipeline
     pipe = None
 
-    def __init__(self, strict=False):
+    def __init__(self, strict=False, **kwargs):
         """
         Initialize as either StrictRedis or Redis.
 
@@ -550,4 +550,13 @@ def mock_redis_client(**kwargs):
     can return a MockRedis object
     instead of a Redis object.
     """
-    return MockRedis(**kwargs)
+    return MockRedis()
+
+
+def mock_strict_redis_client(**kwargs):
+    """
+    Mock common.util.redis_client so we
+    can return a MockRedis object
+    instead of a StrictRedis object.
+    """
+    return MockRedis(strict=True)
