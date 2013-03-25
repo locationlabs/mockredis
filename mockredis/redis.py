@@ -231,6 +231,8 @@ class MockRedis(object):
             # No, override the defaultdict's default and create the list
             self.redis[key] = list([])
 
+    """List Functions"""
+
     def lindex(self, key, index):
         """Emulate lindex."""
 
@@ -242,22 +244,21 @@ class MockRedis(object):
             # Redis returns nil if the index doesn't exist
             pass
 
+    def llen(self, key):
+        """Emulate llen."""
+
+        if key in self.redis:
+            return len(self.redis[key])
+
+        # Redis returns 0 if list doesn't exist
+        return 0
+
     def lpop(self, key):
         """Emulate lpop."""
 
         if key in self.redis:
             try:
                 return str(self.redis[key].pop(0))
-            except (IndexError):
-                # Redis returns nil if popping from an empty list
-                pass
-
-    def rpop(self, key):
-        """Emulate lpop."""
-
-        if key in self.redis:
-            try:
-                return str(self.redis[key].pop(len(self.redis[key])-1))
             except (IndexError):
                 # Redis returns nil if popping from an empty list
                 pass
@@ -270,6 +271,16 @@ class MockRedis(object):
             self.redis[key] = list([])
         for arg in args:
             self.redis[key].insert(0, arg)
+
+    def rpop(self, key):
+        """Emulate lpop."""
+
+        if key in self.redis:
+            try:
+                return str(self.redis[key].pop(len(self.redis[key])-1))
+            except (IndexError):
+                # Redis returns nil if popping from an empty list
+                pass
 
     def rpush(self, key, *args):
         """Emulate rpush."""
