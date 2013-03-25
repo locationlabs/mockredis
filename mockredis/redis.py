@@ -252,6 +252,25 @@ class MockRedis(object):
                 # Redis returns nil if popping from an empty list
                 pass
 
+    def rpop(self, key):
+        """Emulate lpop."""
+
+        if key in self.redis:
+            try:
+                return str(self.redis[key].pop(len(self.redis[key])-1))
+            except (IndexError):
+                # Redis returns nil if popping from an empty list
+                pass
+
+    def lpush(self, key, *args):
+        """Emulate lpush."""
+
+        # Does the set at this key already exist?
+        if not key in self.redis:
+            self.redis[key] = list([])
+        for arg in args:
+            self.redis[key].insert(0, arg)
+
     def rpush(self, key, *args):
         """Emulate rpush."""
 

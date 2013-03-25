@@ -82,4 +82,5 @@ class TestSortedSet(TestCase):
         self.zset["two"] = 2.0
         self.zset["three"] = 3.0
         self.assertEquals([(1.0, "one"), (1.0, "uno")], self.zset.scorerange(1.0, 1.1))
-        self.assertEquals([(1.0, "one"), (1.0, "uno"), (2.0, "two")], self.zset.scorerange(1.0, 2.0))
+        self.assertEquals([(1.0, "one"), (1.0, "uno"), (2.0, "two")],
+                          self.zset.scorerange(1.0, 2.0))
