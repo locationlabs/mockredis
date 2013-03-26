@@ -50,7 +50,7 @@ class MockRedis(object):
             return 'list'
         elif _type is SortedSet:
             return 'zset'
-        raise TypeError("unhandled type ".format(_type))
+        raise TypeError("unhandled type {}".format(_type))
 
     def echo(self, msg):
         return msg
