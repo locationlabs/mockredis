@@ -520,25 +520,26 @@ class MockRedis(object):
         """
         Get (and maybe create) a list by name.
         """
-
-        if self.type(key) in ['list', 'none']:
-            if create:
-                return self.redis.setdefault(key, [])
-            else:
-                return self.redis.get(key, [])
-
-        raise TypeError("{} requires a list".format(operation))
+        return self._get_by_type(key, operation, create, 'list', [])
 
     def _get_zset(self, name, operation, create=False):
         """
         Get (and maybe create) a sorted set by name.
         """
-        if name not in self.redis:
+        return self._get_by_type(name, operation, create, 'zset', SortedSet(), False)
+
+    def _get_by_type(self, key, operation, create, typeName, default, returnDefault=True):
+        """
+        Get (and maybe create) a redis data structure by name and type.
+        """
+
+        if self.type(key) in [typeName, 'none']:
             if create:
-                self.redis[name] = SortedSet()
-        elif not isinstance(self.redis[name], SortedSet):
-            raise TypeError("{} requires a sorted set".format(operation))
-        return self.redis.get(name)
+                return self.redis.setdefault(key, default)
+            else:
+                return self.redis.get(key, default if returnDefault else None)
+
+        raise TypeError("{} requires a {}".format(operation, typeName))
 
     def _translate_range(self, len_, start, end):
         """
