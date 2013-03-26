@@ -247,11 +247,8 @@ class MockRedis(object):
     def llen(self, key):
         """Emulate llen."""
 
-        if key in self.redis:
-            return len(self.redis[key])
-
         # Redis returns 0 if list doesn't exist
-        return 0
+        return len(self.redis.get(key, []))
 
     def lpop(self, key):
         """Emulate lpop."""
@@ -266,18 +263,17 @@ class MockRedis(object):
     def lpush(self, key, *args):
         """Emulate lpush."""
 
-        # Does the set at this key already exist?
-        if not key in self.redis:
-            self.redis[key] = list([])
-        for arg in args:
-            self.redis[key].insert(0, arg)
+        # Creates the set at this key if it doesn't exist, and appends args to its beginning
+        args_reversed = list(args)
+        args_reversed.reverse()
+        self.redis[key] = args_reversed + self.redis.setdefault(key, [])
 
     def rpop(self, key):
         """Emulate lpop."""
 
         if key in self.redis:
             try:
-                return str(self.redis[key].pop(len(self.redis[key])-1))
+                return str(self.redis[key].pop())
             except (IndexError):
                 # Redis returns nil if popping from an empty list
                 pass
@@ -285,11 +281,8 @@ class MockRedis(object):
     def rpush(self, key, *args):
         """Emulate rpush."""
 
-        # Does the set at this key already exist?
-        if not key in self.redis:
-            self.redis[key] = list([])
-        for arg in args:
-            self.redis[key].append(arg)
+        # Creates the set at this key if it doesn't exist, and appends args to it
+        self.redis.setdefault(key, []).extend(args)
 
     def sadd(self, key, *values):
         """Emulate sadd."""

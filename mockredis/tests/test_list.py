@@ -18,7 +18,7 @@ class TestList(TestCase):
         self.assertEqual(0, len(self.redis.redis['test_list']))
 
     def test_llen(self):
-        self.redis.redis['test_list'] = list(['val1', 'val2'])
+        self.redis.redis['test_list'] = ['val1', 'val2']
         self.assertEquals(2, self.redis.llen('test_list'))
         self.redis.redis['test_list'].pop(0)
         self.assertEquals(1, self.redis.llen('test_list'))
@@ -26,7 +26,7 @@ class TestList(TestCase):
         self.assertEquals(0, self.redis.llen('test_list'))
 
     def test_lpop(self):
-        self.redis.redis['test_list'] = list(['val1', 'val2'])
+        self.redis.redis['test_list'] = ['val1', 'val2']
         self.assertEquals('val1', self.redis.lpop('test_list'))
         self.assertEquals(1, len(self.redis.redis['test_list']))
         self.assertEquals('val2', self.redis.lpop('test_list'))
@@ -48,8 +48,7 @@ class TestList(TestCase):
         self.assertEquals('val1', self.redis.redis['test_list'][1])
 
         # insert two more values with one repeated
-        self.redis.lpush('test_list', 'val1')
-        self.redis.lpush('test_list', 'val3')
+        self.redis.lpush('test_list', 'val1', 'val3')
 
         # validate the update
         self.assertEquals(4, len(self.redis.redis['test_list']))
@@ -60,7 +59,7 @@ class TestList(TestCase):
         self.assertEquals('val1', self.redis.redis['test_list'][3])
 
     def test_rpop(self):
-        self.redis.redis['test_list'] = list(['val1', 'val2'])
+        self.redis.redis['test_list'] = ['val1', 'val2']
         self.assertEquals('val2', self.redis.rpop('test_list'))
         self.assertEquals(1, len(self.redis.redis['test_list']))
         self.assertEquals('val1', self.redis.rpop('test_list'))
@@ -82,8 +81,7 @@ class TestList(TestCase):
         self.assertEquals('val2', self.redis.redis['test_list'][1])
 
         # insert two more values with one repeated
-        self.redis.rpush('test_list', 'val1')
-        self.redis.rpush('test_list', 'val3')
+        self.redis.rpush('test_list', 'val1', 'val3')
 
         # validate the update
         self.assertEquals(4, len(self.redis.redis['test_list']))
