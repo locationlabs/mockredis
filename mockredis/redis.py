@@ -50,7 +50,7 @@ class MockRedis(object):
             return 'list'
         elif _type is SortedSet:
             return 'zset'
-        return 'none'
+        raise TypeError("unhandled type ".format(_type))
 
     def echo(self, msg):
         return msg
@@ -246,43 +246,48 @@ class MockRedis(object):
 
     def llen(self, key):
         """Emulate llen."""
+        redis_list = self._get_list(key, 'LLEN')
 
         # Redis returns 0 if list doesn't exist
-        return len(self.redis.get(key, []))
+        return len(redis_list)
 
     def lpop(self, key):
         """Emulate lpop."""
+        redis_list = self._get_list(key, 'LPOP')
 
         if key in self.redis:
             try:
-                return str(self.redis[key].pop(0))
+                return str(redis_list.pop(0))
             except (IndexError):
                 # Redis returns nil if popping from an empty list
                 pass
 
     def lpush(self, key, *args):
         """Emulate lpush."""
+        redis_list = self._get_list(key, 'LPUSH', True)
 
-        # Creates the set at this key if it doesn't exist, and appends args to its beginning
+        # Creates the list at this key if it doesn't exist, and appends args to its beginning
         args_reversed = list(args)
         args_reversed.reverse()
-        self.redis[key] = args_reversed + self.redis.setdefault(key, [])
+        self.redis[key] = args_reversed + redis_list
 
     def rpop(self, key):
         """Emulate lpop."""
+        redis_list = self._get_list(key, 'RPOP')
 
         if key in self.redis:
             try:
-                return str(self.redis[key].pop())
+                return str(redis_list.pop())
             except (IndexError):
                 # Redis returns nil if popping from an empty list
                 pass
 
     def rpush(self, key, *args):
         """Emulate rpush."""
+        redis_list = self._get_list(key, 'RPUSH', True)
 
-        # Creates the set at this key if it doesn't exist, and appends args to it
-        self.redis.setdefault(key, []).extend(args)
+        # Creates the list at this key if it doesn't exist, and appends args to it
+        redis_list.extend(args)
 
     def sadd(self, key, *values):
         """Emulate sadd."""
@@ -510,6 +515,19 @@ class MockRedis(object):
         # always override existing keys
         self.redis[dest] = union
         return len(union)
+
+    def _get_list(self, key, operation, create=False):
+        """
+        Get (and maybe create) a list by name.
+        """
+
+        if self.type(key) in ['list', 'none']:
+            if create:
+                return self.redis.setdefault(key, [])
+            else:
+                return self.redis.get(key, [])
+
+        raise TypeError("{} requires a list".format(operation))
 
     def _get_zset(self, name, operation, create=False):
         """

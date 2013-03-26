@@ -18,6 +18,7 @@ class TestList(TestCase):
         self.assertEqual(0, len(self.redis.redis['test_list']))
 
     def test_llen(self):
+        self.assertEquals(0, self.redis.llen('test_list'))
         self.redis.redis['test_list'] = ['val1', 'val2']
         self.assertEquals(2, self.redis.llen('test_list'))
         self.redis.redis['test_list'].pop(0)
