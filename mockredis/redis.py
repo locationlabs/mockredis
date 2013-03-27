@@ -264,7 +264,7 @@ class MockRedis(object):
 
     def lpush(self, key, *args):
         """Emulate lpush."""
-        redis_list = self._get_list(key, 'LPUSH', True)
+        redis_list = self._get_list(key, 'LPUSH', create=True)
 
         # Creates the list at this key if it doesn't exist, and appends args to its beginning
         args_reversed = list(args)
@@ -284,7 +284,7 @@ class MockRedis(object):
 
     def rpush(self, key, *args):
         """Emulate rpush."""
-        redis_list = self._get_list(key, 'RPUSH', True)
+        redis_list = self._get_list(key, 'RPUSH', create=True)
 
         # Creates the list at this key if it doesn't exist, and appends args to it
         redis_list.extend(args)
@@ -526,7 +526,7 @@ class MockRedis(object):
         """
         Get (and maybe create) a sorted set by name.
         """
-        return self._get_by_type(name, operation, create, 'zset', SortedSet(), False)
+        return self._get_by_type(name, operation, create, 'zset', SortedSet(), returnDefault=False)
 
     def _get_by_type(self, key, operation, create, typeName, default, returnDefault=True):
         """
