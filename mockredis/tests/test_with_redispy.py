@@ -6,11 +6,18 @@ import logging
 
 
 def redis_exists():
+    """
+    Test that redis-py is installed and redis-server is running locally.
+    """
     try:
         from redis import StrictRedis as Redis, RedisError
-        Redis(db=15).echo("test")
+    except ImportError:
+        return False
+
+    try:
+        Redis(db=15).ping()
         return True
-    except (ImportError, RedisError):
+    except RedisError:
         return False
 
 
