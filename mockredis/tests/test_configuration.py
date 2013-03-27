@@ -15,7 +15,7 @@ values = [
     "-1234.123",
     "some text",
     [1, 3, 5, '12312', 'help'],
-    {'key':'value', 'key2':12}
+    {'key': 'value', 'key2': 12}
 ]
 
 

@@ -50,7 +50,7 @@ class MockRedis(object):
             return 'list'
         elif _type is SortedSet:
             return 'zset'
-        return 'none'
+        raise TypeError("unhandled type {}".format(_type))
 
     def echo(self, msg):
         return msg
@@ -231,6 +231,8 @@ class MockRedis(object):
             # No, override the defaultdict's default and create the list
             self.redis[key] = list([])
 
+    """List Functions"""
+
     def lindex(self, key, index):
         """Emulate lindex."""
 
@@ -242,24 +244,58 @@ class MockRedis(object):
             # Redis returns nil if the index doesn't exist
             pass
 
+    def llen(self, key):
+        """Emulate llen."""
+        redis_list = self._get_list(key, 'LLEN')
+
+        # Redis returns 0 if list doesn't exist
+        return len(redis_list)
+
     def lpop(self, key):
         """Emulate lpop."""
+        redis_list = self._get_list(key, 'LPOP')
 
         if key in self.redis:
             try:
-                return str(self.redis[key].pop(0))
+                return str(redis_list.pop(0))
+            except (IndexError):
+                # Redis returns nil if popping from an empty list
+                pass
+
+    def lpush(self, key, *args):
+        """Emulate lpush."""
+        redis_list = self._get_list(key, 'LPUSH', create=True)
+
+        # Creates the list at this key if it doesn't exist, and appends args to its beginning
+        args_reversed = list(args)
+        args_reversed.reverse()
+        self.redis[key] = args_reversed + redis_list
+
+    def rpop(self, key):
+        """Emulate lpop."""
+        redis_list = self._get_list(key, 'RPOP')
+
+        if key in self.redis:
+            try:
+                return str(redis_list.pop())
             except (IndexError):
                 # Redis returns nil if popping from an empty list
                 pass
 
     def rpush(self, key, *args):
         """Emulate rpush."""
+        redis_list = self._get_list(key, 'RPUSH', create=True)
 
+<<<<<<< HEAD
         # Does the set at this key already exist?
         if not key in self.redis:
             self.redis[key] = list([])
         for arg in args:
             self.redis[key].append(str(arg))
+=======
+        # Creates the list at this key if it doesn't exist, and appends args to it
+        redis_list.extend(args)
+>>>>>>> feature/AddMissingListMethods
 
     def sadd(self, key, *values):
         """Emulate sadd."""
@@ -489,16 +525,30 @@ class MockRedis(object):
         self.redis[dest] = union
         return len(union)
 
+    def _get_list(self, key, operation, create=False):
+        """
+        Get (and maybe create) a list by name.
+        """
+        return self._get_by_type(key, operation, create, 'list', [])
+
     def _get_zset(self, name, operation, create=False):
         """
         Get (and maybe create) a sorted set by name.
         """
-        if name not in self.redis:
+        return self._get_by_type(name, operation, create, 'zset', SortedSet(), return_default=False)
+
+    def _get_by_type(self, key, operation, create, typeName, default, return_default=True):
+        """
+        Get (and maybe create) a redis data structure by name and type.
+        """
+
+        if self.type(key) in [typeName, 'none']:
             if create:
-                self.redis[name] = SortedSet()
-        elif not isinstance(self.redis[name], SortedSet):
-            raise TypeError("{} requires a sorted set".format(operation))
-        return self.redis.get(name)
+                return self.redis.setdefault(key, default)
+            else:
+                return self.redis.get(key, default if return_default else None)
+
+        raise TypeError("{} requires a {}".format(operation, typeName))
 
     def _translate_range(self, len_, start, end):
         """
