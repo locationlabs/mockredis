@@ -1,4 +1,4 @@
-from test_configuration import *
+from test_configuration import * # flake8: noqa
 from mockredis import MockRedis
 
 from unittest import TestCase, skipUnless
@@ -14,7 +14,7 @@ def redis_exists():
         return False
 
 
-@skipUnless(redis_exists(), "redis-py or localbost redis-server not found")
+@skipUnless(redis_exists(), "redis-py or localhost redis-server not found")
 class TestReads(TestCase):
 
     def setUp(self):

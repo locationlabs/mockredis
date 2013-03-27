@@ -156,7 +156,7 @@ class MockRedis(object):
 
         # Iterate over every key:value in the value argument.
         for attributekey, attributevalue in value.items():
-            self.redis[hashkey][attributekey] = attributevalue
+            self.redis[hashkey][attributekey] = str(attributevalue)
 
     def hset(self, key, attribute, value):
         """Emulate hset."""
@@ -259,7 +259,7 @@ class MockRedis(object):
         if not key in self.redis:
             self.redis[key] = list([])
         for arg in args:
-            self.redis[key].append(arg)
+            self.redis[key].append(str(arg))
 
     def sadd(self, key, *values):
         """Emulate sadd."""
@@ -321,7 +321,7 @@ class MockRedis(object):
         # kwargs
         pieces.extend(kwargs.items())
 
-        insert_count = lambda member, score: 1 if zset.insert(member, float(score)) else 0
+        insert_count = lambda member, score: 1 if zset.insert(str(member), float(score)) else 0
         return sum((insert_count(member, score) for member, score in pieces))
 
     def zcard(self, name):
@@ -340,6 +340,7 @@ class MockRedis(object):
     def zincrby(self, name, value, amount=1):
         zset = self._get_zset(name, "ZINCRBY", create=True)
 
+        value = str(value)
         score = zset.score(value) or 0.0
         score += float(amount)
         zset[value] = score
