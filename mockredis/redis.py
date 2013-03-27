@@ -286,16 +286,8 @@ class MockRedis(object):
         """Emulate rpush."""
         redis_list = self._get_list(key, 'RPUSH', create=True)
 
-<<<<<<< HEAD
-        # Does the set at this key already exist?
-        if not key in self.redis:
-            self.redis[key] = list([])
-        for arg in args:
-            self.redis[key].append(str(arg))
-=======
         # Creates the list at this key if it doesn't exist, and appends args to it
         redis_list.extend(args)
->>>>>>> feature/AddMissingListMethods
 
     def sadd(self, key, *values):
         """Emulate sadd."""
