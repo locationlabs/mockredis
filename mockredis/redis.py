@@ -267,7 +267,7 @@ class MockRedis(object):
         redis_list = self._get_list(key, 'LPUSH', create=True)
 
         # Creates the list at this key if it doesn't exist, and appends args to its beginning
-        args_reversed = list(args)
+        args_reversed = map(str, args)
         args_reversed.reverse()
         self.redis[key] = args_reversed + redis_list
 
@@ -287,7 +287,7 @@ class MockRedis(object):
         redis_list = self._get_list(key, 'RPUSH', create=True)
 
         # Creates the list at this key if it doesn't exist, and appends args to it
-        redis_list.extend(args)
+        redis_list.extend(map(str, args))
 
     def sadd(self, key, *values):
         """Emulate sadd."""
@@ -330,6 +330,7 @@ class MockRedis(object):
         self.timeouts.clear()
 
     #### SORTED SET COMMANDS ####
+
     def zadd(self, name, *args, **kwargs):
         zset = self._get_zset(name, "ZADD", create=True)
 
