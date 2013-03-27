@@ -526,9 +526,9 @@ class MockRedis(object):
         """
         Get (and maybe create) a sorted set by name.
         """
-        return self._get_by_type(name, operation, create, 'zset', SortedSet(), returnDefault=False)
+        return self._get_by_type(name, operation, create, 'zset', SortedSet(), return_default=False)
 
-    def _get_by_type(self, key, operation, create, typeName, default, returnDefault=True):
+    def _get_by_type(self, key, operation, create, typeName, default, return_default=True):
         """
         Get (and maybe create) a redis data structure by name and type.
         """
@@ -537,7 +537,7 @@ class MockRedis(object):
             if create:
                 return self.redis.setdefault(key, default)
             else:
-                return self.redis.get(key, default if returnDefault else None)
+                return self.redis.get(key, default if return_default else None)
 
         raise TypeError("{} requires a {}".format(operation, typeName))
 
