@@ -1,16 +1,9 @@
 from collections import defaultdict
 from datetime import datetime, timedelta
 from operator import add
-from random import randint
+from random import choice, sample
 from .lock import MockRedisLock
 from .sortedset import SortedSet
-
-
-def _get_total_seconds(td):
-    """
-    for python 2.6 support
-    """
-    return (td.microseconds + (td.seconds + td.days * 24 * 3600) * 1e6) / 1e6
 
 
 class MockRedis(object):
@@ -36,35 +29,65 @@ class MockRedis(object):
         """
         self.strict = strict
 
-    def type(self, key):
-        if key not in self.redis:
-            return 'none'
-        _type = type(self.redis[key])
-        if _type is dict:
-            return 'hash'
-        elif _type is str:
-            return 'string'
-        elif _type is set:
-            return 'set'
-        elif _type is list:
-            return 'list'
-        elif _type is SortedSet:
-            return 'zset'
-        raise TypeError("unhandled type {}".format(_type))
+    #### Connection Functions ####
 
     def echo(self, msg):
         return msg
 
-    def get(self, key):
+    def ping(self):
+        return "PONG"
 
-        # Override the default dict
-        result = None if key not in self.redis else self.redis[key]
-        return result
+    #### Transactions Functions ####
 
-    def set(self, key, value):
+    def lock(self, key, timeout=0, sleep=0):
+        """Emulate lock."""
+        return MockRedisLock(self, key, timeout, sleep)
 
-        self.redis[key] = str(value)
-        return True
+    def pipeline(self):
+        """Emulate a redis-python pipeline."""
+        # Prevent a circular import
+        from pipeline import MockRedisPipeline
+
+        if self.pipe is None:
+            self.pipe = MockRedisPipeline(self.redis, self.timeouts)
+        return self.pipe
+
+    def watch(self, *argv, **kwargs):
+        """
+        Mock does not support command buffering so watch
+        is a no-op
+        """
+        pass
+
+    def multi(self, *argv, **kwargs):
+        """
+        Mock does not support command buffering so multi
+        is a no-op
+        """
+        pass
+
+    def execute(self):
+        """Emulate the execute method. All piped commands are executed immediately
+        in this mock, so this is a no-op."""
+        pass
+
+    #### Keys Functions ####
+
+    def type(self, key):
+        if key not in self.redis:
+            return 'none'
+        type_ = type(self.redis[key])
+        if type_ is dict:
+            return 'hash'
+        elif type_ is str:
+            return 'string'
+        elif type_ is set:
+            return 'set'
+        elif type_ is list:
+            return 'list'
+        elif type_ is SortedSet:
+            return 'zset'
+        raise TypeError("unhandled type {}".format(type_))
 
     def keys(self, pattern):
         """Emulate keys."""
@@ -78,23 +101,8 @@ class MockRedis(object):
 
         return result
 
-    def lock(self, key, timeout=0, sleep=0):
-        """Emulate lock."""
-
-        return MockRedisLock(self, key, timeout, sleep)
-
-    def pipeline(self):
-        """Emulate a redis-python pipeline."""
-        # Prevent a circular import
-        from pipeline import MockRedisPipeline
-
-        if self.pipe is None:
-            self.pipe = MockRedisPipeline(self.redis, self.timeouts)
-        return self.pipe
-
     def delete(self, key):
         """Emulate delete."""
-
         if key in self.redis:
             del self.redis[key]
 
@@ -102,6 +110,48 @@ class MockRedis(object):
         """Emulate exists."""
 
         return key in self.redis
+
+    def expire(self, key, seconds, currenttime=datetime.now()):
+        """Emulate expire"""
+
+        if key in self.redis:
+            self.timeouts[key] = currenttime + timedelta(seconds=seconds)
+            return 1
+        return 0
+
+    def ttl(self, key, currenttime=datetime.now()):
+        """
+        Emulate ttl
+        do_expire to get valid values
+        """
+
+        self.do_expire(currenttime)
+        return -1 if key not in self.timeouts else self._get_total_seconds(self.timeouts[key] - currenttime)
+
+    def do_expire(self, currenttime=datetime.now()):
+        """
+        Expire objects assuming now == time
+        """
+        for key, value in self.timeouts.items():
+            if value - currenttime < timedelta(0):
+                del self.timeouts[key]
+
+    def flushdb(self):
+        self.redis.clear()
+        self.timeouts.clear()
+
+    #### String Functions ####
+
+    def get(self, key):
+
+        # Override the default dict
+        result = None if key not in self.redis else self.redis[key]
+        return result
+
+    def set(self, key, value):
+
+        self.redis[key] = str(value)
+        return True
 
     def decr(self, key, decrement=1):
         """Emulate decr."""
@@ -116,11 +166,7 @@ class MockRedis(object):
         self.redis[key] = str(previous_value + increment)
         return long(self.redis[key])
 
-    def execute(self):
-        """Emulate the execute method. All piped commands are executed immediately
-        in this mock, so this is a no-op."""
-
-        pass
+    #### Hash Functions ####
 
     def hexists(self, hashkey, attribute):
         """Emulate hexists."""
@@ -179,46 +225,7 @@ class MockRedis(object):
         self.redis[key][attribute] = str(previous_value + increment)
         return long(self.redis[key][attribute])
 
-    def expire(self, key, seconds, currenttime=datetime.now()):
-        """Emulate expire"""
-
-        if key in self.redis:
-            self.timeouts[key] = currenttime + timedelta(seconds=seconds)
-            return 1
-        return 0
-
-    def ttl(self, key, currenttime=datetime.now()):
-        """
-        Emulate ttl
-        do_expire to get valid values
-        """
-
-        self.do_expire(currenttime)
-        return -1 if key not in self.timeouts else _get_total_seconds(self.timeouts[key] - currenttime)
-
-    def do_expire(self, currenttime=datetime.now()):
-        """
-        Expire objects assuming now == time
-
-        """
-
-        for key, value in self.timeouts.items():
-            if value - currenttime < timedelta(0):
-                del self.timeouts[key]
-
-    def watch(self, *argv, **kwargs):
-        """
-        Mock does not support command buffering so watch
-        is a no-op
-        """
-        pass
-
-    def multi(self, *argv, **kwargs):
-        """
-        Mock does not support command buffering so multi
-        is a no-op
-        """
-        pass
+    #### List Functions ####
 
     def lrange(self, key, start, stop):
         """Emulate lrange."""
@@ -230,8 +237,6 @@ class MockRedis(object):
         else:
             # No, override the defaultdict's default and create the list
             self.redis[key] = list([])
-
-    """List Functions"""
 
     def lindex(self, key, index):
         """Emulate lindex."""
@@ -289,45 +294,100 @@ class MockRedis(object):
         # Creates the list at this key if it doesn't exist, and appends args to it
         redis_list.extend(map(str, args))
 
+    #### SET COMMANDS ####
+
     def sadd(self, key, *values):
         """Emulate sadd."""
+        redis_set = self._get_set(key, 'SADD', create=True)
+        before_count = len(redis_set)
+        redis_set.update(map(str, values))
+        after_count = len(redis_set)
+        return after_count - before_count
 
-        # Does the set at this key already exist?
-        if key in self.redis:
-            # Yes, add this to the set converting values
-            # to string
-            self.redis[key].update(map(str, values))
+    def scard(self, key):
+        """Emulate scard."""
+        redis_set = self._get_set(key, 'SADD')
+        return len(redis_set)
+
+    def sdiff(self, keys, *args):
+        """Emulate sdiff."""
+        func = lambda left, right: left.difference(right)
+        return self._apply_to_sets(func, "SDIFF", keys, *args)
+
+    def sdiffstore(self, dest, keys, *args):
+        """Emulate sdiffstore."""
+        result = self.sdiff(keys, *args)
+        self.redis[dest] = result
+        return len(result)
+
+    def sinter(self, keys, *args):
+        """Emulate sinter."""
+        func = lambda left, right: left.intersection(right)
+        return self._apply_to_sets(func, "SINTER", keys, *args)
+
+    def sinterstore(self, dest, keys, *args):
+        """Emulate sinterstore."""
+        result = self.sinter(keys, *args)
+        self.redis[dest] = result
+        return len(result)
+
+    def sismember(self, name, value):
+        """Emulate sismember."""
+        redis_set = self._get_set(name, 'SISMEMBER')
+        if not redis_set:
+            return 0
+        return 1 if value in redis_set else 0
+
+    def smembers(self, name):
+        """Emulate smembers."""
+        redis_set = self._get_set(name, 'SMEMBERS')
+        return redis_set or set([])
+
+    def smove(self, src, dst, value):
+        """Emulate smove."""
+        pass
+
+    def spop(self, name):
+        """Emulate spop."""
+        redis_set = self._get_set(name, 'SPOP')
+        if not redis_set:
+            return None
+        member = choice(list(redis_set))
+        redis_set.remove(member)
+        return member
+
+    def srandmember(self, name, number=None):
+        """Emulate srandmember."""
+        redis_set = self._get_set(name, 'SRANDMEMBER')
+        if not redis_set:
+            return None if number is None else []
+        if number is None:
+            return choice(list(redis_set))
+        elif number > 0:
+            return sample(list(redis_set), min(number, len(redis_set)))
         else:
-            # No, override the defaultdict's default and create the set
-            self.redis[key] = set(map(str, values))
+            return [choice(list(redis_set)) for _ in xrange(abs(number))]
 
     def srem(self, key, member):
-        """Emulate a srem."""
+        """Emulate srem."""
+        redis_set = self._get_set(key, 'SREM')
+        if not redis_set:
+            return 0
+        before_count = len(redis_set)
+        redis_set.discard(str(member))
+        after_count = len(redis_set)
+        return before_count - after_count
 
-        self.redis[key].discard(member)
-        return self
+    def sunion(self, keys, *args):
+        """Emulate sunion."""
+        func = lambda left, right: left.union(right)
+        return self._apply_to_sets(func, "SUNION", keys, *args)
 
-    def srandmember(self, key):
-        """Emulate a srandmember."""
-        length = len(self.redis[key])
-        rand_index = randint(0, length - 1)
-
-        i = 0
-        for set_item in self.redis[key]:
-            if i == rand_index:
-                return set_item
-
-    def smembers(self, key):
-        """Emulate smembers."""
-
-        if key not in self.redis:
-            return set([])
-        else:
-            return self.redis[key]
-
-    def flushdb(self):
-        self.redis.clear()
-        self.timeouts.clear()
+    def sunionstore(self, dest, keys, *args):
+        """Emulate sunionstore."""
+        result = self.sunion(keys, *args)
+        self.redis[dest] = result
+        return len(result)
 
     #### SORTED SET COMMANDS ####
 
@@ -518,11 +578,25 @@ class MockRedis(object):
         self.redis[dest] = union
         return len(union)
 
+    #### Internal ####
+
+    def _get_total_seconds(self, td):
+        """
+        For python 2.6 support
+        """
+        return (td.microseconds + (td.seconds + td.days * 24 * 3600) * 1e6) / 1e6
+
     def _get_list(self, key, operation, create=False):
         """
         Get (and maybe create) a list by name.
         """
         return self._get_by_type(key, operation, create, 'list', [])
+
+    def _get_set(self, key, operation, create=False):
+        """
+        Get (and maybe create) a set by name.
+        """
+        return self._get_by_type(key, operation, create, 'set', set())
 
     def _get_zset(self, name, operation, create=False):
         """
@@ -530,18 +604,17 @@ class MockRedis(object):
         """
         return self._get_by_type(name, operation, create, 'zset', SortedSet(), return_default=False)
 
-    def _get_by_type(self, key, operation, create, typeName, default, return_default=True):
+    def _get_by_type(self, key, operation, create, type_, default, return_default=True):
         """
         Get (and maybe create) a redis data structure by name and type.
         """
-
-        if self.type(key) in [typeName, 'none']:
+        if self.type(key) in [type_, 'none']:
             if create:
                 return self.redis.setdefault(key, default)
             else:
                 return self.redis.get(key, default if return_default else None)
 
-        raise TypeError("{} requires a {}".format(operation, typeName))
+        raise TypeError("{} requires a {}".format(operation, type_))
 
     def _translate_range(self, len_, start, end):
         """
@@ -586,6 +659,34 @@ class MockRedis(object):
             return max
         else:
             raise TypeError("Unsupported aggregate: {}".format(aggregate))
+
+    def _apply_to_sets(self, func, operation, keys, *args):
+        """Helper function for sdiff, sinter, and sunion"""
+        keys = self._list_or_args(keys, args)
+        if not keys:
+            raise ValueError("wrong number of arguments for '{}' command".format(operation.lower()))
+        left = self._get_set(keys[0], operation) or set()
+        for key in keys[1:]:
+            right = self._get_set(key, operation) or set()
+            left = func(left, right)
+        return left
+
+    def _list_or_args(self, keys, args):
+        """
+        Shamelessly copied from redis-py.
+        """
+        # returns a single list combining keys and args
+        try:
+            iter(keys)
+            # a string can be iterated, but indicates
+            # keys wasn't passed as a list
+            if isinstance(keys, basestring):
+                keys = [keys]
+        except TypeError:
+            keys = [keys]
+        if args:
+            keys.extend(args)
+        return keys
 
 
 def mock_redis_client(**kwargs):
