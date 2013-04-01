@@ -1,4 +1,4 @@
-from test_configuration import *
+from test_configuration import * # flake8: noqa
 from mockredis import MockRedis
 
 from unittest import TestCase, skipUnless
@@ -6,15 +6,22 @@ import logging
 
 
 def redis_exists():
+    """
+    Test that redis-py is installed and redis-server is running locally.
+    """
     try:
         from redis import StrictRedis as Redis, RedisError
-        Redis(db=15).echo("test")
+    except ImportError:
+        return False
+
+    try:
+        Redis(db=15).ping()
         return True
-    except (ImportError, RedisError):
+    except RedisError:
         return False
 
 
-@skipUnless(redis_exists(), "redis-py or localbost redis-server not found")
+@skipUnless(redis_exists(), "redis-py or localhost redis-server not found")
 class TestReads(TestCase):
 
     def setUp(self):
