@@ -198,8 +198,8 @@ class TestRedis(TestCase):
         self.assertEquals(set(["one", "two", "three"]), self.redis.sinter("x"))
         self.assertEquals(set(["one"]), self.redis.sinter("x", "y"))
         self.assertEquals(set(["two"]), self.redis.sinter(["x", "z"]))
-        self.assertEquals(set([]), self.redis.sinter("x", "y", "z"))
-        self.assertEquals(set([]), self.redis.sinter(["x", "y"], "z"))
+        self.assertEquals(set(), self.redis.sinter("x", "y", "z"))
+        self.assertEquals(set(), self.redis.sinter(["x", "y"], "z"))
 
     def test_sinterstore(self):
         self.redis.sadd("x", "one", "two", "three")
@@ -217,9 +217,9 @@ class TestRedis(TestCase):
         self.assertEquals(1, self.redis.sinterstore("w", ["x", "z"]))
         self.assertEquals(set(["two"]), self.redis.smembers("w"))
         self.assertEquals(0, self.redis.sinterstore("w", "x", "y", "z"))
-        self.assertEquals(set([]), self.redis.smembers("w"))
+        self.assertEquals(set(), self.redis.smembers("w"))
         self.assertEquals(0, self.redis.sinterstore("w", ["x", "y"], "z"))
-        self.assertEquals(set([]), self.redis.smembers("w"))
+        self.assertEquals(set(), self.redis.smembers("w"))
 
     def test_sismember(self):
         key = "set"
@@ -231,12 +231,27 @@ class TestRedis(TestCase):
 
     def test_smembers(self):
         key = "set"
-        self.assertEquals(set([]), self.redis.smembers(key))
+        self.assertEquals(set(), self.redis.smembers(key))
         self.assertFalse(key in self.redis.redis)
         self.assertEquals(1, self.redis.sadd(key, "one"))
         self.assertEquals(set(["one"]), self.redis.smembers(key))
         self.assertEquals(1, self.redis.sadd(key, "two"))
         self.assertEquals(set(["one", "two"]), self.redis.smembers(key))
+
+    def test_smove(self):
+        self.assertEquals(0, self.redis.smove("x", "y", "one"))
+
+        self.assertEquals(2, self.redis.sadd("x", "one", "two"))
+        self.assertEquals(set(["one", "two"]), self.redis.smembers("x"))
+        self.assertEquals(set(), self.redis.smembers("y"))
+
+        self.assertEquals(0, self.redis.smove("x", "y", "three"))
+        self.assertEquals(set(["one", "two"]), self.redis.smembers("x"))
+        self.assertEquals(set(), self.redis.smembers("y"))
+
+        self.assertEquals(1, self.redis.smove("x", "y", "one"))
+        self.assertEquals(set(["two"]), self.redis.smembers("x"))
+        self.assertEquals(set(["one"]), self.redis.smembers("y"))
 
     def test_spop(self):
         key = "set"
@@ -278,10 +293,10 @@ class TestRedis(TestCase):
     def test_srem(self):
         key = "set"
         self.assertEquals(0, self.redis.srem(key, "one"))
-        self.assertEquals(2, self.redis.sadd(key, "one", "two"))
-        self.assertEquals(0, self.redis.srem(key, "three"))
-        self.assertEquals(1, self.redis.srem(key, "one"))
-        self.assertEquals(1, self.redis.srem(key, "two"))
+        self.assertEquals(3, self.redis.sadd(key, "one", "two", "three"))
+        self.assertEquals(0, self.redis.srem(key, "four"))
+        self.assertEquals(2, self.redis.srem(key, "one", "three"))
+        self.assertEquals(1, self.redis.srem(key, "two", "four"))
 
     def test_sunion(self):
         self.redis.sadd("x", "one", "two", "three")

@@ -2,8 +2,8 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 from operator import add
 from random import choice, sample
-from .lock import MockRedisLock
-from .sortedset import SortedSet
+from mockredis.lock import MockRedisLock
+from mockredis.sortedset import SortedSet
 
 
 class MockRedis(object):
@@ -341,11 +341,20 @@ class MockRedis(object):
     def smembers(self, name):
         """Emulate smembers."""
         redis_set = self._get_set(name, 'SMEMBERS')
-        return redis_set or set([])
+        return redis_set or set()
 
     def smove(self, src, dst, value):
         """Emulate smove."""
-        pass
+        src_set = self._get_set(src, 'SMOVE')
+        dst_set = self._get_set(dst, 'SMOVE')
+
+        if value not in src_set:
+            return 0
+
+        src_set.discard(value)
+        dst_set.add(value)
+        self.redis[src], self.redis[dst] = src_set, dst_set
+        return 1
 
     def spop(self, name):
         """Emulate spop."""
@@ -368,13 +377,14 @@ class MockRedis(object):
         else:
             return [choice(list(redis_set)) for _ in xrange(abs(number))]
 
-    def srem(self, key, member):
+    def srem(self, key, *values):
         """Emulate srem."""
         redis_set = self._get_set(key, 'SREM')
         if not redis_set:
             return 0
         before_count = len(redis_set)
-        redis_set.discard(str(member))
+        for value in values:
+            redis_set.discard(str(value))
         after_count = len(redis_set)
         return before_count - after_count
 
