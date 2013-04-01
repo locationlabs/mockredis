@@ -1,0 +1,10 @@
+Version 2.7.2.2
+
+ -  Added `list` operations: LLEN, LPUSH, RPOP
+ -  Ensure that saved values are strings.
+
+Version 2.7.2.1
+
+ -  Added `zset` operations: ZADD, ZCARD, ZCOUNT, ZINCRBY, ZINTERSTORE, ZRANGE,
+    ZRANGEBYSCORE, ZRANK, ZREM, ZREMRANGEBYRANK, ZREMRANGEBYSCORE, ZREVRANGE,
+    ZREVRANGEBYSCORE, ZREVRANK, ZSCORE, ZUNIONSTORE
