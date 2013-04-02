@@ -8,7 +8,7 @@ __version__ = '2.7.2.3'
 # Jenkins will replace __build__ with a unique value.
 __build__ = ''
 
-setup(name='mockredis',
+setup(name='mockredispy',
       version=__version__ + __build__,
       description='Mock for redis-py',
       url='http://www.github.com/locationlabs/mockredis',
