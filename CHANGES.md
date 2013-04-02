@@ -1,3 +1,10 @@
+Version 2.7.2.3
+
+ -  Changed distribution name to "mockredispy"
+ -  Added `set` operations: SADD (multivalue), SCARD, SDIFF, SDIFFSTORE,
+    SINTER, SINTERSTORE, SISMEMBER, SMEMBERS (minor improvement), SMOVE,
+    SPOP, SRANDMEMBER (improvement), SREM (multivalue), SUNION, SUNIONSTORE
+
 Version 2.7.2.2
 
  -  Added `list` operations: LLEN, LPUSH, RPOP
