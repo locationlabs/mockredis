@@ -3,6 +3,12 @@
 Supports writing tests for code using the [redis-py][redis-py] library 
 without requiring a a [redis-server][redis] install.
 
+## Installation
+
+Use pip:
+
+    pip install mockredispy
+
 ## Usage
 
 Both `mockredis.mock_redis_client` and `mockredis.mock_strict_redis_cient` can be
