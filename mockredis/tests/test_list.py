@@ -91,3 +91,31 @@ class TestList(TestCase):
         self.assertEquals('val2', self.redis.redis['test_list'][1])
         self.assertEquals('val1', self.redis.redis['test_list'][2])
         self.assertEquals('val3', self.redis.redis['test_list'][3])
+
+    def test_lrem(self):
+        self.redis.redis['test_list'] = ['val1', 'val2', 'val1', 'val3', 'val4', 'val2']
+        self.redis.lrem('test_list', 0, 'val1')
+        self.assertListEqual(['val2', 'val3', 'val4', 'val2'], self.redis.redis['test_list'])
+
+        self.redis.redis['test_list'] = ['val1', 'val2', 'val1', 'val3', 'val4', 'val2']
+        self.redis.lrem('test_list', 1, 'val2')
+        self.assertListEqual(['val1', 'val1', 'val3', 'val4', 'val2'],
+                             self.redis.redis['test_list'])
+
+        self.redis.redis['test_list'] = ['val1', 'val2', 'val1', 'val3', 'val4', 'val2']
+        self.redis.lrem('test_list', 100, 'val1')
+        self.assertListEqual(['val2', 'val3', 'val4', 'val2'], self.redis.redis['test_list'])
+
+        self.redis.redis['test_list'] = ['val1', 'val2', 'val1', 'val3', 'val4', 'val2']
+        self.redis.lrem('test_list', -1, 'val3')
+        self.assertListEqual(['val1', 'val2', 'val1', 'val4', 'val2'],
+                             self.redis.redis['test_list'])
+
+        self.redis.redis['test_list'] = ['val1', 'val2', 'val1', 'val3', 'val4', 'val2']
+        self.redis.lrem('test_list', -1, 'val2')
+        self.assertListEqual(['val1', 'val2', 'val1', 'val3', 'val4'],
+                             self.redis.redis['test_list'])
+
+        self.redis.redis['test_list'] = ['val1', 'val2', 'val1', 'val3', 'val4', 'val2']
+        self.redis.lrem('test_list', -2, 'val2')
+        self.assertListEqual(['val1', 'val1', 'val3', 'val4'], self.redis.redis['test_list'])
