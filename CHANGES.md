@@ -1,3 +1,7 @@
+Version 2.7.2.4
+
+ - Added `list` operations: LREM
+
 Version 2.7.2.3
 
  -  Changed distribution name to "mockredispy"

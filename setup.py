@@ -3,7 +3,7 @@
 from setuptools import setup, find_packages
 
 # Match releases to redis-py versions
-__version__ = '2.7.2.3'
+__version__ = '2.7.2.4'
 
 # Jenkins will replace __build__ with a unique value.
 __build__ = ''
@@ -15,7 +15,7 @@ setup(name='mockredispy',
       license='Apache2',
       packages=find_packages(exclude=['*.tests']),
       setup_requires=[
-          'nose==1.2.1'
+          'nose'
       ],
       install_requires=[
       ],

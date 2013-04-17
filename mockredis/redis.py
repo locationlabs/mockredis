@@ -294,6 +294,34 @@ class MockRedis(object):
         # Creates the list at this key if it doesn't exist, and appends args to it
         redis_list.extend(map(str, args))
 
+    def lrem(self, key, count, value):
+        """Emulate lrem."""
+        redis_list = self._get_list(key, 'LREM')
+
+        if key in self.redis:
+            if count == 0:
+                # Remove all ocurrences
+                while redis_list.count(value):
+                    redis_list.remove(value)
+            elif count > 0:
+                counter = 0
+                # remove first 'count' ocurrences
+                while redis_list.count(value):
+                    redis_list.remove(value)
+                    counter += 1
+                    if counter >= count:
+                        break
+            elif count < 0:
+                # remove last 'count' ocurrences
+                counter = -count
+                new_list = []
+                for v in reversed(redis_list):
+                    if v == value and counter > 0:
+                        counter -= 1
+                    else:
+                        new_list.append(v)
+                self.redis[key] = list(reversed(new_list))
+
     #### SET COMMANDS ####
 
     def sadd(self, key, *values):
