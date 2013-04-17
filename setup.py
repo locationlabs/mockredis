@@ -15,7 +15,7 @@ setup(name='mockredispy',
       license='Apache2',
       packages=find_packages(exclude=['*.tests']),
       setup_requires=[
-          'nose==1.2.1'
+          'nose'
       ],
       install_requires=[
       ],
