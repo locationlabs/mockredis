@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from operator import add
 from random import choice, sample
 from mockredis.lock import MockRedisLock
+from mockredis.script import Script
 from mockredis.sortedset import SortedSet
 
 
@@ -126,7 +127,8 @@ class MockRedis(object):
         """
 
         self.do_expire(currenttime)
-        return -1 if key not in self.timeouts else self._get_total_seconds(self.timeouts[key] - currenttime)
+        return -1 if key not in self.timeouts else self._get_total_seconds(self.timeouts[key]
+                                                                           - currenttime)
 
     def do_expire(self, currenttime=datetime.now()):
         """
@@ -615,6 +617,32 @@ class MockRedis(object):
         # always override existing keys
         self.redis[dest] = union
         return len(union)
+
+    #### Script Commands ####
+
+    def eval(self, script, numkeys, *keys_and_args):
+        """
+        Execute the LUA ``script``, specifying the ``numkeys`` the script
+        will touch and the key names and argument values in ``keys_and_args``.
+        Returns the result of the script.
+
+        In practice, use the object returned by ``register_script``. This
+        function exists purely for Redis API completion.
+        """
+        script_callable = self.register_script(script)
+        if numkeys > 0:
+            keys = keys_and_args[0:numkeys]
+        args = keys_and_args[numkeys:]
+        return script_callable(keys, args)
+
+    def register_script(self, script):
+        """
+        Register a LUA ``script`` specifying the ``keys`` it will touch.
+        Returns a Script object that is callable and hides the complexity of
+        deal with scripts, keys, and args. This is the preferred way to work
+        with LUA scripts.
+        """
+        return Script(self, script)
 
     #### Internal ####
 
