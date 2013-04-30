@@ -13,27 +13,33 @@ class Script(object):
 
     def __call__(self, keys=[], args=[]):
         "Execute the script, passing any required ``args``"
-        self._execute_lua(keys, args)
+        return self._execute_lua(keys, args)
 
     def _execute_lua(self, keys, args):
+        """Sets KEYS and ARGV in lua globals and executes the lua redis script"""
         self._create_lua_array("KEYS", keys)
         self._create_lua_array("ARGV", args)
         lua.execute(lua_callback)
-        lua.execute(self.script)
+        return lua.execute(self.script)
 
     def _create_lua_array(self, name, args):
-        self.lg[name] = ["dummy"] + args
+        """
+        Since Lua array indexes begin from 1 and we are passing a Python array to Lua.
+        We need a dummy value at 0th index, which is going to be ignored in Lua scripts
+        """
+        self.lg[name] = [None] + list(args)
 
-    def callback(self, redis_command, *args):
+    def callback(self, redis_command, *redis_args):
+        """
+        Sends call to the function, whose name is specified by redis_command,
+        in registered_client(MockRedis)
+        """
         redis_function = getattr(self.registered_client, string.lower(redis_command))
-        redis_args = args[1:]
-        redis_function(*redis_args)
-        print redis_command
-        print args
+        return redis_function(*redis_args)
 
-
+"""Lua Script for sending the redis.call(...) requests from Lua to Script.callback"""
 lua_callback = """redis = {
   call  = function(...)
-            python_callback(unpack(arg))
+            return python_callback(unpack(arg))
           end
 }"""

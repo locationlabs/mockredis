@@ -324,6 +324,12 @@ class MockRedis(object):
                         new_list.append(v)
                 self.redis[key] = list(reversed(new_list))
 
+    def rpoplpush(self, source, destination):
+        """Emulate rpoplpush"""
+        transfer_item = self.rpop(source)
+        self.lpush(destination, transfer_item)
+        return transfer_item
+
     #### SET COMMANDS ####
 
     def sadd(self, key, *values):
@@ -621,14 +627,7 @@ class MockRedis(object):
     #### Script Commands ####
 
     def eval(self, script, numkeys, *keys_and_args):
-        """
-        Execute the LUA ``script``, specifying the ``numkeys`` the script
-        will touch and the key names and argument values in ``keys_and_args``.
-        Returns the result of the script.
-
-        In practice, use the object returned by ``register_script``. This
-        function exists purely for Redis API completion.
-        """
+        """Emulate eval"""
         script_callable = self.register_script(script)
         if numkeys > 0:
             keys = keys_and_args[0:numkeys]
@@ -636,12 +635,7 @@ class MockRedis(object):
         return script_callable(keys, args)
 
     def register_script(self, script):
-        """
-        Register a LUA ``script`` specifying the ``keys`` it will touch.
-        Returns a Script object that is callable and hides the complexity of
-        deal with scripts, keys, and args. This is the preferred way to work
-        with LUA scripts.
-        """
+        """Emulate register_script"""
         return Script(self, script)
 
     #### Internal ####

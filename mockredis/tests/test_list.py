@@ -43,21 +43,15 @@ class TestList(TestCase):
         self.redis.lpush('test_list', 'val2')
 
         # validate insertion
-        self.assertEquals(2, len(self.redis.redis['test_list']))
         self.assertEquals('list', self.redis.type('test_list'))
-        self.assertEquals('val2', self.redis.redis['test_list'][0])
-        self.assertEquals('val1', self.redis.redis['test_list'][1])
+        self.assertEquals(['val2', 'val1'], self.redis.redis['test_list'])
 
         # insert two more values with one repeated
         self.redis.lpush('test_list', 'val1', 'val3')
 
         # validate the update
-        self.assertEquals(4, len(self.redis.redis['test_list']))
         self.assertEquals('list', self.redis.type('test_list'))
-        self.assertEquals('val3', self.redis.redis['test_list'][0])
-        self.assertEquals('val1', self.redis.redis['test_list'][1])
-        self.assertEquals('val2', self.redis.redis['test_list'][2])
-        self.assertEquals('val1', self.redis.redis['test_list'][3])
+        self.assertEquals(['val3', 'val1', 'val2', 'val1'], self.redis.redis['test_list'])
 
     def test_rpop(self):
         self.redis.redis['test_list'] = ['val1', 'val2']
@@ -76,21 +70,15 @@ class TestList(TestCase):
         self.redis.rpush('test_list', 'val2')
 
         # validate insertion
-        self.assertEquals(2, len(self.redis.redis['test_list']))
         self.assertEquals('list', self.redis.type('test_list'))
-        self.assertEquals('val1', self.redis.redis['test_list'][0])
-        self.assertEquals('val2', self.redis.redis['test_list'][1])
+        self.assertEquals(['val1', 'val2'], self.redis.redis['test_list'])
 
         # insert two more values with one repeated
         self.redis.rpush('test_list', 'val1', 'val3')
 
         # validate the update
-        self.assertEquals(4, len(self.redis.redis['test_list']))
         self.assertEquals('list', self.redis.type('test_list'))
-        self.assertEquals('val1', self.redis.redis['test_list'][0])
-        self.assertEquals('val2', self.redis.redis['test_list'][1])
-        self.assertEquals('val1', self.redis.redis['test_list'][2])
-        self.assertEquals('val3', self.redis.redis['test_list'][3])
+        self.assertEquals(['val1', 'val2', 'val1', 'val3'], self.redis.redis['test_list'])
 
     def test_lrem(self):
         self.redis.redis['test_list'] = ['val1', 'val2', 'val1', 'val3', 'val4', 'val2']
@@ -119,3 +107,11 @@ class TestList(TestCase):
         self.redis.redis['test_list'] = ['val1', 'val2', 'val1', 'val3', 'val4', 'val2']
         self.redis.lrem('test_list', -2, 'val2')
         self.assertListEqual(['val1', 'val1', 'val3', 'val4'], self.redis.redis['test_list'])
+
+    def test_rpoplpush(self):
+        self.redis.redis['source_list'] = ['val1', 'val2']
+        self.redis.redis['dest_list'] = ['vala', 'valb']
+        transfer_item = self.redis.rpoplpush('source_list', 'dest_list')
+        self.assertEqual("val2", transfer_item)
+        self.assertEqual(['val1'], self.redis.redis['source_list'])
+        self.assertEqual(['val2', 'vala', 'valb'], self.redis.redis['dest_list'])
