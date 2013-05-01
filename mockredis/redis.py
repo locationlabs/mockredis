@@ -16,12 +16,6 @@ class MockRedis(object):
     expiry is NOT supported.
     """
 
-    # The 'Redis' store
-    redis = defaultdict(dict)
-    timeouts = defaultdict(dict)
-    # The pipeline
-    pipe = None
-
     def __init__(self, strict=False, **kwargs):
         """
         Initialize as either StrictRedis or Redis.
@@ -29,6 +23,11 @@ class MockRedis(object):
         Defaults to non-strict.
         """
         self.strict = strict
+        # The 'Redis' store
+        self.redis = defaultdict(dict)
+        self.timeouts = defaultdict(dict)
+        # The pipeline
+        self.pipe = None
 
     #### Connection Functions ####
 
@@ -629,8 +628,8 @@ class MockRedis(object):
     def eval(self, script, numkeys, *keys_and_args):
         """Emulate eval"""
         script_callable = self.register_script(script)
-        if numkeys > 0:
-            keys = keys_and_args[0:numkeys]
+        if numkeys >= 0:
+            keys = keys_and_args[:numkeys]
         args = keys_and_args[numkeys:]
         return script_callable(keys, args)
 
