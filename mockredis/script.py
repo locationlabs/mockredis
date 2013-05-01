@@ -8,18 +8,21 @@ class Script(object):
     def __init__(self, registered_client, script):
         self.registered_client = registered_client
         self.script = script
+        lua.execute(lua_callback)
         self.lg = lua.globals()
-        self.lg.python_callback = self.callback
 
     def __call__(self, keys=[], args=[]):
         "Execute the script, passing any required ``args``"
         return self._execute_lua(keys, args)
 
-    def _execute_lua(self, keys, args):
+    def _execute_lua(self, keys, args, client=None):
         """Sets KEYS and ARGV in lua globals and executes the lua redis script"""
         self._create_lua_array("KEYS", keys)
         self._create_lua_array("ARGV", args)
-        lua.execute(lua_callback)
+        if client:
+            self.lg.python_callback = Callback(client)
+        else:
+            self.lg.python_callback = Callback(self.registered_client)
         return lua.execute(self.script)
 
     def _create_lua_array(self, name, args):
@@ -29,7 +32,13 @@ class Script(object):
         """
         self.lg[name] = [None] + list(args)
 
-    def callback(self, redis_command, *redis_args):
+
+class Callback(object):
+
+    def __init__(self, registered_client):
+        self.registered_client = registered_client
+
+    def __call__(self, redis_command, *redis_args):
         """
         Sends call to the function, whose name is specified by redis_command,
         in registered_client(MockRedis)
