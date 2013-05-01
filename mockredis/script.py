@@ -3,7 +3,10 @@ import lua
 
 
 class Script(object):
-    "An executable LUA script object returned by ``MockRedis.register_script``"
+    """
+    An executable LUA script object returned by ``MockRedis.register_script``.
+    Also acts as sha for ''MockRedis.shas''
+    """
 
     def __init__(self, registered_client, script):
         self.registered_client = registered_client
@@ -11,18 +14,24 @@ class Script(object):
         lua.execute(lua_callback)
         self.lg = lua.globals()
 
-    def __call__(self, keys=[], args=[]):
+    def __call__(self, keys=[], args=[], client=None):
         "Execute the script, passing any required ``args``"
+
+        # make sure the Redis server knows about the script
+        if client:
+            args = tuple(keys) + tuple(args)
+            return client.eval(self.script, len(keys), *args)
+
+        if not self.registered_client.script_exists_single(self.script):
+            self.registered_client.register_sha(self)
+
         return self._execute_lua(keys, args)
 
-    def _execute_lua(self, keys, args, client=None):
+    def _execute_lua(self, keys, args):
         """Sets KEYS and ARGV in lua globals and executes the lua redis script"""
         self._create_lua_array("KEYS", keys)
         self._create_lua_array("ARGV", args)
-        if client:
-            self.lg.python_callback = Callback(client)
-        else:
-            self.lg.python_callback = Callback(self.registered_client)
+        self.lg.python_callback = Callback(self.registered_client)
         return lua.execute(self.script)
 
     def _create_lua_array(self, name, args):

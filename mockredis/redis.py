@@ -26,6 +26,8 @@ class MockRedis(object):
         # The 'Redis' store
         self.redis = defaultdict(dict)
         self.timeouts = defaultdict(dict)
+        # Dictionary from script to sha ''Script''
+        self.shas = defaultdict(dict)
         # The pipeline
         self.pipe = None
 
@@ -627,15 +629,53 @@ class MockRedis(object):
 
     def eval(self, script, numkeys, *keys_and_args):
         """Emulate eval"""
-        script_callable = self.register_script(script)
+        sha = self.script_load(script)
+        return self.evalsha(sha, numkeys, *keys_and_args)
+
+    def evalsha(self, sha, numkeys, *keys_and_args):
+        if sha not in self.shas.values():
+            raise Exception
+        script_callable = sha
         if numkeys >= 0:
             keys = keys_and_args[:numkeys]
         args = keys_and_args[numkeys:]
         return script_callable(keys, args)
 
+    def script_exists(self, *args):
+        """Emulates script_exists"""
+        return [arg in self.shas for arg in args]
+
+    def script_flush(self):
+        """Emulate script_flush"""
+        self.shas.clear()
+
+    def script_kill(self):
+        """Emulate script_kill"""
+        """XXX: To be implemented, should not be called before that."""
+        raise Exception
+
+    def script_load(self, script):
+        """Emulate script_kill"""
+        return self.shas.setdefault(script, Script(self, script))
+
     def register_script(self, script):
         """Emulate register_script"""
-        return Script(self, script)
+        return self.script_load(script)
+
+    def script_exists_single(self, arg):
+        """Checks if sha exists for a single script"""
+        return self.script_exists(arg)[0]
+
+    def register_sha(self, sha):
+        """
+        Add sha. Should be invoked only from inside Script.__call__,
+        for the purpose of registering sha when there is no sha
+        registered against the script
+        """
+        script_callable = sha
+        if self.script_exists_single(script_callable.script):
+            raise Exception
+        self.shas[script_callable.script] = sha
 
     #### Internal ####
 
