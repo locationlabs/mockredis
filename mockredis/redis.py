@@ -3,8 +3,10 @@ from datetime import datetime, timedelta
 from operator import add
 from random import choice, sample
 from mockredis.lock import MockRedisLock
+from mockredis.exceptions import RedisError
 from mockredis.script import Script
 from mockredis.sortedset import SortedSet
+from mockredis.sha import Sha
 
 
 class MockRedis(object):
@@ -633,17 +635,18 @@ class MockRedis(object):
         return self.evalsha(sha, numkeys, *keys_and_args)
 
     def evalsha(self, sha, numkeys, *keys_and_args):
+        """Emulates evalsha"""
         if sha not in self.shas.values():
-            raise Exception
-        script_callable = sha
-        if numkeys >= 0:
-            keys = keys_and_args[:numkeys]
+            raise RedisError
+        script_callable = Script(self, sha.script)
+        numkeys = max(numkeys, 0)
+        keys = keys_and_args[:numkeys]
         args = keys_and_args[numkeys:]
         return script_callable(keys, args)
 
     def script_exists(self, *args):
         """Emulates script_exists"""
-        return [arg in self.shas for arg in args]
+        return [arg in self.shas.values() for arg in args]
 
     def script_flush(self):
         """Emulate script_flush"""
@@ -655,27 +658,12 @@ class MockRedis(object):
         raise Exception
 
     def script_load(self, script):
-        """Emulate script_kill"""
-        return self.shas.setdefault(script, Script(self, script))
+        """Emulate script_load"""
+        return self.shas.setdefault(script, Sha(script))
 
     def register_script(self, script):
         """Emulate register_script"""
-        return self.script_load(script)
-
-    def script_exists_single(self, arg):
-        """Checks if sha exists for a single script"""
-        return self.script_exists(arg)[0]
-
-    def register_sha(self, sha):
-        """
-        Add sha. Should be invoked only from inside Script.__call__,
-        for the purpose of registering sha when there is no sha
-        registered against the script
-        """
-        script_callable = sha
-        if self.script_exists_single(script_callable.script):
-            raise Exception
-        self.shas[script_callable.script] = sha
+        return Script(self, script)
 
     #### Internal ####
 
