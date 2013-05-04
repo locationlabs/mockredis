@@ -171,12 +171,14 @@ class MockRedis(object):
     def hexists(self, hashkey, attribute):
         """Emulate hexists."""
 
+        attribute = str(attribute)
         return attribute in self.redis[hashkey]
 
     def hget(self, hashkey, attribute):
         """Emulate hget."""
 
         # Return '' if the attribute does not exist
+        attribute = str(attribute)
         result = self.redis[hashkey][attribute] if attribute in self.redis[hashkey] \
             else None
         return result
@@ -202,28 +204,29 @@ class MockRedis(object):
 
         # Iterate over every key:value in the value argument.
         for attributekey, attributevalue in value.items():
-            self.redis[hashkey][attributekey] = str(attributevalue)
+            self.redis[hashkey][str(attributekey)] = str(attributevalue)
 
-    def hset(self, key, attribute, value):
+    def hset(self, hashkey, attribute, value):
         """Emulate hset."""
 
-        if key not in self.redis:
-            self.redis['key'] = {}
+        if hashkey not in self.redis:
+            self.redis[hashkey] = {}
         else:
-            if type(self.redis[key]) != dict:
-                raise ValueError("Type mismatch for key={key}".format(key=key))
+            if type(self.redis[hashkey]) != dict:
+                raise ValueError("Type mismatch for key={}".format(hashkey))
 
-        self.redis[key][attribute] = str(value)
+        self.redis[hashkey][str(attribute)] = str(value)
 
-    def hincrby(self, key, attribute, increment=1):
+    def hincrby(self, hashkey, attribute, increment=1):
 
+        attribute = str(attribute)
         # inititalize hset and value if required
-        if key not in self.redis:
-            self.redis['key'] = {}
-        previous_value = long(self.redis[key].get(attribute, '0'))
+        if hashkey not in self.redis:
+            self.redis[hashkey] = {}
+        previous_value = long(self.redis[hashkey].get(attribute, '0'))
 
-        self.redis[key][attribute] = str(previous_value + increment)
-        return long(self.redis[key][attribute])
+        self.redis[hashkey][attribute] = str(previous_value + increment)
+        return long(self.redis[hashkey][attribute])
 
     #### List Functions ####
 

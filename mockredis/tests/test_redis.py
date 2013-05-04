@@ -677,3 +677,30 @@ class TestRedis(TestCase):
         self.assertEquals(1, self.redis.zinterstore(key, ["zset1", "zset2"], aggregate="max"))
         self.assertEquals([("two", 2.5)],
                           self.redis.zrange(key, 0, -1, withscores=True))
+
+    ### Hash Tests ###
+
+    def test_hset(self):
+        hashkey = "hash"
+        self.redis.hset(hashkey, "key", "value")
+        self.assertEquals("value", self.redis.hget(hashkey, "key"))
+
+    def test_hset_integral(self):
+        hashkey = "hash"
+        self.redis.hset(hashkey, 1, 2)
+        self.assertEquals("2", self.redis.hget(hashkey, 1))
+        self.assertEquals("2", self.redis.hget(hashkey, "1"))
+
+    def test_hmset(self):
+        hashkey = "hash"
+        self.redis.hmset(hashkey, {"key1": "value1", "key2": "value2"})
+        self.assertEquals("value1", self.redis.hget(hashkey, "key1"))
+        self.assertEquals("value2", self.redis.hget(hashkey, "key2"))
+
+    def test_hmset_integral(self):
+        hashkey = "hash"
+        self.redis.hmset(hashkey, {1: 2, 3: 4})
+        self.assertEquals("2", self.redis.hget(hashkey, "1"))
+        self.assertEquals("2", self.redis.hget(hashkey, 1))
+        self.assertEquals("4", self.redis.hget(hashkey, "3"))
+        self.assertEquals("4", self.redis.hget(hashkey, 3))
