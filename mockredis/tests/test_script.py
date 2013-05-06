@@ -16,9 +16,7 @@ class TestScript(TestCase):
 
     def setUp(self):
         self.redis = MockRedis()
-        sha_lpop = sha1()
-        sha_lpop.update(LPOP_SCRIPT)
-        self.LPOP_SCRIPT_SHA = sha_lpop.digest()
+        self.LPOP_SCRIPT_SHA = sha1(LPOP_SCRIPT).hexdigest()
 
     def test_register_script_lpush(self):
         # lpush two values
@@ -115,6 +113,11 @@ class TestScript(TestCase):
         sha = self.LPOP_SCRIPT_SHA
 
         # validator error when script not registered
+        with self.assertRaises(RedisError) as redisError:
+            self.redis.evalsha(self.LPOP_SCRIPT_SHA, 1, LIST1)
+
+        self.assertEqual("Sha not registered", str(redisError.exception))
+
         self.assertRaises(RedisError, self.redis.evalsha, self.LPOP_SCRIPT_SHA, 1, LIST1)
 
         # load script and then evalsha

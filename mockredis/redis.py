@@ -30,7 +30,7 @@ class MockRedis(object):
         self.redis = defaultdict(dict)
         self.timeouts = defaultdict(dict)
         # Dictionary from script to sha ''Script''
-        self.shas = defaultdict(dict)
+        self.shas = dict()
         # The pipeline
         self.pipe = None
 
@@ -637,8 +637,8 @@ class MockRedis(object):
 
     def evalsha(self, sha, numkeys, *keys_and_args):
         """Emulates evalsha"""
-        if sha not in self.shas.keys():
-            raise RedisError
+        if not self.script_exists(sha)[0]:
+            raise RedisError("Sha not registered")
         script_callable = Script(self, self.shas[sha])
         numkeys = max(numkeys, 0)
         keys = keys_and_args[:numkeys]
@@ -647,7 +647,7 @@ class MockRedis(object):
 
     def script_exists(self, *args):
         """Emulates script_exists"""
-        return [arg in self.shas.keys() for arg in args]
+        return [arg in self.shas for arg in args]
 
     def script_flush(self):
         """Emulate script_flush"""
@@ -656,14 +656,12 @@ class MockRedis(object):
     def script_kill(self):
         """Emulate script_kill"""
         """XXX: To be implemented, should not be called before that."""
-        raise Exception
+        raise NotImplementedError("Not yet implemented.")
 
     def script_load(self, script):
         """Emulate script_load"""
-        sha = sha1()
-        sha.update(script)
-        sha_digest = sha.digest()
-        self.shas.setdefault(sha_digest, script)
+        sha_digest = sha1(script).hexdigest()
+        self.shas[sha_digest] = script
         return sha_digest
 
     def register_script(self, script):
