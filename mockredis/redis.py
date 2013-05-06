@@ -1,12 +1,13 @@
 from collections import defaultdict
 from datetime import datetime, timedelta
+from hashlib import sha1
 from operator import add
 from random import choice, sample
+import string
 from mockredis.lock import MockRedisLock
 from mockredis.exceptions import RedisError
 from mockredis.script import Script
 from mockredis.sortedset import SortedSet
-from mockredis.sha import Sha
 
 
 class MockRedis(object):
@@ -636,9 +637,9 @@ class MockRedis(object):
 
     def evalsha(self, sha, numkeys, *keys_and_args):
         """Emulates evalsha"""
-        if sha not in self.shas.values():
+        if sha not in self.shas.keys():
             raise RedisError
-        script_callable = Script(self, sha.script)
+        script_callable = Script(self, self.shas[sha])
         numkeys = max(numkeys, 0)
         keys = keys_and_args[:numkeys]
         args = keys_and_args[numkeys:]
@@ -646,7 +647,7 @@ class MockRedis(object):
 
     def script_exists(self, *args):
         """Emulates script_exists"""
-        return [arg in self.shas.values() for arg in args]
+        return [arg in self.shas.keys() for arg in args]
 
     def script_flush(self):
         """Emulate script_flush"""
@@ -659,11 +660,22 @@ class MockRedis(object):
 
     def script_load(self, script):
         """Emulate script_load"""
-        return self.shas.setdefault(script, Sha(script))
+        sha = sha1()
+        sha.update(script)
+        sha_digest = sha.digest()
+        self.shas.setdefault(sha_digest, script)
+        return sha_digest
 
     def register_script(self, script):
         """Emulate register_script"""
         return Script(self, script)
+
+    def call(self, command, *args):
+        """
+        Sends call to the function, whose name is specified by command.
+        """
+        redis_function = getattr(self, string.lower(command))
+        return redis_function(*args)
 
     #### Internal ####
 

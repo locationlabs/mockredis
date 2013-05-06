@@ -1,7 +1,7 @@
 from unittest import TestCase
+from hashlib import sha1
 from mockredis.exceptions import RedisError
 from mockredis.redis import MockRedis
-from mockredis.sha import Sha
 from mockredis.tests.test_constants import (
     LIST1, LIST2,
     VAL1, VAL2, VAL3, VAL4,
@@ -16,12 +16,9 @@ class TestScript(TestCase):
 
     def setUp(self):
         self.redis = MockRedis()
-
-    def test_initially_empty(self):
-        """
-        List is created empty.
-        """
-        self.assertEqual(0, len(self.redis.redis[LIST1]))
+        sha_lpop = sha1()
+        sha_lpop.update(LPOP_SCRIPT)
+        self.LPOP_SCRIPT_SHA = sha_lpop.digest()
 
     def test_register_script_lpush(self):
         # lpush two values
@@ -73,13 +70,32 @@ class TestScript(TestCase):
         self.assertEqual([VAL1], self.redis.lrange(LIST1, 0, -1))
         self.assertEqual([VAL2, VAL3, VAL4], self.redis.lrange(LIST2, 0, -1))
 
+    def test_register_script_client(self):
+        # lpush two values in LIST1 in first instance of redis
+        self.redis.lpush(LIST1, VAL2, VAL1)
+
+        # create script on first instance of redis
+        script_content = LPOP_SCRIPT
+        script = self.redis.register_script(script_content)
+
+        # lpush two values in LIST1 in redis2 (second instance of redis)
+        redis2 = MockRedis()
+        redis2.lpush(LIST1, VAL4, VAL3)
+
+        # execute LPOP script on redis2 instance
+        list_item = script(keys=[LIST1], client=redis2)
+
+        # validate lpop from LIST1 in redis2
+        self.assertEquals(VAL3, list_item)
+        self.assertEquals([VAL4], redis2.lrange(LIST1, 0, -1))
+        self.assertEquals([VAL1, VAL2], self.redis.lrange(LIST1, 0, -1))
+
     def test_eval_lpush(self):
         # lpush two values
         script_content = "redis.call('LPUSH', KEYS[1], ARGV[1], ARGV[2])"
         self.redis.eval(script_content, 1, LIST1, VAL1, VAL2)
 
         # validate insertion
-        self.assertEquals("list", self.redis.type(LIST1))
         self.assertEquals([VAL2, VAL1], self.redis.lrange(LIST1, 0, -1))
 
     def test_eval_lpop(self):
@@ -96,10 +112,10 @@ class TestScript(TestCase):
     def test_evalsha(self):
         self.redis.lpush(LIST1, VAL1)
         script = LPOP_SCRIPT
-        sha = Sha(script)
+        sha = self.LPOP_SCRIPT_SHA
 
         # validator error when script not registered
-        self.assertRaises(RedisError, self.redis.evalsha, sha, 1, LIST1)
+        self.assertRaises(RedisError, self.redis.evalsha, self.LPOP_SCRIPT_SHA, 1, LIST1)
 
         # load script and then evalsha
         self.assertEquals(sha, self.redis.script_load(script))
@@ -108,14 +124,14 @@ class TestScript(TestCase):
 
     def test_script_exists(self):
         script = LPOP_SCRIPT
-        sha = Sha(script)
+        sha = self.LPOP_SCRIPT_SHA
         self.assertEquals([False], self.redis.script_exists(sha))
         self.redis.register_script(script)
         self.assertEquals([True], self.redis.script_exists(sha))
 
     def test_script_flush(self):
         script = LPOP_SCRIPT
-        sha = Sha(script)
+        sha = self.LPOP_SCRIPT_SHA
         self.redis.register_script(script)
         self.assertEquals([True], self.redis.script_exists(sha))
         self.redis.script_flush()
@@ -123,7 +139,7 @@ class TestScript(TestCase):
 
     def test_script_load(self):
         script = LPOP_SCRIPT
-        sha = Sha(script)
+        sha = self.LPOP_SCRIPT_SHA
         self.assertEquals([False], self.redis.script_exists(sha))
         self.assertEquals(sha, self.redis.script_load(script))
         self.assertEquals([True], self.redis.script_exists(sha))
