@@ -184,7 +184,7 @@ class MockRedis(object):
         """Emulate hgetall."""
 
         redis_hash = self._get_hash(hashkey, 'HGETALL')
-        return redis_hash
+        return dict(redis_hash)
 
     def hdel(self, hashkey, *keys):
         """Emulate hdel"""
@@ -196,6 +196,8 @@ class MockRedis(object):
             if attribute in redis_hash:
                 count += 1
                 del redis_hash[attribute]
+                if not redis_hash:
+                    del self.redis[hashkey]
         return count
 
     def hlen(self, hashkey):
@@ -239,20 +241,20 @@ class MockRedis(object):
     def hincrby(self, hashkey, attribute, increment=1):
         """Emulate hincrby."""
 
-        redis_hash = self._get_hash(hashkey, 'HINCRBY', create=True)
-        attribute = str(attribute)
-        previous_value = long(redis_hash.get(attribute, '0'))
-        redis_hash[attribute] = str(previous_value + increment)
-        return long(redis_hash[attribute])
+        return self._hincrby(hashkey, attribute, 'HINCRBY', long, increment)
 
     def hincrbyfloat(self, hashkey, attribute, increment=1.0):
         """Emulate hincrbyfloat."""
 
-        redis_hash = self._get_hash(hashkey, 'HINCRBYFLOAT', create=True)
+        return self._hincrby(hashkey, attribute, 'HINCRBYFLOAT', float, increment)
+
+    def _hincrby(self, hashkey, attribute, command, type_, increment):
+        """Shared hincrby and hincrbyfloat routine"""
+        redis_hash = self._get_hash(hashkey, command, create=True)
         attribute = str(attribute)
-        previous_value = float(redis_hash.get(attribute, '0'))
+        previous_value = type_(redis_hash.get(attribute, '0'))
         redis_hash[attribute] = str(previous_value + increment)
-        return float(redis_hash[attribute])
+        return type_(redis_hash[attribute])
 
     def hkeys(self, hashkey):
         """Emulate hkeys."""

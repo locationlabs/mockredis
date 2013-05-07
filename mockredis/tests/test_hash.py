@@ -31,6 +31,7 @@ class TestRedisHash(TestCase):
         self.assertEquals({"3": "3"}, self.redis.hgetall(hashkey))
         self.assertEquals(1, self.redis.hdel(hashkey, "3", 4))
         self.assertEquals({}, self.redis.hgetall(hashkey))
+        self.assertFalse(self.redis.exists(hashkey))
 
     def test_hlen(self):
         hashkey = "hash"
