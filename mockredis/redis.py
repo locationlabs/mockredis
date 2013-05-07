@@ -171,59 +171,102 @@ class MockRedis(object):
     def hexists(self, hashkey, attribute):
         """Emulate hexists."""
 
-        return attribute in self.redis[hashkey]
+        redis_hash = self._get_hash(hashkey, 'HEXISTS')
+        return str(attribute) in redis_hash
 
     def hget(self, hashkey, attribute):
         """Emulate hget."""
 
-        # Return '' if the attribute does not exist
-        result = self.redis[hashkey][attribute] if attribute in self.redis[hashkey] \
-            else None
-        return result
+        redis_hash = self._get_hash(hashkey, 'HGET')
+        return redis_hash.get(str(attribute))
 
     def hgetall(self, hashkey):
         """Emulate hgetall."""
 
-        return self.redis[hashkey]
+        redis_hash = self._get_hash(hashkey, 'HGETALL')
+        return dict(redis_hash)
 
     def hdel(self, hashkey, *keys):
         """Emulate hdel"""
 
-        deleted = map(self.redis[hashkey].pop, keys)
-        return len(deleted)
+        redis_hash = self._get_hash(hashkey, 'HDEL')
+        count = 0
+        for key in keys:
+            attribute = str(key)
+            if attribute in redis_hash:
+                count += 1
+                del redis_hash[attribute]
+                if not redis_hash:
+                    del self.redis[hashkey]
+        return count
 
     def hlen(self, hashkey):
         """Emulate hlen."""
-
-        return len(self.redis[hashkey])
+        redis_hash = self._get_hash(hashkey, 'HLEN')
+        return len(redis_hash)
 
     def hmset(self, hashkey, value):
         """Emulate hmset."""
 
-        # Iterate over every key:value in the value argument.
-        for attributekey, attributevalue in value.items():
-            self.redis[hashkey][attributekey] = str(attributevalue)
+        redis_hash = self._get_hash(hashkey, 'HMSET', create=True)
+        for key, value in value.items():
+            attribute = str(key)
+            redis_hash[attribute] = str(value)
 
-    def hset(self, key, attribute, value):
+    def hmget(self, hashkey, keys, *args):
+        """Emulate hmget."""
+
+        redis_hash = self._get_hash(hashkey, 'HMGET')
+        attributes = self._list_or_args(keys, args)
+        return [redis_hash.get(str(attribute)) for attribute in attributes]
+
+    def hset(self, hashkey, attribute, value):
         """Emulate hset."""
 
-        if key not in self.redis:
-            self.redis['key'] = {}
+        redis_hash = self._get_hash(hashkey, 'HSET', create=True)
+        attribute = str(attribute)
+        redis_hash[attribute] = str(value)
+
+    def hsetnx(self, hashkey, attribute, value):
+        """Emulate hsetnx."""
+
+        redis_hash = self._get_hash(hashkey, 'HSETNX', create=True)
+        attribute = str(attribute)
+        if attribute in redis_hash:
+            return 0
         else:
-            if type(self.redis[key]) != dict:
-                raise ValueError("Type mismatch for key={key}".format(key=key))
+            redis_hash[attribute] = str(value)
+            return 1
 
-        self.redis[key][attribute] = str(value)
+    def hincrby(self, hashkey, attribute, increment=1):
+        """Emulate hincrby."""
 
-    def hincrby(self, key, attribute, increment=1):
+        return self._hincrby(hashkey, attribute, 'HINCRBY', long, increment)
 
-        # inititalize hset and value if required
-        if key not in self.redis:
-            self.redis['key'] = {}
-        previous_value = long(self.redis[key].get(attribute, '0'))
+    def hincrbyfloat(self, hashkey, attribute, increment=1.0):
+        """Emulate hincrbyfloat."""
 
-        self.redis[key][attribute] = str(previous_value + increment)
-        return long(self.redis[key][attribute])
+        return self._hincrby(hashkey, attribute, 'HINCRBYFLOAT', float, increment)
+
+    def _hincrby(self, hashkey, attribute, command, type_, increment):
+        """Shared hincrby and hincrbyfloat routine"""
+        redis_hash = self._get_hash(hashkey, command, create=True)
+        attribute = str(attribute)
+        previous_value = type_(redis_hash.get(attribute, '0'))
+        redis_hash[attribute] = str(previous_value + increment)
+        return type_(redis_hash[attribute])
+
+    def hkeys(self, hashkey):
+        """Emulate hkeys."""
+
+        redis_hash = self._get_hash(hashkey, 'HKEYS')
+        return redis_hash.keys()
+
+    def hvals(self, hashkey):
+        """Emulate hvals."""
+
+        redis_hash = self._get_hash(hashkey, 'HVALS')
+        return redis_hash.values()
 
     #### List Functions ####
 
@@ -635,6 +678,12 @@ class MockRedis(object):
         Get (and maybe create) a set by name.
         """
         return self._get_by_type(key, operation, create, 'set', set())
+
+    def _get_hash(self, name, operation, create=False):
+        """
+        Get (and maybe create) a hash by name.
+        """
+        return self._get_by_type(name, operation, create, 'hash', {})
 
     def _get_zset(self, name, operation, create=False):
         """
