@@ -738,13 +738,11 @@ class MockRedis(object):
         """
         Return a suitable aggregate score function.
         """
-        if not aggregate or aggregate == 'sum':
-            return add
-        elif aggregate == 'min':
-            return min
-        elif aggregate == 'max':
-            return max
-        else:
+        funcs = {"sum": add, "min": min, "max": max}
+        func_name = aggregate.lower() if aggregate else 'sum'
+        try:
+            return funcs[func_name]
+        except KeyError:
             raise TypeError("Unsupported aggregate: {}".format(aggregate))
 
     def _apply_to_sets(self, func, operation, keys, *args):
