@@ -11,10 +11,10 @@ class TestRedisHash(TestCase):
 
     def test_hexists(self):
         hashkey = "hash"
-        self.assertEquals(False, self.redis.hexists(hashkey, "key"))
+        self.assertFalse(self.redis.hexists(hashkey, "key"))
         self.redis.hset(hashkey, "key", "value")
-        self.assertEquals(True, self.redis.hexists(hashkey, "key"))
-        self.assertEquals(False, self.redis.hexists(hashkey, "key2"))
+        self.assertTrue(self.redis.hexists(hashkey, "key"))
+        self.assertFalse(self.redis.hexists(hashkey, "key2"))
 
     def test_hgetall(self):
         hashkey = "hash"
@@ -42,6 +42,10 @@ class TestRedisHash(TestCase):
         hashkey = "hash"
         self.redis.hset(hashkey, "key", "value")
         self.assertEquals("value", self.redis.hget(hashkey, "key"))
+
+    def test_hget(self):
+        hashkey = "hash"
+        self.assertEquals(None, self.redis.hget(hashkey, "key"))
 
     def test_hset_integral(self):
         hashkey = "hash"
