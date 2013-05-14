@@ -254,94 +254,171 @@ class TestRedisZset(TestCase):
 
         self.assertEquals([], self.redis.zrange(key, 0, -1))
 
-    def test_zunionstore(self):
+    def test_zunionstore_no_keys(self):
         key = "zset"
 
-        # no keys
         self.assertEquals(0, self.redis.zunionstore(key, ["zset1", "zset2"]))
 
+    def test_zunionstore_default(self):
+        # sum is default
+        key = "zset"
         self.redis.zadd("zset1", "one", 1.0)
         self.redis.zadd("zset1", "two", 2.0)
         self.redis.zadd("zset2", "two", 2.5)
         self.redis.zadd("zset2", "three", 3.0)
 
-        # sum (default)
         self.assertEquals(3, self.redis.zunionstore(key, ["zset1", "zset2"]))
         self.assertEquals([("one", 1.0), ("three", 3.0), ("two", 4.5)],
                           self.redis.zrange(key, 0, -1, withscores=True))
 
+    def test_zunionstore_sum(self):
+        key = "zset"
         self.redis.zadd("zset1", "one", 1.0)
         self.redis.zadd("zset1", "two", 2.0)
         self.redis.zadd("zset2", "two", 2.5)
         self.redis.zadd("zset2", "three", 3.0)
 
-        # sum (explicit)
         self.assertEquals(3, self.redis.zunionstore(key, ["zset1", "zset2"], aggregate="sum"))
         self.assertEquals([("one", 1.0), ("three", 3.0), ("two", 4.5)],
                           self.redis.zrange(key, 0, -1, withscores=True))
 
+    def test_zunionstore_SUM(self):
+        key = "zset"
         self.redis.zadd("zset1", "one", 1.0)
         self.redis.zadd("zset1", "two", 2.0)
         self.redis.zadd("zset2", "two", 2.5)
         self.redis.zadd("zset2", "three", 3.0)
 
-        # min
+        self.assertEquals(3, self.redis.zunionstore(key, ["zset1", "zset2"], aggregate="SUM"))
+        self.assertEquals([("one", 1.0), ("three", 3.0), ("two", 4.5)],
+                          self.redis.zrange(key, 0, -1, withscores=True))
+
+    def test_zunionstore_min(self):
+        key = "zset"
+        self.redis.zadd("zset1", "one", 1.0)
+        self.redis.zadd("zset1", "two", 2.0)
+        self.redis.zadd("zset2", "two", 2.5)
+        self.redis.zadd("zset2", "three", 3.0)
+
         self.assertEquals(3, self.redis.zunionstore(key, ["zset1", "zset2"], aggregate="min"))
         self.assertEquals([("one", 1.0), ("two", 2.0), ("three", 3.0)],
                           self.redis.zrange(key, 0, -1, withscores=True))
 
+    def test_zunionstore_MIN(self):
+        key = "zset"
         self.redis.zadd("zset1", "one", 1.0)
         self.redis.zadd("zset1", "two", 2.0)
         self.redis.zadd("zset2", "two", 2.5)
         self.redis.zadd("zset2", "three", 3.0)
 
-        # max
+        self.assertEquals(3, self.redis.zunionstore(key, ["zset1", "zset2"], aggregate="MIN"))
+        self.assertEquals([("one", 1.0), ("two", 2.0), ("three", 3.0)],
+                          self.redis.zrange(key, 0, -1, withscores=True))
+
+    def test_zunionstore_max(self):
+        key = "zset"
+        self.redis.zadd("zset1", "one", 1.0)
+        self.redis.zadd("zset1", "two", 2.0)
+        self.redis.zadd("zset2", "two", 2.5)
+        self.redis.zadd("zset2", "three", 3.0)
+
+        key = "zset"
         self.assertEquals(3, self.redis.zunionstore(key, ["zset1", "zset2"], aggregate="max"))
         self.assertEquals([("one", 1.0), ("two", 2.5), ("three", 3.0)],
                           self.redis.zrange(key, 0, -1, withscores=True))
 
-    def test_zinterstore(self):
+    def test_zunionstore_MAX(self):
+        key = "zset"
+        self.redis.zadd("zset1", "one", 1.0)
+        self.redis.zadd("zset1", "two", 2.0)
+        self.redis.zadd("zset2", "two", 2.5)
+        self.redis.zadd("zset2", "three", 3.0)
+
+        key = "zset"
+        self.assertEquals(3, self.redis.zunionstore(key, ["zset1", "zset2"], aggregate="MAX"))
+        self.assertEquals([("one", 1.0), ("two", 2.5), ("three", 3.0)],
+                          self.redis.zrange(key, 0, -1, withscores=True))
+
+    def test_zinterstore_no_keys(self):
         key = "zset"
 
         # no keys
         self.assertEquals(0, self.redis.zinterstore(key, ["zset1", "zset2"]))
 
+    def test_zinterstore_default(self):
+        # sum is default
+        key = "zset"
         self.redis.zadd("zset1", "one", 1.0)
         self.redis.zadd("zset1", "two", 2.0)
         self.redis.zadd("zset2", "two", 2.5)
         self.redis.zadd("zset2", "three", 3.0)
 
-        # sum (default)
         self.assertEquals(1, self.redis.zinterstore(key, ["zset1", "zset2"]))
         self.assertEquals([("two", 4.5)],
                           self.redis.zrange(key, 0, -1, withscores=True))
 
+    def test_zinterstore_sum(self):
+        key = "zset"
         self.redis.zadd("zset1", "one", 1.0)
         self.redis.zadd("zset1", "two", 2.0)
         self.redis.zadd("zset2", "two", 2.5)
         self.redis.zadd("zset2", "three", 3.0)
 
-        # sum (explicit)
         self.assertEquals(1, self.redis.zinterstore(key, ["zset1", "zset2"], aggregate="sum"))
         self.assertEquals([("two", 4.5)],
                           self.redis.zrange(key, 0, -1, withscores=True))
 
+    def test_zinterstore_SUM(self):
+        key = "zset"
         self.redis.zadd("zset1", "one", 1.0)
         self.redis.zadd("zset1", "two", 2.0)
         self.redis.zadd("zset2", "two", 2.5)
         self.redis.zadd("zset2", "three", 3.0)
 
-        # min
+        self.assertEquals(1, self.redis.zinterstore(key, ["zset1", "zset2"], aggregate="SUM"))
+        self.assertEquals([("two", 4.5)],
+                          self.redis.zrange(key, 0, -1, withscores=True))
+
+    def test_zinterstore_min(self):
+        key = "zset"
+        self.redis.zadd("zset1", "one", 1.0)
+        self.redis.zadd("zset1", "two", 2.0)
+        self.redis.zadd("zset2", "two", 2.5)
+        self.redis.zadd("zset2", "three", 3.0)
+
         self.assertEquals(1, self.redis.zinterstore(key, ["zset1", "zset2"], aggregate="min"))
         self.assertEquals([("two", 2.0)],
                           self.redis.zrange(key, 0, -1, withscores=True))
 
+    def test_zinterstore_MIN(self):
+        key = "zset"
         self.redis.zadd("zset1", "one", 1.0)
         self.redis.zadd("zset1", "two", 2.0)
         self.redis.zadd("zset2", "two", 2.5)
         self.redis.zadd("zset2", "three", 3.0)
 
-        # max
+        self.assertEquals(1, self.redis.zinterstore(key, ["zset1", "zset2"], aggregate="MIN"))
+        self.assertEquals([("two", 2.0)],
+                          self.redis.zrange(key, 0, -1, withscores=True))
+
+    def test_zinterstore_max(self):
+        key = "zset"
+        self.redis.zadd("zset1", "one", 1.0)
+        self.redis.zadd("zset1", "two", 2.0)
+        self.redis.zadd("zset2", "two", 2.5)
+        self.redis.zadd("zset2", "three", 3.0)
+
         self.assertEquals(1, self.redis.zinterstore(key, ["zset1", "zset2"], aggregate="max"))
+        self.assertEquals([("two", 2.5)],
+                          self.redis.zrange(key, 0, -1, withscores=True))
+
+    def test_zinterstore_MAX(self):
+        key = "zset"
+        self.redis.zadd("zset1", "one", 1.0)
+        self.redis.zadd("zset1", "two", 2.0)
+        self.redis.zadd("zset2", "two", 2.5)
+        self.redis.zadd("zset2", "three", 3.0)
+
+        self.assertEquals(1, self.redis.zinterstore(key, ["zset1", "zset2"], aggregate="MAX"))
         self.assertEquals([("two", 2.5)],
                           self.redis.zrange(key, 0, -1, withscores=True))
