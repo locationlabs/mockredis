@@ -1,3 +1,7 @@
+Version 2.7.2.5
+
+ - Added `hash` operations: HMGET, HSETNX, HINCRBYFLOAT, HKEYS, HVALS
+ 
 Version 2.7.2.4
 
  - Added `list` operations: LREM

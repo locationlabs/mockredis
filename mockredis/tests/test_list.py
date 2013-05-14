@@ -2,10 +2,8 @@ from unittest import TestCase
 from mockredis.redis import MockRedis
 
 
-class TestList(TestCase):
-    """
-    Tests for MockRedis list operations
-    """
+class TestRedisList(TestCase):
+    """list tests"""
 
     def setUp(self):
         self.redis = MockRedis()
