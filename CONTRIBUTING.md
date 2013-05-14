@@ -1,6 +1,6 @@
 # Contributing
 
-Mock Redis uses [git-flow][https://github.com/nvie/gitflow] for its branch management. 
+Mock Redis uses [git-flow][1] for its branch management. 
 We ask that contributors to this project please:
 
  1. Implement changes in new git branches, following git-flow's model:
@@ -24,3 +24,5 @@ We ask that contributors to this project please:
  4. Update the change log appropriately.
 
 Thank you!
+
+ [1]: https://github.com/nvie/gitflow
