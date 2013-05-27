@@ -1,7 +1,7 @@
 # Mock for the redis-py client library
 
 Supports writing tests for code using the [redis-py][redis-py] library 
-without requiring a a [redis-server][redis] install.
+without requiring a [redis-server][redis] install.
 
 ## Installation
 
@@ -11,7 +11,7 @@ Use pip:
 
 ## Usage
 
-Both `mockredis.mock_redis_client` and `mockredis.mock_strict_redis_cient` can be
+Both `mockredis.mock_redis_client` and `mockredis.mock_strict_redis_client` can be
 used to patch instances of the *redis client*.
 
 For example, using the [mock][mock] library:
