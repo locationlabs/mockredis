@@ -209,7 +209,7 @@ class MockRedis(object):
 
     def _creation_ok(self, key, creation_type):
         """
-        determine if it is okay to create a session
+        Determine if it is okay to create a key
 
         if the creation_type is None, returns True, otherwise, returns True of false based on
         the value of ``key`` and the ``creation_type`` (nx | xx)
