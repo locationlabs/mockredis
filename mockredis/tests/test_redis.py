@@ -101,7 +101,6 @@ class TestRedis(TestCase):
     def test_ttl(self):
         self.redis.set('key', 'key')
         self.redis.expire('key', 30)
-        self.redis.set('key1', 'key')
 
         # should not be None
         self.assertTrue(self.redis.ttl('key'))
