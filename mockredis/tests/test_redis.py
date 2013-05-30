@@ -101,9 +101,16 @@ class TestRedis(TestCase):
     def test_ttl(self):
         self.redis.set('key', 'key')
         self.redis.expire('key', 30)
+        self.redis.set('key1', 'key')
 
+        # should not be None
+        assert self.redis.ttl('key')
+        # should be less than the timeout originally set
         assert self.redis.ttl('key') <= 30
-        self.assertEqual(self.redis.ttl('invalid_key'), -1)
+        # like the redis-py lib, ttl should return None if the key is absent
+        self.assertEqual(self.redis.ttl('invalid_key'), None)
+        # like the redis-py lib, ttl should return None if the key has no timeout set
+        self.assertEqual(self.redis.ttl('key1'), None)
 
     def test_push_pop_returns_str(self):
         key = 'l'
