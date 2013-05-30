@@ -25,7 +25,7 @@ class TestRedis(TestCase):
 
     def test_get_types(self):
         '''
-        testing type coversions for set/get, hset/hget, sadd/smembers
+        testing type conversions for set/get, hset/hget, sadd/smembers
 
         Python bools, lists, dicts are returned as strings by
         redis-py/redis.
@@ -104,13 +104,23 @@ class TestRedis(TestCase):
         self.redis.set('key1', 'key')
 
         # should not be None
-        assert self.redis.ttl('key')
+        self.assertTrue(self.redis.ttl('key'))
+        # should be an int
+        self.assertTrue(isinstance(self.redis.ttl('key'), int))
         # should be less than the timeout originally set
-        assert self.redis.ttl('key') <= 30
-        # like the redis-py lib, ttl should return None if the key is absent
+        self.assertTrue(self.redis.ttl('key') <= 30)
+
+    def test_ttl_when_key_absent(self):
+        """Test whether, like the redis-py lib, ttl returns None if the key is absent"""
+
         self.assertEqual(self.redis.ttl('invalid_key'), None)
-        # like the redis-py lib, ttl should return None if the key has no timeout set
-        self.assertEqual(self.redis.ttl('key1'), None)
+
+    def test_ttl_no_timeout(self):
+        """
+        Test whether, like the redis-py lib, ttl returns None if the key has no timeout set.
+        """
+        self.redis.set('key', 'key')
+        self.assertEqual(self.redis.ttl('key'), None)
 
     def test_push_pop_returns_str(self):
         key = 'l'

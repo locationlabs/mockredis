@@ -127,16 +127,16 @@ class MockRedis(object):
     def ttl(self, key, currenttime=datetime.now()):
         """
         Emulate ttl
-        do_expire to get valid values
+        do_expire to get valid values.
 
-        even though the official redis commands documentation at http://redis.io/commands/ttl
+        Even though the official redis commands documentation at http://redis.io/commands/ttl
         states "Return value: Integer reply: TTL in seconds, -2 when key does not exist or -1
         when key does not have a timeout." the redis-py lib returns None for both these cases.
-        The lib behaviour has been emulated here.
+        The lib behavior has been emulated here.
 
-        :param key: key foe whcih ttl is requested
+        :param key: key for which ttl is requested.
         :returns: the number of seconds till timeout, None if the key does not exist or if the
-        key has no timeout(as per the redis-py lib behavior)
+                  key has no timeout(as per the redis-py lib behavior).
         """
 
         self.do_expire(currenttime)
@@ -144,12 +144,14 @@ class MockRedis(object):
         if key not in self.timeouts:
             return None
         else:
-            return self._get_total_seconds(self.timeouts[key] - currenttime)
+            # the return should be an int with the number seconds to timeout
+            return int(self._get_total_seconds(self.timeouts[key] - currenttime))
 
     def do_expire(self, currenttime=datetime.now()):
         """
         Expire objects assuming now == time
         """
+
         for key, value in self.timeouts.items():
             if value - currenttime < timedelta(0):
                 del self.timeouts[key]
@@ -166,105 +168,80 @@ class MockRedis(object):
         result = None if key not in self.redis else self.redis[key]
         return result
 
-    def set(self, key, value, ex=None, px=None, nx=False, xx=False):
+    def set(self, key, value, ex=None, px=None, nx=False, xx=False, currenttime=datetime.now()):
         """
-        Set the ``value`` for the ``key`` in the context of the provided kwargs
-
-        SET accepts the EX, PX, NX and XX options from Redis 2.6.12 and redis-py >= 2.7.4
-        These options should not be used with redis-py < 2.7.4 and will generate errors
-        used when connected to a Redis server < 2.6.12
+        Set the ``value`` for the ``key`` in the context of the provided kwargs.
 
         As per the behavior of the redis-py lib:
-        if nx and xx are both set, the function does nothing and 'None' is returned
-        if px and ex are both set, the preference is given to px
+        If nx and xx are both set, the function does nothing and None is returned.
+        If px and ex are both set, the preference is given to px.
+        If the key is not set for some reason, the lib function returns None.
 
         """
 
         if nx and xx:
             return None
 
-        creation_type = None
-        if nx:
-            creation_type = "nx"
-        elif xx:
-            creation_type = "xx"
+        mode = "nx" if nx else "xx" if xx else None
 
-        delta = None
-        if px:
-            delta = int(round(px / 1000))
-        elif ex:
-            delta = ex
+        if isinstance(px, int):
+            px = int(px / 1000)
 
-        if self._creation_ok(key, creation_type):
+        delta = px or ex
+
+        if self._should_set(key, mode):
             if delta:
-                if isinstance(delta, timedelta):
-                    delta = delta.seconds + delta.days * 24 * 3600
-                # create with expiration, if creation is ok
-                return self.setex(key, delta, value)
+                # set with expiration, if its ok to set
+                return self.setex(key, delta, value, currenttime=currenttime)
             return self._set(key, value)
 
     def _set(self, key, value):
         self.redis[key] = str(value)
         return True
 
-    def _creation_ok(self, key, creation_type):
+    def _should_set(self, key, mode):
         """
-        Determine if it is okay to create a key
+        Determine if it is okay to set a key.
 
-        if the creation_type is None, returns True, otherwise, returns True of false based on
-        the value of ``key`` and the ``creation_type`` (nx | xx)
+        If the mode is None, returns True, otherwise, returns True of false based on
+        the value of ``key`` and the ``mode`` (nx | xx).
         """
 
-        if creation_type:
-            # get the db to the latest state
-            self.do_expire()
-            if creation_type is "nx":
-                if key in self.redis:
-                    # nx means create only if key is absent
-                    # false if the key already exists
-                    return False
-            elif creation_type is "xx":
-                if key not in self.redis:
-                    # xx means create only if the key already exists
-                    # false if is absent
-                    return False
+        if mode is None or mode not in ["nx", "xx"]:
+            return True
+
+        if mode == "nx":
+            if key in self.redis:
+                # nx means set only if key is absent
+                # false if the key already exists
+                return False
+        elif key not in self.redis:
+            # at this point mode can only be xx
+            # xx means set only if the key already exists
+            # false if is absent
+            return False
         # for all other cases, return true
         return True
 
-    def _setex_options(self, key, delta, value, creation_type=None):
-        """
-        sets ``key`` to ``value`` only if ``key`` already exists
-        """
-        if self._creation_ok(key, creation_type):
-            return self.setex(key, delta, value)
-
-    def setex(self, key, time, value):
+    def setex(self, key, time, value, currenttime=datetime.now()):
         """
         Set the value of ``key`` to ``value`` that expires in ``time``
         seconds. ``time`` can be represented by an integer or a Python
         timedelta object.
         """
+
+        seconds = time
         if isinstance(time, timedelta):
-            time = time.seconds + time.days * 24 * 3600
-        # atomically doing the set and expire operations
-        if not self._set(key, value):
-            return False
-        if not self.expire(key, time):
-            # if the expire op failed, remove the key from the dict as well.
-            try:
-                self.delete(key)
-            except KeyError:
-                # the key was not there! but anyway, no problem, we wanted to remove it anyway.
-                pass
-            return False
+            seconds = time.seconds + time.days * 24 * 3600
+
+        self._set(key, value)
+        self.expire(key, seconds, currenttime)
         return True
 
     def setnx(self, key, value):
         """Set the value of ``key`` to ``value`` if key doesn't exist"""
 
-        if key not in self.redis:
-            return 1 if self._set(key, value) else 0
-        return 0
+        return 1 if key not in self.redis and self._set(key, value) else 0
 
     def decr(self, key, decrement=1):
         """Emulate decr."""

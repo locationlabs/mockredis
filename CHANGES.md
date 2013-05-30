@@ -1,12 +1,16 @@
-Version 2.7.2.6
+Version 2.7.5.1
 
- - Added 'script' operations: EVAL, EVALSHA, SCRIPT_EXISTS, SCRIPT_FLUSH, SCRIPT_LOAD, REGISTER_SCRIPT
+ - Added 'script' operations: EVAL, EVALSHA, SCRIPT_EXISTS, SCRIPT_FLUSH,
+   SCRIPT_LOAD, REGISTER_SCRIPT
  - Added 'list' operations: RPOPLPUSH
+ - Added `string` operations: SETEX, SETNX
+ - Changed `string` operation SET to support EX, PX, NX and XX options
+   (available in redis-py since 2.7.4).
 
 Version 2.7.2.5
 
  - Added `hash` operations: HMGET, HSETNX, HINCRBYFLOAT, HKEYS, HVALS
- 
+
 Version 2.7.2.4
 
  - Added `list` operations: LREM
