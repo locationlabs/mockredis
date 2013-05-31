@@ -145,7 +145,7 @@ class MockRedis(object):
             return None
         else:
             # the return should be an int with the number seconds to timeout
-            return int(self._get_total_seconds(self.timeouts[key] - currenttime))
+            return self._get_total_seconds(self.timeouts[key] - currenttime)
 
     def do_expire(self, currenttime=datetime.now()):
         """
@@ -181,14 +181,8 @@ class MockRedis(object):
 
         if nx and xx:
             return None
-
         mode = "nx" if nx else "xx" if xx else None
-
-        if isinstance(px, int):
-            px = int(px / 1000)
-
-        delta = px or ex
-
+        delta = int(px / 1000) if isinstance(px, int) else px or ex
         if self._should_set(key, mode):
             if delta:
                 # set with expiration, if its ok to set
@@ -808,7 +802,7 @@ class MockRedis(object):
         """
         For python 2.6 support
         """
-        return (td.microseconds + (td.seconds + td.days * 24 * 3600) * 1e6) / 1e6
+        return int((td.microseconds + (td.seconds + td.days * 24 * 3600) * 1e6) / 1e6)
 
     def _get_list(self, key, operation, create=False):
         """

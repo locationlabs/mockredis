@@ -102,12 +102,11 @@ class TestRedis(TestCase):
         self.redis.set('key', 'key')
         self.redis.expire('key', 30)
 
-        # should not be None
-        self.assertTrue(self.redis.ttl('key'))
+        result = self.redis.ttl('key')
         # should be an int
-        self.assertTrue(isinstance(self.redis.ttl('key'), int))
+        self.assertTrue(isinstance(result, int))
         # should be less than the timeout originally set
-        self.assertTrue(self.redis.ttl('key') <= 30)
+        self.assertTrue(result <= 30)
 
     def test_ttl_when_key_absent(self):
         """Test whether, like the redis-py lib, ttl returns None if the key is absent"""

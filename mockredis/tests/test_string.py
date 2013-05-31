@@ -31,72 +31,61 @@ class TestRedisString(object):
         iff it is absent.
         """
 
-        category, local_setup, cases = test_cases
-        if local_setup:
-                self.redis.set('key', 'value')
+        category, existing_key, cases = test_cases
+        msg = "Failed in: {}".format(category)
+        if existing_key:
+            self.redis.set('key', 'value')
         for (key, value, expected_result), config in cases:
-            print category
             # set with creation mode and expiry options
             result = self.redis.set(key, value, **config)
-            eq_(expected_result, result)
+            eq_(expected_result, result, msg)
             if expected_result is not None:
                 # if the set was expected to happen
-                self._assert_got_set(key, value, config)
+                self._assert_was_set(key, value, config, msg)
             else:
                 # if the set was not expected to happen
-                self._assert_not_set(key, value)
+                self._assert_not_set(key, value, msg)
 
-    def _assert_not_set(self, key, value):
+    def _assert_not_set(self, key, value, msg):
         """Check that the key and its timeout were not set"""
 
         # check that the value wasn't updated
-        ok_(value != self.redis.get(key))
+        ok_(value != self.redis.get(key), msg)
         # check that the expiration was not set
-        ok_(self.redis.ttl(key) is None)
+        ok_(self.redis.ttl(key) is None, msg)
 
-    def _assert_got_set(self, key, value, config):
-        """Assert that the key got set along with timeout if applicable"""
+    def _assert_was_set(self, key, value, config, msg):
+        """Assert that the key was set along with timeout if applicable"""
 
         eq_(value, self.redis.get(key))
-        if 'px' in config and 'ex' in config:
-            self._assert_px_preference(key, config)
-        elif 'px' in config:
-            ok_(int(config['px'] / 1000) >= self.redis.ttl(key))
+        if 'px' in config:
+            # px should have been preferred over ex if it was specified
+            ok_(int(config['px'] / 1000) == self.redis.ttl(key), msg)
         elif 'ex' in config:
-            ok_(config['ex'] >= self.redis.ttl(key))
-
-    def _assert_px_preference(self, key, config):
-        """Check if px got preference when setting timeout"""
-
-        px = int(config['px'] / 1000)
-        ex = int(config['ex'])
-        if px > ex:
-            ok_(ex <= self.redis.ttl(key) <= px)
-        else:
-            ok_(self.redis.ttl(key) <= px)
+            ok_(config['ex'] == self.redis.ttl(key), msg)
 
     def test_set_with_options(self):
         """Test the set function with various combinations of arguments"""
 
-        test_cases = [("1. px and ex are set and nx is always true & set on non-existing key",
+        test_cases = [("1. px and ex are set, nx is always true & set on non-existing key",
                       False,
                       [(('key1', 'value1', None), dict(ex=20, px=70000, xx=True, nx=True)),
                       (('key2', 'value1', True), dict(ex=20, px=70000, xx=False, nx=True)),
                       (('key3', 'value2', True), dict(ex=20, px=70000, nx=True))]),
 
-                      ("2. px and ex are set and nx is always true & set on existing key",
+                      ("2. px and ex are set, nx is always true & set on existing key",
                       True,
                       [(('key', 'value1', None), dict(ex=20, px=70000, xx=True, nx=True)),
-                      (('key', 'value1', None), dict(ex=20, px=70000, xx=False, nx=True)),
+                      (('key', 'value1', None), dict(ex=20, px=7000, xx=False, nx=True)),
                       (('key', 'value1', None), dict(ex=20, px=70000, nx=True))]),
 
-                      ("3. px and ex are set and xx is always true & set on existing key",
+                      ("3. px and ex are set, xx is always true & set on existing key",
                       True,
                       [(('key', 'value1', None), dict(ex=20, px=70000, xx=True, nx=True)),
                       (('key', 'value1', True), dict(ex=20, px=70000, xx=True, nx=False)),
                       (('key', 'value4', True), dict(ex=20, px=70000, xx=True))]),
 
-                      ("4. px and ex are set and xx is always true & set on non-existing key",
+                      ("4. px and ex are set, xx is always true & set on non-existing key",
                       False,
                       [(('key1', 'value1', None), dict(ex=20, px=70000, xx=True, nx=True)),
                       (('key2', 'value2', None), dict(ex=20, px=70000, xx=True, nx=False)),
@@ -170,7 +159,7 @@ class TestRedisString(object):
             yield self._assert_set_with_timeout, case
 
     def test_setnx(self):
-        """Check whether setnx sets a key only iff it does not already exist"""
+        """Check whether setnx sets a key iff it does not already exist"""
 
         ok_(self.redis.setnx('key', 'value'))
         ok_(not self.redis.setnx('key', 'different_value'))
