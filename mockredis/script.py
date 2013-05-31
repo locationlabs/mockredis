@@ -1,6 +1,3 @@
-import lua
-
-
 class Script(object):
     """
     An executable LUA script object returned by ``MockRedis.register_script``.
@@ -25,6 +22,11 @@ class Script(object):
         Sets KEYS and ARGV alongwith redis.call() function in lua globals
         and executes the lua redis script
         """
+        try:
+            import lua
+        except ImportError:
+            raise RuntimeError("LUA not installed")
+
         lua_globals = lua.globals()
         lua_globals.KEYS = self._create_lua_array(keys)
         lua_globals.ARGV = self._create_lua_array(args)

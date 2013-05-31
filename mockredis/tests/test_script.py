@@ -1,4 +1,4 @@
-from unittest import TestCase
+from unittest import TestCase, skipUnless
 from hashlib import sha1
 from mockredis.exceptions import RedisError
 from mockredis.redis import MockRedis
@@ -9,6 +9,19 @@ from mockredis.tests.test_constants import (
 )
 
 
+def has_lua():
+    """
+    Test that lua is available.
+    """
+    try:
+        import lua # flake8: noqa
+        return True
+    except ImportError:
+        return False
+
+
+
+@skipUnless(has_lua(), "mockredispy was not installed with lua support")
 class TestScript(TestCase):
     """
     Tests for MockRedis scripting operations

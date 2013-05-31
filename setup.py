@@ -17,9 +17,9 @@ setup(name='mockredispy',
       setup_requires=[
           'nose'
       ],
-      install_requires=[
-          'lunatic-python-bugfix==1.1'
-      ],
+      extras_require={
+          'lua': ['lunatic-python-bugfix==1.1'],
+      },
       tests_require=[
           'redis>=2.7.2'
       ],
