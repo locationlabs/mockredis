@@ -14,11 +14,10 @@ def has_lua():
     Test that lua is available.
     """
     try:
-        import lua # flake8: noqa
+        import lua  # noqa
         return True
     except ImportError:
         return False
-
 
 
 @skipUnless(has_lua(), "mockredispy was not installed with lua support")
