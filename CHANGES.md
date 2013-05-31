@@ -1,4 +1,4 @@
-Version 2.7.5.1
+Version 2.7.5.0
 
  - Added 'script' operations: EVAL, EVALSHA, SCRIPT_EXISTS, SCRIPT_FLUSH,
    SCRIPT_LOAD, REGISTER_SCRIPT
