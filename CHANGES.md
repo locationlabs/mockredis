@@ -1,3 +1,8 @@
+Version 2.7.2.6
+
+ - Added 'script' operations: EVAL, EVALSHA, SCRIPT_EXISTS, SCRIPT_FLUSH, SCRIPT_LOAD, REGISTER_SCRIPT
+ - Added 'list' operations: RPOPLPUSH
+
 Version 2.7.2.5
 
  - Added `hash` operations: HMGET, HSETNX, HINCRBYFLOAT, HKEYS, HVALS

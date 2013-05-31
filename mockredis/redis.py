@@ -1,8 +1,12 @@
 from collections import defaultdict
 from datetime import datetime, timedelta
+from hashlib import sha1
 from operator import add
 from random import choice, sample
+import string
 from mockredis.lock import MockRedisLock
+from mockredis.exceptions import RedisError
+from mockredis.script import Script
 from mockredis.sortedset import SortedSet
 
 
@@ -15,12 +19,6 @@ class MockRedis(object):
     expiry is NOT supported.
     """
 
-    # The 'Redis' store
-    redis = defaultdict(dict)
-    timeouts = defaultdict(dict)
-    # The pipeline
-    pipe = None
-
     def __init__(self, strict=False, **kwargs):
         """
         Initialize as either StrictRedis or Redis.
@@ -28,6 +26,13 @@ class MockRedis(object):
         Defaults to non-strict.
         """
         self.strict = strict
+        # The 'Redis' store
+        self.redis = defaultdict(dict)
+        self.timeouts = defaultdict(dict)
+        # Dictionary from script to sha ''Script''
+        self.shas = dict()
+        # The pipeline
+        self.pipe = None
 
     #### Connection Functions ####
 
@@ -126,7 +131,8 @@ class MockRedis(object):
         """
 
         self.do_expire(currenttime)
-        return -1 if key not in self.timeouts else self._get_total_seconds(self.timeouts[key] - currenttime)
+        return -1 if key not in self.timeouts else self._get_total_seconds(self.timeouts[key]
+                                                                           - currenttime)
 
     def do_expire(self, currenttime=datetime.now()):
         """
@@ -364,6 +370,12 @@ class MockRedis(object):
                     else:
                         new_list.append(v)
                 self.redis[key] = list(reversed(new_list))
+
+    def rpoplpush(self, source, destination):
+        """Emulate rpoplpush"""
+        transfer_item = self.rpop(source)
+        self.lpush(destination, transfer_item)
+        return transfer_item
 
     #### SET COMMANDS ####
 
@@ -658,6 +670,53 @@ class MockRedis(object):
         # always override existing keys
         self.redis[dest] = union
         return len(union)
+
+    #### Script Commands ####
+
+    def eval(self, script, numkeys, *keys_and_args):
+        """Emulate eval"""
+        sha = self.script_load(script)
+        return self.evalsha(sha, numkeys, *keys_and_args)
+
+    def evalsha(self, sha, numkeys, *keys_and_args):
+        """Emulates evalsha"""
+        if not self.script_exists(sha)[0]:
+            raise RedisError("Sha not registered")
+        script_callable = Script(self, self.shas[sha])
+        numkeys = max(numkeys, 0)
+        keys = keys_and_args[:numkeys]
+        args = keys_and_args[numkeys:]
+        return script_callable(keys, args)
+
+    def script_exists(self, *args):
+        """Emulates script_exists"""
+        return [arg in self.shas for arg in args]
+
+    def script_flush(self):
+        """Emulate script_flush"""
+        self.shas.clear()
+
+    def script_kill(self):
+        """Emulate script_kill"""
+        """XXX: To be implemented, should not be called before that."""
+        raise NotImplementedError("Not yet implemented.")
+
+    def script_load(self, script):
+        """Emulate script_load"""
+        sha_digest = sha1(script).hexdigest()
+        self.shas[sha_digest] = script
+        return sha_digest
+
+    def register_script(self, script):
+        """Emulate register_script"""
+        return Script(self, script)
+
+    def call(self, command, *args):
+        """
+        Sends call to the function, whose name is specified by command.
+        """
+        redis_function = getattr(self, string.lower(command))
+        return redis_function(*args)
 
     #### Internal ####
 
