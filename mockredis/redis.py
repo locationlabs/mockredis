@@ -1,8 +1,12 @@
 from collections import defaultdict
 from datetime import datetime, timedelta
+from hashlib import sha1
 from operator import add
 from random import choice, sample
+import string
 from mockredis.lock import MockRedisLock
+from mockredis.exceptions import RedisError
+from mockredis.script import Script
 from mockredis.sortedset import SortedSet
 
 
@@ -15,12 +19,6 @@ class MockRedis(object):
     expiry is NOT supported.
     """
 
-    # The 'Redis' store
-    redis = defaultdict(dict)
-    timeouts = defaultdict(dict)
-    # The pipeline
-    pipe = None
-
     def __init__(self, strict=False, **kwargs):
         """
         Initialize as either StrictRedis or Redis.
@@ -28,6 +26,13 @@ class MockRedis(object):
         Defaults to non-strict.
         """
         self.strict = strict
+        # The 'Redis' store
+        self.redis = defaultdict(dict)
+        self.timeouts = defaultdict(dict)
+        # Dictionary from script to sha ''Script''
+        self.shas = dict()
+        # The pipeline
+        self.pipe = None
 
     #### Connection Functions ####
 
@@ -122,16 +127,31 @@ class MockRedis(object):
     def ttl(self, key, currenttime=datetime.now()):
         """
         Emulate ttl
-        do_expire to get valid values
+        do_expire to get valid values.
+
+        Even though the official redis commands documentation at http://redis.io/commands/ttl
+        states "Return value: Integer reply: TTL in seconds, -2 when key does not exist or -1
+        when key does not have a timeout." the redis-py lib returns None for both these cases.
+        The lib behavior has been emulated here.
+
+        :param key: key for which ttl is requested.
+        :returns: the number of seconds till timeout, None if the key does not exist or if the
+                  key has no timeout(as per the redis-py lib behavior).
         """
 
         self.do_expire(currenttime)
-        return -1 if key not in self.timeouts else self._get_total_seconds(self.timeouts[key] - currenttime)
+
+        if key not in self.timeouts:
+            return None
+        else:
+            # the return should be an int with the number seconds to timeout
+            return self._get_total_seconds(self.timeouts[key] - currenttime)
 
     def do_expire(self, currenttime=datetime.now()):
         """
         Expire objects assuming now == time
         """
+
         for key, value in self.timeouts.items():
             if value - currenttime < timedelta(0):
                 del self.timeouts[key]
@@ -148,10 +168,74 @@ class MockRedis(object):
         result = None if key not in self.redis else self.redis[key]
         return result
 
-    def set(self, key, value):
+    def set(self, key, value, ex=None, px=None, nx=False, xx=False, currenttime=datetime.now()):
+        """
+        Set the ``value`` for the ``key`` in the context of the provided kwargs.
 
+        As per the behavior of the redis-py lib:
+        If nx and xx are both set, the function does nothing and None is returned.
+        If px and ex are both set, the preference is given to px.
+        If the key is not set for some reason, the lib function returns None.
+
+        """
+
+        if nx and xx:
+            return None
+        mode = "nx" if nx else "xx" if xx else None
+        delta = int(px / 1000) if isinstance(px, int) else px or ex
+        if self._should_set(key, mode):
+            if delta:
+                # set with expiration, if its ok to set
+                return self.setex(key, delta, value, currenttime=currenttime)
+            return self._set(key, value)
+
+    def _set(self, key, value):
         self.redis[key] = str(value)
         return True
+
+    def _should_set(self, key, mode):
+        """
+        Determine if it is okay to set a key.
+
+        If the mode is None, returns True, otherwise, returns True of false based on
+        the value of ``key`` and the ``mode`` (nx | xx).
+        """
+
+        if mode is None or mode not in ["nx", "xx"]:
+            return True
+
+        if mode == "nx":
+            if key in self.redis:
+                # nx means set only if key is absent
+                # false if the key already exists
+                return False
+        elif key not in self.redis:
+            # at this point mode can only be xx
+            # xx means set only if the key already exists
+            # false if is absent
+            return False
+        # for all other cases, return true
+        return True
+
+    def setex(self, key, time, value, currenttime=datetime.now()):
+        """
+        Set the value of ``key`` to ``value`` that expires in ``time``
+        seconds. ``time`` can be represented by an integer or a Python
+        timedelta object.
+        """
+
+        seconds = time
+        if isinstance(time, timedelta):
+            seconds = time.seconds + time.days * 24 * 3600
+
+        self._set(key, value)
+        self.expire(key, seconds, currenttime)
+        return True
+
+    def setnx(self, key, value):
+        """Set the value of ``key`` to ``value`` if key doesn't exist"""
+
+        return 1 if key not in self.redis and self._set(key, value) else 0
 
     def decr(self, key, decrement=1):
         """Emulate decr."""
@@ -364,6 +448,12 @@ class MockRedis(object):
                     else:
                         new_list.append(v)
                 self.redis[key] = list(reversed(new_list))
+
+    def rpoplpush(self, source, destination):
+        """Emulate rpoplpush"""
+        transfer_item = self.rpop(source)
+        self.lpush(destination, transfer_item)
+        return transfer_item
 
     #### SET COMMANDS ####
 
@@ -659,13 +749,60 @@ class MockRedis(object):
         self.redis[dest] = union
         return len(union)
 
+    #### Script Commands ####
+
+    def eval(self, script, numkeys, *keys_and_args):
+        """Emulate eval"""
+        sha = self.script_load(script)
+        return self.evalsha(sha, numkeys, *keys_and_args)
+
+    def evalsha(self, sha, numkeys, *keys_and_args):
+        """Emulates evalsha"""
+        if not self.script_exists(sha)[0]:
+            raise RedisError("Sha not registered")
+        script_callable = Script(self, self.shas[sha])
+        numkeys = max(numkeys, 0)
+        keys = keys_and_args[:numkeys]
+        args = keys_and_args[numkeys:]
+        return script_callable(keys, args)
+
+    def script_exists(self, *args):
+        """Emulates script_exists"""
+        return [arg in self.shas for arg in args]
+
+    def script_flush(self):
+        """Emulate script_flush"""
+        self.shas.clear()
+
+    def script_kill(self):
+        """Emulate script_kill"""
+        """XXX: To be implemented, should not be called before that."""
+        raise NotImplementedError("Not yet implemented.")
+
+    def script_load(self, script):
+        """Emulate script_load"""
+        sha_digest = sha1(script).hexdigest()
+        self.shas[sha_digest] = script
+        return sha_digest
+
+    def register_script(self, script):
+        """Emulate register_script"""
+        return Script(self, script)
+
+    def call(self, command, *args):
+        """
+        Sends call to the function, whose name is specified by command.
+        """
+        redis_function = getattr(self, string.lower(command))
+        return redis_function(*args)
+
     #### Internal ####
 
     def _get_total_seconds(self, td):
         """
         For python 2.6 support
         """
-        return (td.microseconds + (td.seconds + td.days * 24 * 3600) * 1e6) / 1e6
+        return int((td.microseconds + (td.seconds + td.days * 24 * 3600) * 1e6) / 1e6)
 
     def _get_list(self, key, operation, create=False):
         """

@@ -173,7 +173,11 @@ class TestRedisZset(TestCase):
         self.assertEquals([("one", 1.5), ("two", 2.5), ("three", 3.5)],
                           self.redis.zrangebyscore(key, "-inf", "inf", withscores=True))
         self.assertEquals([("one", 1), ("two", 2), ("three", 3)],
-                          self.redis.zrangebyscore(key, "-inf", "inf", withscores=True, score_cast_func=int))
+                          self.redis.zrangebyscore(key,
+                                                   "-inf",
+                                                   "inf",
+                                                   withscores=True,
+                                                   score_cast_func=int))
 
         self.assertEquals(["one"],
                           self.redis.zrangebyscore(key, 1.0, 2.0))
@@ -209,7 +213,11 @@ class TestRedisZset(TestCase):
         self.assertEquals([("three", 3.5), ("two", 2.5), ("one", 1.5)],
                           self.redis.zrevrangebyscore(key, "inf", "-inf", withscores=True))
         self.assertEquals([("three", 3), ("two", 2), ("one", 1)],
-                          self.redis.zrevrangebyscore(key, "inf", "-inf", withscores=True, score_cast_func=int))
+                          self.redis.zrevrangebyscore(key,
+                                                      "inf",
+                                                      "-inf",
+                                                      withscores=True,
+                                                      score_cast_func=int))
 
         self.assertEquals(["one"],
                           self.redis.zrevrangebyscore(key, 2.0, 1.0))
