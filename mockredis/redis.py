@@ -54,7 +54,7 @@ class MockRedis(object):
         from pipeline import MockRedisPipeline
 
         if self.pipe is None:
-            self.pipe = MockRedisPipeline(self.redis, self.timeouts)
+            self.pipe = MockRedisPipeline(self.redis, self.timeouts, self)
         return self.pipe
 
     def watch(self, *argv, **kwargs):

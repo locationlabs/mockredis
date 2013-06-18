@@ -8,10 +8,16 @@ class MockRedisPipeline(MockRedis):
     real Redis server.
     """
 
-    def __init__(self, redis, timeouts):
+    def __init__(self, redis, timeouts, client):
         """Initialize the object."""
         self.redis = redis
         self.timeouts = timeouts
+        self.client = client
+        self.results = []
+
+    @property
+    def shas(self):
+        return self.client.shas
 
     def execute(self):
         """
