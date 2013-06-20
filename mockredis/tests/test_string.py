@@ -164,3 +164,23 @@ class TestRedisString(object):
         ok_(self.redis.setnx('key', 'value'))
         ok_(not self.redis.setnx('key', 'different_value'))
         eq_('value', self.redis.get('key'))
+
+    def test_delete(self):
+        """Test if delete works"""
+
+        test_cases = [('1', '1', 1),
+                      (('1', '2'), ('1', '2'), 2),
+                      (('1', '2', '3'), ('1', '3'), 2),
+                      (('1', '2'), '1', 1),
+                      ('1', '2', 0)]
+        for case in test_cases:
+            yield self._assert_delete, case
+
+    def _assert_delete(self, data):
+        """Asserts that key(s) deletion along with removing timeouts if any, succeeds as expected"""
+        to_create, to_delete, check = data
+        for key in to_create:
+            self.redis.set(key, "value")
+        for key in set(to_create) & set(to_delete):
+            ok_(key not in self.redis.timeouts)
+        eq_(self.redis.delete(*to_delete), check)

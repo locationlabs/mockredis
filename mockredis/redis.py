@@ -106,10 +106,17 @@ class MockRedis(object):
 
         return result
 
-    def delete(self, key):
+    def delete(self, *keys):
         """Emulate delete."""
-        if key in self.redis:
-            del self.redis[key]
+
+        key_counter = 0
+        for key in keys:
+            if key in self.redis:
+                del self.redis[key]
+                key_counter += 1
+            if key in self.timeouts:
+                del self.timeouts[key]
+        return key_counter
 
     def exists(self, key):
         """Emulate exists."""

@@ -1,3 +1,8 @@
+Version 2.7.5.1
+
+ - Changed `delete` operation to support a list of keys as arguments and return
+   the number of keys that were deleted.
+
 Version 2.7.5.0
 
  - Added 'script' operations: EVAL, EVALSHA, SCRIPT_EXISTS, SCRIPT_FLUSH,
