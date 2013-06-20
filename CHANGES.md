@@ -1,7 +1,7 @@
 Version 2.7.5.1
 
- - Changed `delete` operation to support a list of keys as arguments and return
-   the number of keys that were deleted.
+ - Changed DEL to support a list of keys as arguments and return the number of
+   keys that were deleted.
 
 Version 2.7.5.0
 
