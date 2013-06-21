@@ -6,6 +6,7 @@ from random import choice, sample
 import string
 from mockredis.lock import MockRedisLock
 from mockredis.exceptions import RedisError
+from mockredis.pipeline import MockRedisPipeline
 from mockredis.script import Script
 from mockredis.sortedset import SortedSet
 
@@ -50,11 +51,8 @@ class MockRedis(object):
 
     def pipeline(self):
         """Emulate a redis-python pipeline."""
-        # Prevent a circular import
-        from pipeline import MockRedisPipeline
-
         if self.pipe is None:
-            self.pipe = MockRedisPipeline(self.redis, self.timeouts, self)
+            self.pipe = MockRedisPipeline(self)
         return self.pipe
 
     def watch(self, *argv, **kwargs):
