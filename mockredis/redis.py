@@ -32,8 +32,6 @@ class MockRedis(object):
         self.timeouts = defaultdict(dict)
         # Dictionary from script to sha ''Script''
         self.shas = dict()
-        # The pipeline
-        self.pipe = None
 
     #### Connection Functions ####
 
@@ -51,9 +49,7 @@ class MockRedis(object):
 
     def pipeline(self):
         """Emulate a redis-python pipeline."""
-        if self.pipe is None:
-            self.pipe = MockRedisPipeline(self)
-        return self.pipe
+        return MockRedisPipeline(self)
 
     def watch(self, *argv, **kwargs):
         """

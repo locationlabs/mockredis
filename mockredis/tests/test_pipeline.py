@@ -10,6 +10,26 @@ class TestPipeline(TestCase):
         self.redis = MockRedis()
         self.redis.flushdb()
 
+    def test_pipeline(self):
+        """
+        Pipeline execution returns all of the saved up values.
+        """
+        with self.redis.pipeline() as pipeline:
+            pipeline.echo("foo")
+            pipeline.echo("bar")
+
+            eq_(["foo", "bar"], pipeline.execute())
+
+    def test_set_and_get(self):
+        """
+        Pipeline execution returns the pipeline, not the intermediate value.
+        """
+        with self.redis.pipeline() as pipeline:
+            eq_(pipeline, pipeline.set("foo", "bar"))
+            eq_(pipeline, pipeline.get("foo"))
+
+            eq_([True, "bar"], pipeline.execute())
+
     def test_scripts(self):
         """
         Verify that script calls work across pipelines.
@@ -26,4 +46,4 @@ class TestPipeline(TestCase):
         eq_([True], self.redis.script_exists(sha))
 
         # Script exists in pipeline
-        eq_([True], self.redis.pipeline().script_exists(sha))
+        eq_([True], self.redis.pipeline().script_exists(sha).execute()[0])
