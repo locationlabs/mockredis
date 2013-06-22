@@ -9,7 +9,6 @@ class MockRedisPipeline(object):
 
     def __init__(self, mock_redis):
         self.mock_redis = mock_redis
-        self.results = []
 
     def __getattr__(self, name):
         """
