@@ -6,6 +6,7 @@ from random import choice, sample
 import string
 from mockredis.lock import MockRedisLock
 from mockredis.exceptions import RedisError
+from mockredis.pipeline import MockRedisPipeline
 from mockredis.script import Script
 from mockredis.sortedset import SortedSet
 
@@ -31,8 +32,6 @@ class MockRedis(object):
         self.timeouts = defaultdict(dict)
         # Dictionary from script to sha ''Script''
         self.shas = dict()
-        # The pipeline
-        self.pipe = None
 
     #### Connection Functions ####
 
@@ -50,12 +49,7 @@ class MockRedis(object):
 
     def pipeline(self):
         """Emulate a redis-python pipeline."""
-        # Prevent a circular import
-        from pipeline import MockRedisPipeline
-
-        if self.pipe is None:
-            self.pipe = MockRedisPipeline(self.redis, self.timeouts)
-        return self.pipe
+        return MockRedisPipeline(self)
 
     def watch(self, *argv, **kwargs):
         """
@@ -106,10 +100,17 @@ class MockRedis(object):
 
         return result
 
-    def delete(self, key):
+    def delete(self, *keys):
         """Emulate delete."""
-        if key in self.redis:
-            del self.redis[key]
+
+        key_counter = 0
+        for key in keys:
+            if key in self.redis:
+                del self.redis[key]
+                key_counter += 1
+            if key in self.timeouts:
+                del self.timeouts[key]
+        return key_counter
 
     def exists(self, key):
         """Emulate exists."""

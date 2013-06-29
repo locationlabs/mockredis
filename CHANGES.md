@@ -1,3 +1,9 @@
+Version 2.7.5.1
+
+ - Changed DEL to support a list of keys as arguments and return the number of
+   keys that were deleted.
+ - Improved pipeline support
+
 Version 2.7.5.0
 
  - Added 'script' operations: EVAL, EVALSHA, SCRIPT_EXISTS, SCRIPT_FLUSH,

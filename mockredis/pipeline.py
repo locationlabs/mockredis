@@ -1,25 +1,31 @@
-from mockredis.redis import MockRedis
-
-
-class MockRedisPipeline(MockRedis):
+class MockRedisPipeline(object):
     """
-    Imitate a redis-python pipeline object
-    so unit tests can run without needing a
-    real Redis server.
+    Simulates a redis-python pipeline object.
     """
 
-    def __init__(self, redis, timeouts):
-        """Initialize the object."""
-        self.redis = redis
-        self.timeouts = timeouts
+    def __init__(self, mock_redis):
+        self.mock_redis = mock_redis
+        self.commands = []
+
+    def __getattr__(self, name):
+        """
+        Handle all unfound attributes by adding a deferred function call that
+        delegates to the underlying mock redis instance.
+        """
+        command = getattr(self.mock_redis, name)
+        if not callable(command):
+            raise AttributeError(name)
+
+        def wrapper(*args, **kwargs):
+            self.commands.append(lambda: command(*args, **kwargs))
+            return self
+        return wrapper
 
     def execute(self):
         """
-        Emulate the execute method. All piped
-        commands are executed immediately
-        in this mock, so this is a no-op.
+        Execute all of the saved commands and return results.
         """
-        pass
+        return [command() for command in self.commands]
 
     def __exit__(self, *argv, **kwargs):
         pass
