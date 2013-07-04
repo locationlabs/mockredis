@@ -27,7 +27,14 @@ class Script(object):
         except ImportError:
             raise RuntimeError("LUA not installed")
 
+        import ctypes
+        ctypes.CDLL('liblua5.2.so', mode=ctypes.RTLD_GLOBAL)
+
         lua_globals = lua.globals()
+        try:
+            lua_globals.cjson = lua.eval('require "cjson"')
+        except RuntimeError:
+            raise RuntimeError("cjson not installed")
         lua_globals.KEYS = self._create_lua_array(keys)
         lua_globals.ARGV = self._create_lua_array(args)
         lua_globals.redis = {"call": client.call}
