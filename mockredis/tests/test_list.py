@@ -115,3 +115,26 @@ class TestRedisList(TestCase):
         self.assertEqual(VAL2, transfer_item)
         self.assertEqual([VAL1], self.redis.redis[LIST1])
         self.assertEqual([VAL2, VAL3, VAL4], self.redis.redis[LIST2])
+
+    def test_lrange(self):
+        self.assertEqual([], self.redis.lrange(LIST1, 0, 6))
+        self.assertEqual([], self.redis.lrange(LIST1, 0, -1))
+        self.redis.lpush(LIST1, VAL1, VAL2, VAL3, VAL4)
+
+        """Cases for returning entire list"""
+        self.assertEqual([VAL4, VAL3, VAL2, VAL1],
+                         self.redis.lrange(LIST1, 0, 3))
+        self.assertEqual([VAL4, VAL3, VAL2, VAL1],
+                         self.redis.lrange(LIST1, 0, -1))
+        self.assertEqual([VAL4, VAL3, VAL2, VAL1],
+                         self.redis.lrange(LIST1, 0, 6))
+
+        """Cases for returning partial list"""
+        self.assertEqual([VAL4, VAL3],
+                         self.redis.lrange(LIST1, 0, 1))
+        self.assertEqual([VAL2, VAL1],
+                         self.redis.lrange(LIST1, 2, 3))
+        self.assertEqual([VAL2, VAL1],
+                         self.redis.lrange(LIST1, 2, -1))
+        self.assertEqual([VAL3, VAL2],
+                         self.redis.lrange(LIST1, 1, 2))

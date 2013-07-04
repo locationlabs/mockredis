@@ -361,10 +361,12 @@ class MockRedis(object):
         # Does the set at this key already exist?
         if key in self.redis:
             # Yes, add this to the list
-            return map(str, self.redis[key][start:stop + 1 if stop != -1 else None])
+            return map(str,
+                       self.redis[key][start:stop + 1 if stop != -1 else None])
         else:
             # No, override the defaultdict's default and create the list
             self.redis[key] = list([])
+            return self.redis[key]
 
     def lindex(self, key, index):
         """Emulate lindex."""
