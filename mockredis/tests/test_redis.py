@@ -1,4 +1,6 @@
+import time
 from unittest import TestCase
+
 from mockredis import MockRedis, mock_redis_client, mock_strict_redis_client
 
 
@@ -124,11 +126,8 @@ class TestRedis(TestCase):
         """
         test whether expireat sets the correct ttl, setting a timestamp 30s in the future
         """
-        import time
-        from datetime import datetime
-
         self.redis.set('key', 'key')
-        self.redis.expireat('key', time.mktime(datetime.utcnow().timetuple()) + 30)
+        self.redis.expireat('key', int(time.time()) + 30)
 
         result = self.redis.ttl('key')
         # should be an int
