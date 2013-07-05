@@ -58,6 +58,13 @@ class MockRedis(object):
         """
         pass
 
+    def unwatch(self):
+        """
+        Mock does not support command buffering so unwatch
+        is a no-op
+        """
+        pass
+
     def multi(self, *argv, **kwargs):
         """
         Mock does not support command buffering so multi
