@@ -125,6 +125,14 @@ class MockRedis(object):
             return 1
         return 0
 
+    def expireat(self, key, when):
+        """Emulate expireat"""
+        expire_time = datetime.fromtimestamp(when)
+        if key in self.redis:
+            self.timeouts[key] = expire_time
+            return 1
+        return 0
+
     def ttl(self, key, currenttime=datetime.now()):
         """
         Emulate ttl
