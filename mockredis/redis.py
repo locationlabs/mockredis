@@ -58,6 +58,13 @@ class MockRedis(object):
         """
         pass
 
+    def unwatch(self):
+        """
+        Mock does not support command buffering so unwatch
+        is a no-op
+        """
+        pass
+
     def multi(self, *argv, **kwargs):
         """
         Mock does not support command buffering so multi
@@ -122,6 +129,14 @@ class MockRedis(object):
 
         if key in self.redis:
             self.timeouts[key] = currenttime + timedelta(seconds=seconds)
+            return 1
+        return 0
+
+    def expireat(self, key, when):
+        """Emulate expireat"""
+        expire_time = datetime.fromtimestamp(when)
+        if key in self.redis:
+            self.timeouts[key] = expire_time
             return 1
         return 0
 
