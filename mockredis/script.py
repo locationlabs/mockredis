@@ -27,18 +27,34 @@ class Script(object):
         except ImportError:
             raise RuntimeError("LUA not installed")
 
-        import ctypes
-        ctypes.CDLL('liblua5.2.so', mode=ctypes.RTLD_GLOBAL)
-
         lua_globals = lua.globals()
-        try:
-            lua_globals.cjson = lua.eval('require "cjson"')
-        except RuntimeError:
-            raise RuntimeError("cjson not installed")
+        self._import_lua_dependencies(lua, lua_globals)
         lua_globals.KEYS = self._create_lua_array(keys)
         lua_globals.ARGV = self._create_lua_array(args)
         lua_globals.redis = {"call": client.call}
         return lua.execute(self.script)
+
+    def _import_lua_dependencies(self, lua, lua_globals):
+        """
+        Imports lua dependencies that are supported by redis lua scripts.
+        Included:
+            - cjson lib.
+        Pending:
+            - base lib.
+            - table lib.
+            - string lib.
+            - math lib.
+            - debug lib.
+            - cmsgpack lib.
+        """
+
+        import ctypes
+        ctypes.CDLL('liblua5.2.so', mode=ctypes.RTLD_GLOBAL)
+
+        try:
+            lua_globals.cjson = lua.eval('require "cjson"')
+        except RuntimeError:
+            raise RuntimeError("cjson not installed")
 
     def _create_lua_array(self, args):
         """
