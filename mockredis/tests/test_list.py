@@ -118,37 +118,32 @@ class TestRedisList(TestCase):
 
     def test_lrange_get_all(self):
         """Cases for returning entire list"""
+        values = [VAL4, VAL3, VAL2, VAL1]
 
         self.assertEqual([], self.redis.lrange(LIST1, 0, 6))
         self.assertEqual([], self.redis.lrange(LIST1, 0, -1))
-        self.redis.lpush(LIST1, VAL1, VAL2, VAL3, VAL4)
+        self.redis.lpush(LIST1, *reversed(values))
 
         # Check with exact range
-        self.assertEqual([VAL4, VAL3, VAL2, VAL1],
-                         self.redis.lrange(LIST1, 0, 3))
+        self.assertEqual(values, self.redis.lrange(LIST1, 0, 3))
         # Check with negative index
-        self.assertEqual([VAL4, VAL3, VAL2, VAL1],
-                         self.redis.lrange(LIST1, 0, -1))
+        self.assertEqual(values, self.redis.lrange(LIST1, 0, -1))
         # Check with range larger than length of list
-        self.assertEqual([VAL4, VAL3, VAL2, VAL1],
-                         self.redis.lrange(LIST1, 0, 6))
+        self.assertEqual(values, self.redis.lrange(LIST1, 0, 6))
 
     def test_lrange_get_sublist(self):
         """Cases for returning partial list"""
+        values = [VAL4, VAL3, VAL2, VAL1]
 
         self.assertEqual([], self.redis.lrange(LIST1, 0, 6))
         self.assertEqual([], self.redis.lrange(LIST1, 0, -1))
-        self.redis.lpush(LIST1, VAL1, VAL2, VAL3, VAL4)
+        self.redis.lpush(LIST1, *reversed(values))
 
         # Check from left end of the list
-        self.assertEqual([VAL4, VAL3],
-                         self.redis.lrange(LIST1, 0, 1))
+        self.assertEqual(values[:2], self.redis.lrange(LIST1, 0, 1))
         # Check from right end of the list
-        self.assertEqual([VAL2, VAL1],
-                         self.redis.lrange(LIST1, 2, 3))
+        self.assertEqual(values[2:4], self.redis.lrange(LIST1, 2, 3))
         # Check from right end of the list with negative range
-        self.assertEqual([VAL2, VAL1],
-                         self.redis.lrange(LIST1, -2, -1))
+        self.assertEqual(values[-2:], self.redis.lrange(LIST1, -2, -1))
         # Check from middle of the list
-        self.assertEqual([VAL3, VAL2],
-                         self.redis.lrange(LIST1, 1, 2))
+        self.assertEqual(values[1:3], self.redis.lrange(LIST1, 1, 2))
