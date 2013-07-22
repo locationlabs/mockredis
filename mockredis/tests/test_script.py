@@ -119,6 +119,17 @@ class TestScript(TestCase):
         self.assertEquals(VAL1, list_item)
         self.assertEquals([VAL2], self.redis.lrange(LIST1, 0, -1))
 
+    def test_table_getn(self):
+        self.redis.lpush(LIST1, VAL2, VAL1)
+        script_content = """
+        local num_items = redis.call('LRANGE', KEYS[1], ARGV[1], ARGV[2])
+        return table.getn(num_items)
+        """
+        script = self.redis.register_script(script_content)
+        num_items = script(keys=[LIST1], args=[0, -1])
+
+        self.assertEqual(num_items, 2)
+
     def test_evalsha(self):
         self.redis.lpush(LIST1, VAL1)
         script = LPOP_SCRIPT

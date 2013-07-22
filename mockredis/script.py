@@ -31,7 +31,22 @@ class Script(object):
         self._import_lua_dependencies(lua, lua_globals)
         lua_globals.KEYS = self._create_lua_array(keys)
         lua_globals.ARGV = self._create_lua_array(args)
-        lua_globals.redis = {"call": client.call}
+
+        def _call(*call_args):
+            """
+            Convert Python list into Lua list, as Python list is not
+            compatible with Lua functions such as table.getn().
+            """
+            response = client.call(*call_args)
+            if isinstance(response, list):
+                lua_list = lua.eval("{}")
+                lua_table = lua.eval("table")
+                for item in response:
+                    lua_table.insert(lua_list, item)
+                return lua_list
+            return response
+
+        lua_globals.redis = {"call": _call}
         return lua.execute(self.script)
 
     def _import_lua_dependencies(self, lua, lua_globals):
@@ -49,7 +64,7 @@ class Script(object):
         """
 
         import ctypes
-        ctypes.CDLL('liblua5.2.so', mode=ctypes.RTLD_GLOBAL)
+        ctypes.CDLL('liblua5.1.so', mode=ctypes.RTLD_GLOBAL)
 
         try:
             lua_globals.cjson = lua.eval('require "cjson"')
