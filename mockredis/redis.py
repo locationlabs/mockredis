@@ -452,6 +452,15 @@ class MockRedis(object):
                         new_list.append(v)
                 self.redis[key] = list(reversed(new_list))
 
+    def ltrim(self, key, start, stop):
+        """Emulate ltrim."""
+        if key in self.redis:
+            redis_list = self._get_list(key, 'LTRIM')
+            start_point = start if start != -1 else (len(redis_list) - 1)
+            stop_point = (stop + 1) if stop != -1 else len(redis_list)
+            self.redis[key] = redis_list[start_point:stop_point]
+        return True
+
     def rpoplpush(self, source, destination):
         """Emulate rpoplpush"""
         transfer_item = self.rpop(source)
