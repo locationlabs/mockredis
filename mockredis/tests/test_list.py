@@ -141,7 +141,7 @@ class TestRedisList(TestCase):
 
     def test_ltrim_retain_all(self):
         values = [VAL4, VAL3, VAL2, VAL1]
-        self._init_list(LIST1, *values)
+        self._reinitialize_list(LIST1, *values)
 
         self.redis.ltrim(LIST1, 0, -1)
         self.assertEqual(values, self.redis.lrange(LIST1, 0, -1))
@@ -160,7 +160,7 @@ class TestRedisList(TestCase):
 
     def test_ltrim_remove_all(self):
         values = [VAL4, VAL3, VAL2, VAL1]
-        self._init_list(LIST1, *values)
+        self._reinitialize_list(LIST1, *values)
 
         self.redis.ltrim(LIST1, 2, 1)
         self.assertEqual([], self.redis.lrange(LIST1, 0, -1))
@@ -179,24 +179,24 @@ class TestRedisList(TestCase):
 
     def test_ltrim(self):
         values = [VAL4, VAL3, VAL2, VAL1]
-        self._init_list(LIST1, *values)
+        self._reinitialize_list(LIST1, *values)
 
         self.redis.ltrim(LIST1, 1, 2)
         self.assertEqual(values[1:3], self.redis.lrange(LIST1, 0, -1))
 
-        self._init_list(LIST1, *values)
+        self._reinitialize_list(LIST1, *values)
         self.redis.ltrim(LIST1, -3, -1)
         self.assertEqual(values[-3:], self.redis.lrange(LIST1, 0, -1))
 
-        self._init_list(LIST1, *values)
+        self._reinitialize_list(LIST1, *values)
         self.redis.ltrim(LIST1, 1, 5)
         self.assertEqual(values[1:5], self.redis.lrange(LIST1, 0, -1))
 
-        self._init_list(LIST1, *values)
+        self._reinitialize_list(LIST1, *values)
         self.redis.ltrim(LIST1, -100, 2)
         self.assertEqual(values[-100:3], self.redis.lrange(LIST1, 0, -1))
 
-    def _init_list(self, key, *values):
+    def _reinitialize_list(self, key, *values):
         """
         Re-initialize the list
         """
