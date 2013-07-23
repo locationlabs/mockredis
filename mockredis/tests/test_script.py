@@ -122,13 +122,23 @@ class TestScript(TestCase):
     def test_table_getn(self):
         self.redis.lpush(LIST1, VAL2, VAL1)
         script_content = """
-        local num_items = redis.call('LRANGE', KEYS[1], ARGV[1], ARGV[2])
-        return table.getn(num_items)
+        local items = redis.call('LRANGE', KEYS[1], ARGV[1], ARGV[2])
+        return table.getn(items)
         """
         script = self.redis.register_script(script_content)
-        num_items = script(keys=[LIST1], args=[0, -1])
+        items = script(keys=[LIST1], args=[0, -1])
 
-        self.assertEqual(num_items, 2)
+        self.assertEqual(items, 2)
+
+    def test_table_dict(self):
+        self.redis.hmset("myset", {"k1": "v1"})
+        script_content = """
+        local item = redis.call('HGETALL', KEYS[1])
+        return item[1]
+        """
+        script = self.redis.register_script(script_content)
+        item = script(keys=["myset"])
+        self.assertEqual(item, 'k1')
 
     def test_evalsha(self):
         self.redis.lpush(LIST1, VAL1)

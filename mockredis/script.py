@@ -29,22 +29,12 @@ class Script(object):
 
         lua_globals = lua.globals()
         self._import_lua_dependencies(lua, lua_globals)
-        lua_globals.KEYS = self._create_lua_array(keys)
-        lua_globals.ARGV = self._create_lua_array(args)
+        lua_globals.KEYS = self._python_to_lua(keys)
+        lua_globals.ARGV = self._python_to_lua(args)
 
         def _call(*call_args):
-            """
-            Convert Python list into Lua list, as Python list is not
-            compatible with Lua functions such as table.getn().
-            """
             response = client.call(*call_args)
-            if isinstance(response, list):
-                lua_list = lua.eval("{}")
-                lua_table = lua.eval("table")
-                for item in response:
-                    lua_table.insert(lua_list, item)
-                return lua_list
-            return response
+            return self._python_to_lua(response)
 
         lua_globals.redis = {"call": _call}
         return lua.execute(self.script)
@@ -71,9 +61,38 @@ class Script(object):
         except RuntimeError:
             raise RuntimeError("cjson not installed")
 
-    def _create_lua_array(self, args):
-        """
-        Since Lua array indexes begin from 1 and we are passing a Python array to Lua.
-        We need a dummy value at 0th index, which is going to be ignored in Lua scripts
-        """
-        return [None] + list(args)
+    def _python_to_lua(self, pval):
+        import lua
+        if isinstance(pval, list) or isinstance(pval, tuple):
+            """
+            Convert Python list into Lua list, as Python list is not
+            compatible with Lua functions such as table.getn().
+            """
+            lua_list = lua.eval("{}")
+            lua_table = lua.eval("table")
+            for item in pval:
+                lua_table.insert(lua_list, self._python_to_lua(item))
+            return lua_list
+        elif isinstance(pval, dict):
+            """
+            Convert Python dict into Lua list, as whenever Python returns
+            a dictionary; Lua returns a list with key value pairs merged
+            into one single list.
+            e.g.: in hmgetall
+                in Python returns: {k1:v1, k2:v2, k3:v3}
+                in Lua returns: {k1, v1, k2, v2, k3, v3}
+            """
+            lua_dict = lua.eval("{}")
+            lua_table = lua.eval("table")
+            for k, v in pval.iteritems():
+                lua_table.insert(lua_dict, self._python_to_lua(k))
+                lua_table.insert(lua_dict, self._python_to_lua(v))
+            return lua_dict
+        elif isinstance(pval, int):
+            """
+            Convert Python integer into Lua number
+            """
+            lua_globals = lua.globals()
+            return lua_globals.tonumber(str(pval))
+
+        return pval
