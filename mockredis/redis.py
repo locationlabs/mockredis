@@ -357,16 +357,11 @@ class MockRedis(object):
 
     def lrange(self, key, start, stop):
         """Emulate lrange."""
-
-        # Does the set at this key already exist?
-        if key in self.redis:
-            # Yes, add this to the list
-            return map(str,
-                       self.redis[key][start:stop + 1 if stop != -1 else None])
-        else:
-            # No, override the defaultdict's default and create the list
-            self.redis[key] = list([])
-            return self.redis[key]
+        redis_list = self._get_list(key, 'LTRIM')
+        if not redis_list:
+            return []
+        start, stop = self._translate_range(len(redis_list), start, stop)
+        return redis_list[start:stop + 1]
 
     def lindex(self, key, index):
         """Emulate lindex."""
@@ -454,11 +449,10 @@ class MockRedis(object):
 
     def ltrim(self, key, start, stop):
         """Emulate ltrim."""
-        if key in self.redis:
-            redis_list = self._get_list(key, 'LTRIM')
-            start_point = start if start != -1 else (len(redis_list) - 1)
-            stop_point = (stop + 1) if stop != -1 else len(redis_list)
-            self.redis[key] = redis_list[start_point:stop_point]
+        redis_list = self._get_list(key, 'LTRIM')
+        if redis_list:
+            start, stop = self._translate_range(len(redis_list), start, stop)
+            self.redis[key] = redis_list[start:stop + 1]
         return True
 
     def rpoplpush(self, source, destination):
@@ -649,8 +643,6 @@ class MockRedis(object):
             return []
 
         start, end = self._translate_range(len(zset), start, end)
-        if start == len(zset) or end < start:
-            return []
 
         func = self._range_func(withscores, score_cast_func)
         return [func(item) for item in zset.range(start, end, desc)]
@@ -856,14 +848,7 @@ class MockRedis(object):
         """
         Translate range to valid bounds.
         """
-        if start < 0:
-            start = len_ + max(start, -len_)
-        elif start > 0:
-            start = min(start, len_)
-        if end < 0:
-            end = len_ + max(end, -(len_ + 1))
-        elif end > 0:
-            end = min(end, len_ - 1)
+        end = end if end != -1 else len_ - 1
         return start, end
 
     def _translate_limit(self, len_, start, num):

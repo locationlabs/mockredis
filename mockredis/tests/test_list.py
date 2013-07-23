@@ -139,7 +139,7 @@ class TestRedisList(TestCase):
         self.assertEqual([VAL3, VAL2],
                          self.redis.lrange(LIST1, 1, 2))
 
-    def test_ltrim_retail_all(self):
+    def test_ltrim_retain_all(self):
         values = [VAL4, VAL3, VAL2, VAL1]
         self._init_list(LIST1, *values)
 
@@ -200,5 +200,5 @@ class TestRedisList(TestCase):
         """
         Re-initialize the list
         """
-        self.redis.ltrim(LIST1, 0, -1 * (self.redis.llen(key) + 1))
+        self.redis.delete(LIST1)
         self.redis.lpush(LIST1, *reversed(values))
