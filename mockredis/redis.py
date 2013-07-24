@@ -357,9 +357,7 @@ class MockRedis(object):
 
     def lrange(self, key, start, stop):
         """Emulate lrange."""
-        redis_list = self._get_list(key, 'LTRIM')
-        if not redis_list:
-            return []
+        redis_list = self._get_list(key, 'LRANGE')
         start, stop = self._translate_range(len(redis_list), start, stop)
         return redis_list[start:stop + 1]
 

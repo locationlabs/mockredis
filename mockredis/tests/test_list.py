@@ -165,15 +165,15 @@ class TestRedisList(TestCase):
         self.redis.ltrim(LIST1, 2, 1)
         self.assertEqual([], self.redis.lrange(LIST1, 0, -1))
 
-        self.redis.lpush(LIST1, *reversed(values))
+        self._reinitialize_list(LIST1, *values)
         self.redis.ltrim(LIST1, -1, -2)
         self.assertEqual([], self.redis.lrange(LIST1, 0, -1))
 
-        self.redis.lpush(LIST1, *reversed(values))
+        self._reinitialize_list(LIST1, *values)
         self.redis.ltrim(LIST1, 2, -3)
         self.assertEqual([], self.redis.lrange(LIST1, 0, -1))
 
-        self.redis.lpush(LIST1, *reversed(values))
+        self._reinitialize_list(LIST1, *values) 
         self.redis.ltrim(LIST1, -1, 2)
         self.assertEqual([], self.redis.lrange(LIST1, 0, -1))
 
