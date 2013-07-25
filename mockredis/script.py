@@ -37,7 +37,7 @@ class Script(object):
             return self._python_to_lua(response)
 
         lua_globals.redis = {"call": _call}
-        return lua.execute(self.script)
+        return self._lua_to_python(lua.execute(self.script))
 
     def _import_lua_dependencies(self, lua, lua_globals):
         """
@@ -61,38 +61,78 @@ class Script(object):
         except RuntimeError:
             raise RuntimeError("cjson not installed")
 
-    def _python_to_lua(self, pval):
+    @staticmethod
+    def _lua_to_python(lval):
+        """
+        Convert Lua object(s) into Python object(s), as at times Lua object(s)
+        are not compatible with Python functions
+        """
         import lua
-        if isinstance(pval, list) or isinstance(pval, tuple):
-            """
-            Convert Python list into Lua list, as Python list is not
-            compatible with Lua functions such as table.getn().
-            """
+        lua_globals = lua.globals()
+        if lval is None:
+            # Lua None --> Python None
+            return None
+        if lua_globals.type(lval) == "table":
+            # Lua table --> Python list
+            pval = []
+            for i in lval:
+                pval.append(Script._lua_to_python(lval[i]))
+            return pval
+        elif isinstance(lval, long):
+            # Lua number --> Python long
+            return long(lval)
+        elif isinstance(lval, float):
+            # Lua number --> Python float
+            return float(lval)
+        elif lua_globals.type(lval) == "userdata":
+            # Lua userdata --> Python string
+            return str(lval)
+        elif lua_globals.type(lval) == "boolean":
+            # Lua boolean --> Python bool
+            return bool(lval)
+        raise RuntimeError("Invalid Lua type: " + str(lua_globals.type(lval)))
+
+    @staticmethod
+    def _python_to_lua(pval):
+        """
+        Convert Python object(s) into Lua object(s), as at times Python object(s)
+        are not compatible with Lua functions
+        """
+        import lua
+        if pval is None:
+            # Python None --> Lua None
+            return lua.eval("")
+        if isinstance(pval, (list, tuple)):
+            # Python list --> Lua table
             lua_list = lua.eval("{}")
             lua_table = lua.eval("table")
             for item in pval:
-                lua_table.insert(lua_list, self._python_to_lua(item))
+                lua_table.insert(lua_list, Script._python_to_lua(item))
             return lua_list
         elif isinstance(pval, dict):
-            """
-            Convert Python dict into Lua list, as whenever Python returns
-            a dictionary; Lua returns a list with key value pairs merged
-            into one single list.
-            e.g.: in hmgetall
-                in Python returns: {k1:v1, k2:v2, k3:v3}
-                in Lua returns: {k1, v1, k2, v2, k3, v3}
-            """
+            # Python dict --> Lua dict
+            # e.g.: in hgetall
+            #     in Python returns: {k1:v1, k2:v2, k3:v3}
+            #     in Lua returns: {k1, v1, k2, v2, k3, v3}
             lua_dict = lua.eval("{}")
             lua_table = lua.eval("table")
-            for k, v in pval.iteritems():
-                lua_table.insert(lua_dict, self._python_to_lua(k))
-                lua_table.insert(lua_dict, self._python_to_lua(v))
+            for k in reversed(pval.keys()):
+                v = pval[k]
+                lua_table.insert(lua_dict, Script._python_to_lua(k))
+                lua_table.insert(lua_dict, Script._python_to_lua(v))
             return lua_dict
-        elif isinstance(pval, int):
-            """
-            Convert Python integer into Lua number
-            """
+        elif isinstance(pval, str):
+            # Python string --> Lua userdata
+            return pval
+        elif isinstance(pval, bool):
+            # Python bool--> Lua boolean
+            if pval:
+                return lua.eval("true")
+            else:
+                return lua.eval("false")
+        elif isinstance(pval, (int, long, float)):
+            # Python int --> Lua number
             lua_globals = lua.globals()
             return lua_globals.tonumber(str(pval))
 
-        return pval
+        raise RuntimeError("Invalid Python type: " + str(type(pval)))

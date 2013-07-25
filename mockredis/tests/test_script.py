@@ -7,6 +7,7 @@ from mockredis.tests.test_constants import (
     VAL1, VAL2, VAL3, VAL4,
     LPOP_SCRIPT
 )
+from mockredis.script import Script as MockredisScript
 
 
 def has_lua():
@@ -29,6 +30,33 @@ class TestScript(TestCase):
     def setUp(self):
         self.redis = MockRedis()
         self.LPOP_SCRIPT_SHA = sha1(LPOP_SCRIPT).hexdigest()
+        import lua
+        self.lua = lua
+        self.lua_globals = lua.globals()
+
+        compare_list = """
+        function compare_list(list1, list2)
+            local isequal = true
+            if not table.getn(list1) == table.getn(list2) then
+                isequal = false
+            else
+                for i, item in ipairs(list1) do
+                    isequal = isequal and (list1[i] == list2[i])
+                end
+            end
+            return isequal
+        end
+        return compare_list
+        """
+        self.lua_compare_list = self.lua.execute(compare_list)
+
+        compare_val = """
+        function compare_val(var1, var2)
+            return var1 == var2
+        end
+        return compare_val
+        """
+        self.lua_compare_val = self.lua.execute(compare_val)
 
     def test_register_script_lpush(self):
         # lpush two values
@@ -119,26 +147,26 @@ class TestScript(TestCase):
         self.assertEquals(VAL1, list_item)
         self.assertEquals([VAL2], self.redis.lrange(LIST1, 0, -1))
 
-    def test_table_getn(self):
+    def test_table_type(self):
         self.redis.lpush(LIST1, VAL2, VAL1)
         script_content = """
         local items = redis.call('LRANGE', KEYS[1], ARGV[1], ARGV[2])
-        return table.getn(items)
+        return type(items)
         """
         script = self.redis.register_script(script_content)
-        items = script(keys=[LIST1], args=[0, -1])
+        itemType = script(keys=[LIST1], args=[0, -1])
+        self.assertEqual('table', itemType)
 
-        self.assertEqual(items, 2)
-
-    def test_table_dict(self):
-        self.redis.hmset("myset", {"k1": "v1"})
+    def test_script_hgetall(self):
+        myhash = {"k1": "v1"}
+        self.redis.hmset("myhash", myhash)
         script_content = """
-        local item = redis.call('HGETALL', KEYS[1])
-        return item[1]
+        return redis.call('HGETALL', KEYS[1])
         """
         script = self.redis.register_script(script_content)
-        item = script(keys=["myset"])
-        self.assertEqual(item, 'k1')
+        item = script(keys=["myhash"])
+        self.assertIsInstance(item, list)
+        self.assertEquals(["k1", "v1"], item)
 
     def test_evalsha(self):
         self.redis.lpush(LIST1, VAL1)
@@ -179,3 +207,89 @@ class TestScript(TestCase):
         self.assertEquals([False], self.redis.script_exists(sha))
         self.assertEquals(sha, self.redis.script_load(script))
         self.assertEquals([True], self.redis.script_exists(sha))
+
+    def test_lua_to_python_none(self):
+        lval = self.lua.eval("")
+        pval = MockredisScript._lua_to_python(lval)
+        self.assertTrue(pval is None)
+
+    def test_lua_to_python_list(self):
+        lval = self.lua.eval('{"val1", "val2"}')
+        pval = MockredisScript._lua_to_python(lval)
+        self.assertIsInstance(pval, list)
+        self.assertEqual(["val1", "val2"], pval)
+
+    def test_lua_to_python_long(self):
+        lval = self.lua.eval('22')
+        pval = MockredisScript._lua_to_python(lval)
+        self.assertIsInstance(pval, long)
+        self.assertEqual(22, pval)
+
+    def test_lua_to_python_flota(self):
+        lval = self.lua.eval('22.2')
+        pval = MockredisScript._lua_to_python(lval)
+        self.assertIsInstance(pval, float)
+        self.assertEqual(22.2, pval)
+
+    def test_lua_to_python_string(self):
+        lval = self.lua.eval('"somestring"')
+        pval = MockredisScript._lua_to_python(lval)
+        self.assertIsInstance(pval, str)
+        self.assertEqual("somestring", pval)
+
+    def test_lua_to_python_bool(self):
+        lval = self.lua.eval('true')
+        pval = MockredisScript._lua_to_python(lval)
+        self.assertIsInstance(pval, bool)
+        self.assertEqual(True, pval)
+
+    def test_python_to_lua_none(self):
+        pval = None
+        lval = MockredisScript._python_to_lua(pval)
+        is_null = """
+        function is_null(var1)
+            return var1 == nil
+        end
+        return is_null
+        """
+        lua_is_null = self.lua.execute(is_null)
+        self.assertTrue(MockredisScript._lua_to_python(lua_is_null(lval)))
+
+    def test_python_to_lua_string(self):
+        pval = "somestring"
+        lval = MockredisScript._python_to_lua(pval)
+        lval_expected = self.lua.eval('"somestring"')
+        self.assertEqual("string", self.lua_globals.type(lval))
+        self.assertEqual(lval_expected, lval)
+
+    def test_python_to_lua_list(self):
+        pval = ["abc", "xyz"]
+        lval = MockredisScript._python_to_lua(pval)
+        lval_expected = self.lua.eval('{"abc", "xyz"}')
+        self.assertTrue(MockredisScript._lua_to_python(self.lua_compare_list(lval_expected, lval)))
+
+    def test_python_to_lua_dict(self):
+        pval = {"k1":"v1", "k2":"v2"}
+        lval = MockredisScript._python_to_lua(pval)
+        lval_expected = self.lua.eval('{"k1", "v1", "k2", "v2"}')
+        self.assertTrue(MockredisScript._lua_to_python(self.lua_compare_list(lval_expected, lval)))
+
+    def test_python_to_lua_long(self):
+        pval = 10L
+        lval = MockredisScript._python_to_lua(pval)
+        lval_expected = self.lua.eval('10')
+        self.assertEqual("number", self.lua_globals.type(lval))
+        self.assertTrue(MockredisScript._lua_to_python(self.lua_compare_val(lval_expected, lval)))
+
+    def test_python_to_lua_float(self):
+        pval = 10.1
+        lval = MockredisScript._python_to_lua(pval)
+        lval_expected = self.lua.eval('10.1')
+        self.assertEqual("number", self.lua_globals.type(lval))
+        self.assertTrue(MockredisScript._lua_to_python(self.lua_compare_val(lval_expected, lval)))
+
+    def test_python_to_lua_boolean(self):
+        pval = True
+        lval = MockredisScript._python_to_lua(pval)
+        self.assertEqual("boolean", self.lua_globals.type(lval))
+        self.assertTrue(MockredisScript._lua_to_python(lval))
