@@ -846,7 +846,13 @@ class MockRedis(object):
         """
         Translate range to valid bounds.
         """
-        end = end if end != -1 else len_ - 1
+#         end = end if end != -1 else len_ - 1
+        if start < 0:
+            start += len_
+        start = max(0, min(start, len_))
+        if end < 0:
+            end += len_
+        end = max(-1, min(end, len_ - 1))
         return start, end
 
     def _translate_limit(self, len_, start, num):
