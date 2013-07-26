@@ -36,19 +36,48 @@ class TestScript(TestCase):
 
         compare_list = """
         function compare_list(list1, list2)
-            local isequal = true
-            if not table.getn(list1) == table.getn(list2) then
-                isequal = false
-            else
-                for i, item in ipairs(list1) do
-                    isequal = isequal and (list1[i] == list2[i])
+            if #list1 ~= #list2 then
+                return false
+            end
+            for i, item1 in ipairs(list1) do
+                if item1 ~= list2[i] then
+                    return false
                 end
             end
-            return isequal
+            return true
         end
         return compare_list
         """
         self.lua_compare_list = self.lua.execute(compare_list)
+
+        compare_list_with_pairs = """
+        function pairExists(list1, key, value)
+            i = 1
+            for i, item1 in ipairs(list1) do
+                if i%2 == 1 then
+                    if (list1[i] == key) and (list1[i + 1] == value) then
+                        return true
+                    end
+                end
+            end
+            return false
+        end
+
+        function compare_list_with_pairs(list1, list2)
+            local isequal = true
+            if #list1 ~= #list2 then
+                return false
+            end
+            for i, item1 in ipairs(list1) do
+                if i%2 == 1 then
+                    isequal = isequal and pairExists(list2, list1[i], list1[i + 1])
+                end
+            end
+            return true
+        end
+        return compare_list_with_pairs
+        """
+        self.lua_compare_list_with_pairs = self.lua.execute(compare_list_with_pairs)
 
         compare_val = """
         function compare_val(var1, var2)
@@ -272,7 +301,7 @@ class TestScript(TestCase):
         pval = {"k1":"v1", "k2":"v2"}
         lval = MockredisScript._python_to_lua(pval)
         lval_expected = self.lua.eval('{"k1", "v1", "k2", "v2"}')
-        self.assertTrue(MockredisScript._lua_to_python(self.lua_compare_list(lval_expected, lval)))
+        self.assertTrue(MockredisScript._lua_to_python(self.lua_compare_list_with_pairs(lval_expected, lval)))
 
     def test_python_to_lua_long(self):
         pval = 10L

@@ -104,6 +104,9 @@ class Script(object):
             return lua.eval("")
         if isinstance(pval, (list, tuple)):
             # Python list --> Lua table
+            # e.g.: in lrange
+            #     in Python returns: [v1, v2, v3]
+            #     in Lua returns: {v1, v2, v3}
             lua_list = lua.eval("{}")
             lua_table = lua.eval("table")
             for item in pval:
@@ -116,8 +119,7 @@ class Script(object):
             #     in Lua returns: {k1, v1, k2, v2, k3, v3}
             lua_dict = lua.eval("{}")
             lua_table = lua.eval("table")
-            for k in reversed(pval.keys()):
-                v = pval[k]
+            for k, v in pval.iteritems():
                 lua_table.insert(lua_dict, Script._python_to_lua(k))
                 lua_table.insert(lua_dict, Script._python_to_lua(v))
             return lua_dict
@@ -126,10 +128,7 @@ class Script(object):
             return pval
         elif isinstance(pval, bool):
             # Python bool--> Lua boolean
-            if pval:
-                return lua.eval("true")
-            else:
-                return lua.eval("false")
+            return lua.eval(str(pval).lower())
         elif isinstance(pval, (int, long, float)):
             # Python int --> Lua number
             lua_globals = lua.globals()
