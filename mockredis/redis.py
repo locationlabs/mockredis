@@ -846,7 +846,6 @@ class MockRedis(object):
         """
         Translate range to valid bounds.
         """
-#         end = end if end != -1 else len_ - 1
         if start < 0:
             start += len_
         start = max(0, min(start, len_))
