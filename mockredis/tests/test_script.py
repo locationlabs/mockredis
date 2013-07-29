@@ -34,7 +34,7 @@ class TestScript(TestCase):
         self.lua = lua
         self.lua_globals = lua.globals()
 
-        compare_list = """
+        assert_equal_list = """
         function compare_list(list1, list2)
             if #list1 ~= #list2 then
                 return false
@@ -46,12 +46,16 @@ class TestScript(TestCase):
             end
             return true
         end
-        return compare_list
-        """
-        self.lua_compare_list = self.lua.execute(compare_list)
 
-        compare_list_with_pairs = """
-        function pairExists(list1, key, value)
+        function assert_equal_list(list1, list2)
+            assert(compare_list(list1, list2))
+        end
+        return assert_equal_list
+        """
+        self.lua_assert_equal_list = self.lua.execute(assert_equal_list)
+
+        assert_equal_list_with_pairs = """
+        function pair_exists(list1, key, value)
             i = 1
             for i, item1 in ipairs(list1) do
                 if i%2 == 1 then
@@ -64,20 +68,23 @@ class TestScript(TestCase):
         end
 
         function compare_list_with_pairs(list1, list2)
-            local isequal = true
-            if #list1 ~= #list2 then
+            if #list1 ~= #list2 or #list1 % 2 == 1 then
                 return false
             end
-            for i, item1 in ipairs(list1) do
-                if i%2 == 1 then
-                    isequal = isequal and pairExists(list2, list1[i], list1[i + 1])
+            for i = 1, #list1, 2 do
+                if not pair_exists(list2, list1[i], list1[i + 1]) then
+                    return false
                 end
             end
             return true
         end
-        return compare_list_with_pairs
+
+        function assert_equal_list_with_pairs(list1, list2)
+            assert(compare_list_with_pairs(list1, list2))
+        end
+        return assert_equal_list_with_pairs
         """
-        self.lua_compare_list_with_pairs = self.lua.execute(compare_list_with_pairs)
+        self.lua_assert_equal_list_with_pairs = self.lua.execute(assert_equal_list_with_pairs)
 
         compare_val = """
         function compare_val(var1, var2)
@@ -295,13 +302,13 @@ class TestScript(TestCase):
         pval = ["abc", "xyz"]
         lval = MockredisScript._python_to_lua(pval)
         lval_expected = self.lua.eval('{"abc", "xyz"}')
-        self.assertTrue(MockredisScript._lua_to_python(self.lua_compare_list(lval_expected, lval)))
+        self.lua_assert_equal_list(lval_expected, lval)
 
     def test_python_to_lua_dict(self):
-        pval = {"k1":"v1", "k2":"v2"}
+        pval = {"k1": "v1", "k2": "v2"}
         lval = MockredisScript._python_to_lua(pval)
         lval_expected = self.lua.eval('{"k1", "v1", "k2", "v2"}')
-        self.assertTrue(MockredisScript._lua_to_python(self.lua_compare_list_with_pairs(lval_expected, lval)))
+        self.lua_assert_equal_list_with_pairs(lval_expected, lval)
 
     def test_python_to_lua_long(self):
         pval = 10L
