@@ -147,3 +147,68 @@ class TestRedisList(TestCase):
         self.assertEqual(values[-2:], self.redis.lrange(LIST1, -2, -1))
         # Check from middle of the list
         self.assertEqual(values[1:3], self.redis.lrange(LIST1, 1, 2))
+
+    def test_ltrim_retain_all(self):
+        values = [VAL4, VAL3, VAL2, VAL1]
+        self._reinitialize_list(LIST1, *values)
+
+        self.redis.ltrim(LIST1, 0, -1)
+        self.assertEqual(values, self.redis.lrange(LIST1, 0, -1))
+
+        self.redis.ltrim(LIST1, 0, len(values) - 1)
+        self.assertEqual(values, self.redis.lrange(LIST1, 0, -1))
+
+        self.redis.ltrim(LIST1, 0, len(values) + 1)
+        self.assertEqual(values, self.redis.lrange(LIST1, 0, -1))
+
+        self.redis.ltrim(LIST1, -1 * len(values), -1)
+        self.assertEqual(values, self.redis.lrange(LIST1, 0, -1))
+
+        self.redis.ltrim(LIST1, -1 * (len(values) + 1), -1)
+        self.assertEqual(values, self.redis.lrange(LIST1, 0, -1))
+
+    def test_ltrim_remove_all(self):
+        values = [VAL4, VAL3, VAL2, VAL1]
+        self._reinitialize_list(LIST1, *values)
+
+        self.redis.ltrim(LIST1, 2, 1)
+        self.assertEqual([], self.redis.lrange(LIST1, 0, -1))
+
+        self._reinitialize_list(LIST1, *values)
+        self.redis.ltrim(LIST1, -1, -2)
+        self.assertEqual([], self.redis.lrange(LIST1, 0, -1))
+
+        self._reinitialize_list(LIST1, *values)
+        self.redis.ltrim(LIST1, 2, -3)
+        self.assertEqual([], self.redis.lrange(LIST1, 0, -1))
+
+        self._reinitialize_list(LIST1, *values) 
+        self.redis.ltrim(LIST1, -1, 2)
+        self.assertEqual([], self.redis.lrange(LIST1, 0, -1))
+
+    def test_ltrim(self):
+        values = [VAL4, VAL3, VAL2, VAL1]
+        self._reinitialize_list(LIST1, *values)
+
+        self.redis.ltrim(LIST1, 1, 2)
+        self.assertEqual(values[1:3], self.redis.lrange(LIST1, 0, -1))
+
+        self._reinitialize_list(LIST1, *values)
+        self.redis.ltrim(LIST1, -3, -1)
+        self.assertEqual(values[-3:], self.redis.lrange(LIST1, 0, -1))
+
+        self._reinitialize_list(LIST1, *values)
+        self.redis.ltrim(LIST1, 1, 5)
+        self.assertEqual(values[1:5], self.redis.lrange(LIST1, 0, -1))
+
+        self._reinitialize_list(LIST1, *values)
+        self.redis.ltrim(LIST1, -100, 2)
+        self.assertEqual(values[-100:3], self.redis.lrange(LIST1, 0, -1))
+
+    def _reinitialize_list(self, key, *values):
+        """
+        Re-initialize the list
+        """
+        self.redis.delete(LIST1)
+        self.redis.lpush(LIST1, *reversed(values))
+
