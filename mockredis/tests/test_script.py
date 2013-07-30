@@ -4,6 +4,7 @@ from mockredis.exceptions import RedisError
 from mockredis.redis import MockRedis
 from mockredis.tests.test_constants import (
     LIST1, LIST2,
+    SET1,
     VAL1, VAL2, VAL3, VAL4,
     LPOP_SCRIPT
 )
@@ -118,6 +119,27 @@ class TestScript(TestCase):
         # validate lpop
         self.assertEquals(VAL1, list_item)
         self.assertEquals([VAL2], self.redis.lrange(LIST1, 0, -1))
+
+    def test_eval_zadd(self):
+        # The score and member are reversed when the client is not strict.
+        self.redis.strict = False
+        script_content = "return redis.call('zadd', KEYS[1], ARGV[1], ARGV[2])"
+        self.redis.eval(script_content, 1, SET1, 42, VAL1)
+
+        self.assertEquals(42, self.redis.zrank(SET1, VAL1))
+
+    def test_eval_zrangebyscore(self):
+        self.redis.strict = False
+        self.redis.zadd(SET1, VAL1, 1)
+        self.redis.zadd(SET1, VAL2, 2)
+
+        script = ("return redis.call('zrangebyscore', "
+                  "KEYS[1], ARGV[1], ARGV[2], 'LIMIT', 0, 2)")
+
+        self.assertListEquals([],     self.redis.eval(script, 1, SET1, 0, 0))
+        self.assertListEquals([1],    self.redis.eval(script, 1, SET1, 0, 1))
+        self.assertListEquals([1, 2], self.redis.eval(script, 1, SET1, 0, 2))
+        self.assertListEquals([2],    self.redis.eval(script, 1, SET1, 2, 2))
 
     def test_evalsha(self):
         self.redis.lpush(LIST1, VAL1)
