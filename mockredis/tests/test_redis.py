@@ -1,4 +1,6 @@
+import time
 from unittest import TestCase
+
 from mockredis import MockRedis, mock_redis_client, mock_strict_redis_client
 
 
@@ -119,6 +121,19 @@ class TestRedis(TestCase):
         """
         self.redis.set('key', 'key')
         self.assertEqual(self.redis.ttl('key'), None)
+
+    def test_expireat_calculates_time(self):
+        """
+        test whether expireat sets the correct ttl, setting a timestamp 30s in the future
+        """
+        self.redis.set('key', 'key')
+        self.redis.expireat('key', int(time.time()) + 30)
+
+        result = self.redis.ttl('key')
+        # should be an int
+        self.assertTrue(isinstance(result, int))
+        # should be less than the timeout originally set
+        self.assertTrue(result <= 30)
 
     def test_push_pop_returns_str(self):
         key = 'l'

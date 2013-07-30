@@ -1,7 +1,9 @@
 from hashlib import sha1
 from unittest import TestCase
 from nose.tools import eq_
+
 from mockredis import MockRedis
+from mockredis.exceptions import RedisError
 
 
 class TestPipeline(TestCase):
@@ -47,3 +49,65 @@ class TestPipeline(TestCase):
 
         # Script exists in pipeline
         eq_([True], self.redis.pipeline().script_exists(sha).execute()[0])
+
+    def test_watch(self):
+        """
+        Verify watch puts the pipeline in immediate execution mode.
+        """
+        with self.redis.pipeline() as pipeline:
+            pipeline.watch("key1", "key2")
+            eq_(True, pipeline.set("foo", "bar"))
+            eq_("bar", pipeline.get("foo"))
+
+    def test_multi(self):
+        """
+        Test explicit transaction with multi command.
+        """
+        with self.redis.pipeline() as pipeline:
+            pipeline.multi()
+            eq_(pipeline, pipeline.set("foo", "bar"))
+            eq_(pipeline, pipeline.get("foo"))
+
+            eq_([True, "bar"], pipeline.execute())
+
+    def test_multi_with_watch(self):
+        """
+        Test explicit transaction with watched keys.
+        """
+        with self.redis.pipeline() as pipeline:
+            pipeline.watch("foo")
+            eq_(True, pipeline.set("foo", "bar"))
+            eq_("bar", pipeline.get("foo"))
+
+            pipeline.multi()
+            eq_(pipeline, pipeline.set("foo", "baz"))
+            eq_(pipeline, pipeline.get("foo"))
+
+            eq_([True, "baz"], pipeline.execute())
+
+    def test_watch_after_multi(self):
+        """
+        Cannot watch after multi.
+        """
+        with self.redis.pipeline() as pipeline:
+            pipeline.multi()
+            with self.assertRaises(RedisError):
+                pipeline.watch()
+
+    def test_multiple_multi_calls(self):
+        """
+        Cannot call multi mutliple times.
+        """
+        with self.redis.pipeline() as pipeline:
+            pipeline.multi()
+            with self.assertRaises(RedisError):
+                pipeline.multi()
+
+    def test_multi_on_implicit_transaction(self):
+        """
+        Cannot start an explicit transaction when commands have already been issued.
+        """
+        with self.redis.pipeline() as pipeline:
+            pipeline.set("foo", "bar")
+            with self.assertRaises(RedisError):
+                pipeline.multi()

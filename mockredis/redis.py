@@ -58,6 +58,13 @@ class MockRedis(object):
         """
         pass
 
+    def unwatch(self):
+        """
+        Mock does not support command buffering so unwatch
+        is a no-op
+        """
+        pass
+
     def multi(self, *argv, **kwargs):
         """
         Mock does not support command buffering so multi
@@ -122,6 +129,14 @@ class MockRedis(object):
 
         if key in self.redis:
             self.timeouts[key] = currenttime + timedelta(seconds=seconds)
+            return 1
+        return 0
+
+    def expireat(self, key, when):
+        """Emulate expireat"""
+        expire_time = datetime.fromtimestamp(when)
+        if key in self.redis:
+            self.timeouts[key] = expire_time
             return 1
         return 0
 
@@ -357,14 +372,9 @@ class MockRedis(object):
 
     def lrange(self, key, start, stop):
         """Emulate lrange."""
-
-        # Does the set at this key already exist?
-        if key in self.redis:
-            # Yes, add this to the list
-            return map(str, self.redis[key][start:stop + 1 if stop != -1 else None])
-        else:
-            # No, override the defaultdict's default and create the list
-            self.redis[key] = list([])
+        redis_list = self._get_list(key, 'LRANGE')
+        start, stop = self._translate_range(len(redis_list), start, stop)
+        return redis_list[start:stop + 1]
 
     def lindex(self, key, index):
         """Emulate lindex."""
@@ -449,6 +459,14 @@ class MockRedis(object):
                     else:
                         new_list.append(v)
                 self.redis[key] = list(reversed(new_list))
+
+    def ltrim(self, key, start, stop):
+        """Emulate ltrim."""
+        redis_list = self._get_list(key, 'LTRIM')
+        if redis_list:
+            start, stop = self._translate_range(len(redis_list), start, stop)
+            self.redis[key] = redis_list[start:stop + 1]
+        return True
 
     def rpoplpush(self, source, destination):
         """Emulate rpoplpush"""
@@ -638,8 +656,6 @@ class MockRedis(object):
             return []
 
         start, end = self._translate_range(len(zset), start, end)
-        if start == len(zset) or end < start:
-            return []
 
         func = self._range_func(withscores, score_cast_func)
         return [func(item) for item in zset.range(start, end, desc)]
@@ -846,13 +862,11 @@ class MockRedis(object):
         Translate range to valid bounds.
         """
         if start < 0:
-            start = len_ + max(start, -len_)
-        elif start > 0:
-            start = min(start, len_)
+            start += len_
+        start = max(0, min(start, len_))
         if end < 0:
-            end = len_ + max(end, -(len_ + 1))
-        elif end > 0:
-            end = min(end, len_ - 1)
+            end += len_
+        end = max(-1, min(end, len_ - 1))
         return start, end
 
     def _translate_limit(self, len_, start, num):
