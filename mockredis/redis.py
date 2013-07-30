@@ -804,8 +804,37 @@ class MockRedis(object):
         """
         Sends call to the function, whose name is specified by command.
         """
-        redis_function = getattr(self, string.lower(command))
-        return redis_function(*args)
+        command = self._normalize_command_name(command)
+        args = self._normalize_command_args(command, *args)
+
+        redis_function = getattr(self, command)
+        value = redis_function(*args)
+        return value
+
+    def _normalize_command_name(self, command):
+        """
+        Modifies the command string to match the redis client method name.
+        """
+        command = string.lower(command)
+
+        if command == 'del':
+            return 'delete'
+
+        return command
+
+    def _normalize_command_args(self, command, *args):
+        """
+        Modifies the command arguments to match the
+        strictness of the redis client.
+        """
+        if self.strict:
+            return args
+
+        if command == 'zadd' and len(args) >= 3:
+            zadd_args = [x for tup in zip(args[2::2], args[1::2]) for x in tup]
+            return [args[0]] + zadd_args
+
+        return args
 
     #### Internal ####
 
