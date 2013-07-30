@@ -833,7 +833,7 @@ class MockRedis(object):
         Modifies the command arguments to match the
         strictness of the redis client.
         """
-        if command == 'zadd' and self.strict and len(args) >= 3:
+        if command == 'zadd' and not self.strict and len(args) >= 3:
             # Reorder score and name
             zadd_args = [x for tup in zip(args[2::2], args[1::2]) for x in tup]
             return [args[0]] + zadd_args

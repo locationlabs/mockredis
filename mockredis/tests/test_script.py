@@ -190,20 +190,29 @@ class TestScript(TestCase):
         script_content = "return redis.call('zadd', KEYS[1], ARGV[1], ARGV[2])"
         self.redis.eval(script_content, 1, SET1, 42, VAL1)
 
-        self.assertEquals(42, self.redis.zrank(SET1, VAL1))
+        self.assertEquals(42, self.redis.zscore(SET1, VAL1))
 
     def test_eval_zrangebyscore(self):
+        # Make sure the limit is removed.
+        script = "return redis.call('zrangebyscore',KEYS[1],ARGV[1],ARGV[2])"
+        self.eval_zrangebyscore(script)
+
+    def test_eval_zrangebyscore_with_limit(self):
+        # Make sure the limit is removed.
+        script = ("return redis.call('zrangebyscore', "
+                  "KEYS[1], ARGV[1], ARGV[2], 'LIMIT', 0, 2)")
+
+        self.eval_zrangebyscore(script)
+
+    def eval_zrangebyscore(self, script):
         self.redis.strict = False
         self.redis.zadd(SET1, VAL1, 1)
         self.redis.zadd(SET1, VAL2, 2)
 
-        script = ("return redis.call('zrangebyscore', "
-                  "KEYS[1], ARGV[1], ARGV[2], 'LIMIT', 0, 2)")
-
-        self.assertListEquals([],     self.redis.eval(script, 1, SET1, 0, 0))
-        self.assertListEquals([1],    self.redis.eval(script, 1, SET1, 0, 1))
-        self.assertListEquals([1, 2], self.redis.eval(script, 1, SET1, 0, 2))
-        self.assertListEquals([2],    self.redis.eval(script, 1, SET1, 2, 2))
+        self.assertEquals([],           self.redis.eval(script, 1, SET1, 0, 0))
+        self.assertEquals([VAL1],       self.redis.eval(script, 1, SET1, 0, 1))
+        self.assertEquals([VAL1, VAL2], self.redis.eval(script, 1, SET1, 0, 2))
+        self.assertEquals([VAL2],       self.redis.eval(script, 1, SET1, 2, 2))
 
     def test_table_type(self):
         self.redis.lpush(LIST1, VAL2, VAL1)
