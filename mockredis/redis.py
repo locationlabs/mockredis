@@ -435,18 +435,20 @@ class MockRedis(object):
     def lrem(self, key, count, value):
         """Emulate lrem."""
         redis_list = self._get_list(key, 'LREM')
-
+        removed_count = 0
         if key in self.redis:
             if count == 0:
                 # Remove all ocurrences
                 while redis_list.count(value):
                     redis_list.remove(value)
+                    removed_count += 1
             elif count > 0:
                 counter = 0
                 # remove first 'count' ocurrences
                 while redis_list.count(value):
                     redis_list.remove(value)
                     counter += 1
+                    removed_count += 1
                     if counter >= count:
                         break
             elif count < 0:
@@ -456,9 +458,11 @@ class MockRedis(object):
                 for v in reversed(redis_list):
                     if v == value and counter > 0:
                         counter -= 1
+                        removed_count += 1
                     else:
                         new_list.append(v)
                 self.redis[key] = list(reversed(new_list))
+        return removed_count
 
     def ltrim(self, key, start, stop):
         """Emulate ltrim."""
