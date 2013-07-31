@@ -54,7 +54,7 @@ class Script(object):
         """
 
         import ctypes
-        ctypes.CDLL('liblua5.1.so', mode=ctypes.RTLD_GLOBAL)
+        ctypes.CDLL('liblua5.2.so', mode=ctypes.RTLD_GLOBAL)
 
         try:
             lua_globals.cjson = lua.eval('require "cjson"')
