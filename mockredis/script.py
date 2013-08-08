@@ -102,7 +102,7 @@ class Script(object):
         if pval is None:
             # Python None --> Lua None
             return lua.eval("")
-        if isinstance(pval, (list, tuple)):
+        if isinstance(pval, (list, tuple, set)):
             # Python list --> Lua table
             # e.g.: in lrange
             #     in Python returns: [v1, v2, v3]
