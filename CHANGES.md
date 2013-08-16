@@ -1,3 +1,7 @@
+Version 2.7.5.2
+
+ - Added `list` operations: LSET
+ 
 Version 2.7.5.1
 
  - Changed DEL to support a list of keys as arguments and return the number of

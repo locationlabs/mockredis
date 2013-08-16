@@ -478,6 +478,16 @@ class MockRedis(object):
         self.lpush(destination, transfer_item)
         return transfer_item
 
+    def lset(self, key, index, value):
+        """Emulate lset."""
+        redis_list = self._get_list(key, 'LSET')
+        if redis_list is None:
+            raise ValueError("no such key")
+        try:
+            redis_list[index] = value
+        except IndexError:
+            raise ValueError("index out of range")
+
     #### SET COMMANDS ####
 
     def sadd(self, key, *values):

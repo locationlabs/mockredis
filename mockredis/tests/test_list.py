@@ -191,7 +191,7 @@ class TestRedisList(TestCase):
         self.redis.ltrim(LIST1, 2, -3)
         self.assertEqual([], self.redis.lrange(LIST1, 0, -1))
 
-        self._reinitialize_list(LIST1, *values) 
+        self._reinitialize_list(LIST1, *values)
         self.redis.ltrim(LIST1, -1, 2)
         self.assertEqual([], self.redis.lrange(LIST1, 0, -1))
 
@@ -214,10 +214,22 @@ class TestRedisList(TestCase):
         self.redis.ltrim(LIST1, -100, 2)
         self.assertEqual(values[-100:3], self.redis.lrange(LIST1, 0, -1))
 
+    def test_lset(self):
+        with self.assertRaises(Exception):
+            self.redis.lset(LIST1, 1, VAL1)
+
+        self.redis.lpush(LIST1, VAL2)
+        self.assertEqual([VAL2], self.redis.lrange(LIST1, 0, -1))
+
+        with self.assertRaises(Exception):
+            self.redis.lset(LIST1, 1, VAL1)
+
+        self.redis.lset(LIST1, 0, VAL1)
+        self.assertEqual([VAL1], self.redis.lrange(LIST1, 0, -1))
+
     def _reinitialize_list(self, key, *values):
         """
         Re-initialize the list
         """
         self.redis.delete(LIST1)
         self.redis.lpush(LIST1, *reversed(values))
-
