@@ -254,15 +254,7 @@ class MockRedis(object):
         milliseconds. ``time`` can be represented by an integer or a Python
         timedelta object.
         """
-
-        milliseconds = time
-        if isinstance(time, timedelta):
-            milliseconds = (time.seconds + time.days * 24 * 3600)*1000
-
-        self._set(key, value)
-        if key in self.redis:
-            self.timeouts[key] = currenttime + timedelta(milliseconds=milliseconds)
-        return True
+        return self.set(key, value, px=time, currenttime=currenttime)
 
     def setnx(self, key, value):
         """Set the value of ``key`` to ``value`` if key doesn't exist"""
