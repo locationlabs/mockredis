@@ -132,6 +132,13 @@ class MockRedis(object):
             return 1
         return 0
 
+    def expire_milliseconds(self, key, milliseconds, currenttime=datetime.now()):
+        """Emulate expire in milliseconds"""
+        if key in self.redis:
+            self.timeouts[key] = currenttime + timedelta(milliseconds=milliseconds)
+            return 1
+        return 0
+
     def expireat(self, key, when):
         """Emulate expireat"""
         expire_time = datetime.fromtimestamp(when)
@@ -159,14 +166,29 @@ class MockRedis(object):
         if key not in self.timeouts:
             return None
         else:
-            # the return should be an int with the number seconds to timeout
             return self._get_total_seconds(self.timeouts[key] - currenttime)
+
+    def pttl(self, key, currenttime=datetime.now()):
+        """
+        Emulate pttl
+        do_expire to get valid values.
+
+        :param key: key for which pttl is requested.
+        :returns: the number of milliseconds till timeout, None if the key does not exist or if the
+                  key has no timeout(as per the redis-py lib behavior).
+        """
+        self.do_expire(currenttime)
+
+        if key not in self.timeouts:
+            return None
+        else:
+            # the return should be an int with the number milliseconds to timeout
+            return self.get_total_milliseconds(self.timeouts[key] - currenttime)
 
     def do_expire(self, currenttime=datetime.now()):
         """
         Expire objects assuming now == time
         """
-
         for key, value in self.timeouts.items():
             if value - currenttime < timedelta(0):
                 del self.timeouts[key]
@@ -197,16 +219,17 @@ class MockRedis(object):
         if nx and xx:
             return None
         mode = "nx" if nx else "xx" if xx else None
-        delta = int(px / 1000) if isinstance(px, int) else px or ex
         if self._should_set(key, mode):
-            if delta:
-                # set with expiration, if its ok to set
-                seconds = delta
-                if isinstance(delta, timedelta):
-                    seconds = delta.seconds + delta.days * 24 * 3600
-        
+            if px or ex:
                 self._set(key, value)
-                self.expire(key, seconds, currenttime)
+                if ex:
+                    if isinstance(ex, timedelta):
+                        ex = self._get_total_seconds(ex)
+                    self.expire(key, ex, currenttime)
+                if px:
+                    if isinstance(px, timedelta):
+                        px = self.get_total_milliseconds(px)
+                    self.expire_milliseconds(key, px, currenttime)
                 return True
             return self._set(key, value)
 
@@ -870,6 +893,9 @@ class MockRedis(object):
         For python 2.6 support
         """
         return int((td.microseconds + (td.seconds + td.days * 24 * 3600) * 1e6) / 1e6)
+
+    def get_total_milliseconds(self, td):
+        return int((td.days * 24 * 60 * 60 + td.seconds) * 1000 + td.microseconds / 1000.0)
 
     def _get_list(self, key, operation, create=False):
         """

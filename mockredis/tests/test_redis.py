@@ -122,6 +122,28 @@ class TestRedis(TestCase):
         self.redis.set('key', 'key')
         self.assertEqual(self.redis.ttl('key'), None)
 
+    def test_pttl(self):
+        self.redis.set('key', 'key')
+        self.redis.expire_milliseconds('key', 30)
+
+        result = self.redis.pttl('key')
+        # should be an int
+        self.assertTrue(isinstance(result, int))
+        # should be less than the timeout originally set
+        self.assertTrue(result <= 30)
+
+    def test_pttl_when_key_absent(self):
+        """Test whether, like the redis-py lib, pttl returns None if the key is absent"""
+
+        self.assertEqual(self.redis.pttl('invalid_key'), None)
+
+    def test_pttl_no_timeout(self):
+        """
+        Test whether, like the redis-py lib, pttl returns None if the key has no timeout set.
+        """
+        self.redis.set('key', 'key')
+        self.assertEqual(self.redis.pttl('key'), None)
+
     def test_expireat_calculates_time(self):
         """
         test whether expireat sets the correct ttl, setting a timestamp 30s in the future
