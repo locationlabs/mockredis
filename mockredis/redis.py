@@ -154,7 +154,6 @@ class MockRedis(object):
         :returns: the number of seconds till timeout, None if the key does not exist or if the
                   key has no timeout(as per the redis-py lib behavior).
         """
-
         self.do_expire(currenttime)
 
         if key not in self.timeouts:
@@ -202,7 +201,13 @@ class MockRedis(object):
         if self._should_set(key, mode):
             if delta:
                 # set with expiration, if its ok to set
-                return self.setex(key, delta, value, currenttime=currenttime)
+                seconds = delta
+                if isinstance(delta, timedelta):
+                    seconds = delta.seconds + delta.days * 24 * 3600
+        
+                self._set(key, value)
+                self.expire(key, seconds, currenttime)
+                return True
             return self._set(key, value)
 
     def _set(self, key, value):
@@ -239,14 +244,7 @@ class MockRedis(object):
         seconds. ``time`` can be represented by an integer or a Python
         timedelta object.
         """
-
-        seconds = time
-        if isinstance(time, timedelta):
-            seconds = time.seconds + time.days * 24 * 3600
-
-        self._set(key, value)
-        self.expire(key, seconds, currenttime)
-        return True
+        return self.set(key, value, ex=time, currenttime=currenttime)
 
     def psetex(self, key, time, value, currenttime=datetime.now()):
         """
@@ -258,8 +256,7 @@ class MockRedis(object):
 
     def setnx(self, key, value):
         """Set the value of ``key`` to ``value`` if key doesn't exist"""
-
-        return 1 if key not in self.redis and self._set(key, value) else 0
+        return 1 if key not in self.redis and self.set(key, value, nx=True) else 0
 
     def decr(self, key, decrement=1):
         """Emulate decr."""
