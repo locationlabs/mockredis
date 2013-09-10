@@ -147,6 +147,16 @@ class MockRedis(object):
             return 1
         return 0
 
+    def _time_to_live(self, key, output_ms, currenttime=datetime.now()):
+        """
+        Returns time to live in milliseconds if output_ms is True, else returns seconds.
+        """
+        if key not in self.timeouts:
+            return None
+        
+        time_to_live = self._get_total_milliseconds(self.timeouts[key] - currenttime) if output_ms else self._get_total_seconds(self.timeouts[key] - currenttime)
+        return max(-1, time_to_live)
+    
     def ttl(self, key, currenttime=datetime.now()):
         """
         Emulate ttl
@@ -161,12 +171,7 @@ class MockRedis(object):
         :returns: the number of seconds till timeout, None if the key does not exist or if the
                   key has no timeout(as per the redis-py lib behavior).
         """
-        self.do_expire(currenttime)
-
-        if key not in self.timeouts:
-            return None
-        else:
-            return self._get_total_seconds(self.timeouts[key] - currenttime)
+        return self._time_to_live(key, False, currenttime)
 
     def pttl(self, key, currenttime=datetime.now()):
         """
@@ -176,10 +181,7 @@ class MockRedis(object):
         :returns: the number of milliseconds till timeout, None if the key does not exist or if the
                   key has no timeout(as per the redis-py lib behavior).
         """
-        if key not in self.timeouts:
-            return None
-        
-        return max(-1, self._get_total_milliseconds(self.timeouts[key] - currenttime))
+        return self._time_to_live(key, True, currenttime)
 
     def do_expire(self, currenttime=datetime.now()):
         """
