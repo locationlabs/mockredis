@@ -154,13 +154,13 @@ class MockRedis(object):
         if key not in self.timeouts:
             return None
         
-        time_to_live = self._get_total_milliseconds(self.timeouts[key] - currenttime) if output_ms else self._get_total_seconds(self.timeouts[key] - currenttime)
+        get_result = self._get_total_milliseconds if output_ms else self._get_total_seconds
+        time_to_live = get_result(self.timeouts[key] - currenttime)
         return max(-1, time_to_live)
     
     def ttl(self, key, currenttime=datetime.now()):
         """
         Emulate ttl
-        do_expire to get valid values.
 
         Even though the official redis commands documentation at http://redis.io/commands/ttl
         states "Return value: Integer reply: TTL in seconds, -2 when key does not exist or -1
@@ -171,7 +171,7 @@ class MockRedis(object):
         :returns: the number of seconds till timeout, None if the key does not exist or if the
                   key has no timeout(as per the redis-py lib behavior).
         """
-        return self._time_to_live(key, False, currenttime)
+        return self._time_to_live(key, output_ms=False, currenttime=currenttime)
 
     def pttl(self, key, currenttime=datetime.now()):
         """
@@ -181,7 +181,7 @@ class MockRedis(object):
         :returns: the number of milliseconds till timeout, None if the key does not exist or if the
                   key has no timeout(as per the redis-py lib behavior).
         """
-        return self._time_to_live(key, True, currenttime)
+        return self._time_to_live(key, output_ms=True, currenttime=currenttime)
 
     def do_expire(self, currenttime=datetime.now()):
         """
@@ -192,7 +192,7 @@ class MockRedis(object):
                 del self.timeouts[key]
                 # removing the expired key
                 if key in self.redis:
-                    del self.redis[key]
+                    self.redis.pop(key, None)
 
     def flushdb(self):
         self.redis.clear()
