@@ -159,7 +159,7 @@ class TestRedisString(object):
             yield self._assert_set_with_timeout, case
 
     def test_psetex(self):
-        test_cases = [20, timedelta(milliseconds=25)]
+        test_cases = [200, timedelta(milliseconds=250)]
         for case in test_cases:
             yield self._assert_set_with_timeout_milliseconds, case
 
@@ -173,7 +173,7 @@ class TestRedisString(object):
 
         ok_(self.redis.pttl('key'), "expiration was not set correctly")
         if isinstance(milliseconds, timedelta):
-            milliseconds = self.redis.get_total_milliseconds(milliseconds)
+            milliseconds = self.redis._get_total_milliseconds(milliseconds)
             
         ok_(0 < self.redis.pttl('key') <= milliseconds)
 

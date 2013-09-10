@@ -124,21 +124,21 @@ class MockRedis(object):
 
         return key in self.redis
 
+    def _expire(self, key, delta, currenttime=datetime.now()):
+        if key not in self.redis:
+            return False
+
+        self.timeouts[key] = currenttime + delta
+        return True
+
     def expire(self, key, seconds, currenttime=datetime.now()):
         """Emulate expire"""
+        return self._expire(key, timedelta(seconds=seconds), currenttime)
 
-        if key in self.redis:
-            self.timeouts[key] = currenttime + timedelta(seconds=seconds)
-            return 1
-        return 0
-
-    def expire_milliseconds(self, key, milliseconds, currenttime=datetime.now()):
-        """Emulate expire in milliseconds"""
-        if key in self.redis:
-            self.timeouts[key] = currenttime + timedelta(milliseconds=milliseconds)
-            return 1
-        return 0
-
+    def pexpire(self, key, milliseconds, currenttime=datetime.now()):
+        """Emulate pexpire"""
+        return self._expire(key, timedelta(milliseconds=milliseconds), currenttime)
+    
     def expireat(self, key, when):
         """Emulate expireat"""
         expire_time = datetime.fromtimestamp(when)
@@ -171,19 +171,15 @@ class MockRedis(object):
     def pttl(self, key, currenttime=datetime.now()):
         """
         Emulate pttl
-        do_expire to get valid values.
-
+        
         :param key: key for which pttl is requested.
         :returns: the number of milliseconds till timeout, None if the key does not exist or if the
                   key has no timeout(as per the redis-py lib behavior).
         """
-        self.do_expire(currenttime)
-
         if key not in self.timeouts:
             return None
-        else:
-            # the return should be an int with the number milliseconds to timeout
-            return self.get_total_milliseconds(self.timeouts[key] - currenttime)
+        
+        return max(-1, self._get_total_milliseconds(self.timeouts[key] - currenttime))
 
     def do_expire(self, currenttime=datetime.now()):
         """
@@ -192,6 +188,9 @@ class MockRedis(object):
         for key, value in self.timeouts.items():
             if value - currenttime < timedelta(0):
                 del self.timeouts[key]
+                # removing the expired key
+                if key in self.redis:
+                    del self.redis[key]
 
     def flushdb(self):
         self.redis.clear()
@@ -228,13 +227,18 @@ class MockRedis(object):
                     self.expire(key, ex, currenttime)
                 if px:
                     if isinstance(px, timedelta):
-                        px = self.get_total_milliseconds(px)
-                    self.expire_milliseconds(key, px, currenttime)
+                        px = self._get_total_milliseconds(px)
+                    self.pexpire(key, px, currenttime)
                 return True
             return self._set(key, value)
 
     def _set(self, key, value):
         self.redis[key] = str(value)
+        
+        # removing the timeout
+        if key in self.timeouts:
+            del self.timeouts[key]
+        
         return True
 
     def _should_set(self, key, mode):
@@ -279,7 +283,7 @@ class MockRedis(object):
 
     def setnx(self, key, value):
         """Set the value of ``key`` to ``value`` if key doesn't exist"""
-        return 1 if key not in self.redis and self.set(key, value, nx=True) else 0
+        return self.set(key, value, nx=True)
 
     def decr(self, key, decrement=1):
         """Emulate decr."""
@@ -894,7 +898,7 @@ class MockRedis(object):
         """
         return int((td.microseconds + (td.seconds + td.days * 24 * 3600) * 1e6) / 1e6)
 
-    def get_total_milliseconds(self, td):
+    def _get_total_milliseconds(self, td):
         return int((td.days * 24 * 60 * 60 + td.seconds) * 1000 + td.microseconds / 1000.0)
 
     def _get_list(self, key, operation, create=False):

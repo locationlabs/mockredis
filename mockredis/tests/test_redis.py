@@ -123,14 +123,15 @@ class TestRedis(TestCase):
         self.assertEqual(self.redis.ttl('key'), None)
 
     def test_pttl(self):
+        expiration_ms = 3000
         self.redis.set('key', 'key')
-        self.redis.expire_milliseconds('key', 30)
+        self.redis.pexpire('key', expiration_ms)
 
         result = self.redis.pttl('key')
         # should be an int
         self.assertTrue(isinstance(result, int))
         # should be less than the timeout originally set
-        self.assertTrue(result <= 30)
+        self.assertTrue(result <= expiration_ms)
 
     def test_pttl_when_key_absent(self):
         """Test whether, like the redis-py lib, pttl returns None if the key is absent"""
