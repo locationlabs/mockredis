@@ -1,6 +1,7 @@
 Version 2.7.5.2
 
  - Added `list` operations: LSET
+ - Added `key` operations: INCRBY, DECRBY
  
 Version 2.7.5.1
 
@@ -10,9 +11,9 @@ Version 2.7.5.1
 
 Version 2.7.5.0
 
- - Added 'script' operations: EVAL, EVALSHA, SCRIPT_EXISTS, SCRIPT_FLUSH,
+ - Added `script` operations: EVAL, EVALSHA, SCRIPT_EXISTS, SCRIPT_FLUSH,
    SCRIPT_LOAD, REGISTER_SCRIPT
- - Added 'list' operations: RPOPLPUSH
+ - Added `list` operations: RPOPLPUSH
  - Added `string` operations: SETEX, SETNX
  - Changed `string` operation SET to support EX, PX, NX and XX options
    (available in redis-py since 2.7.4).
