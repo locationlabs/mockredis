@@ -239,7 +239,7 @@ class MockRedis(object):
         
         # removing the timeout
         if key in self.timeouts:
-            del self.timeouts[key]
+            self.timeouts.pop(key, None)
         
         return True
 
@@ -273,6 +273,8 @@ class MockRedis(object):
         seconds. ``time`` can be represented by an integer or a Python
         timedelta object.
         """
+        if isinstance(time, int) and time <= 0:
+            raise ValueError("invalid expire time in SETEX")
         return self.set(key, value, ex=time, currenttime=currenttime)
 
     def psetex(self, key, time, value, currenttime=datetime.now()):
@@ -281,6 +283,8 @@ class MockRedis(object):
         milliseconds. ``time`` can be represented by an integer or a Python
         timedelta object.
         """
+        if isinstance(time, int) and time <= 0:
+            raise ValueError("invalid expire time in PSETEX")
         return self.set(key, value, px=time, currenttime=currenttime)
 
     def setnx(self, key, value):
