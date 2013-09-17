@@ -297,16 +297,16 @@ class MockRedis(object):
         self.redis[key] = str(previous_value - amount)
         return long(self.redis[key])
 
-    def decrby(self, key, amount):
-        """Emulate decr."""
+    def decrby(self, key, amount=1):
         return self.decr(key, amount)
 
     def incr(self, key, amount=1):
+        """Emulate incr."""
         previous_value = long(self.redis.get(key, '0'))
         self.redis[key] = str(previous_value + amount)
         return long(self.redis[key])
 
-    def incrby(self, key, amount):
+    def incrby(self, key, amount=1):
         return self.incr(key, amount)
 
     #### Hash Functions ####
