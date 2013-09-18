@@ -289,18 +289,23 @@ class MockRedis(object):
         """Set the value of ``key`` to ``value`` if key doesn't exist"""
         return self.set(key, value, nx=True)
 
-    def decr(self, key, decrement=1):
+    def decr(self, key, amount=1):
         """Emulate decr."""
-
         previous_value = long(self.redis.get(key, '0'))
-        self.redis[key] = str(previous_value - decrement)
+        self.redis[key] = str(previous_value - amount)
         return long(self.redis[key])
 
-    def incr(self, key, increment=1):
+    def decrby(self, key, amount=1):
+        return self.decr(key, amount)
 
+    def incr(self, key, amount=1):
+        """Emulate incr."""
         previous_value = long(self.redis.get(key, '0'))
-        self.redis[key] = str(previous_value + increment)
+        self.redis[key] = str(previous_value + amount)
         return long(self.redis[key])
+
+    def incrby(self, key, amount=1):
+        return self.incr(key, amount)
 
     #### Hash Functions ####
 
