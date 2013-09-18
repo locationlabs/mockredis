@@ -221,18 +221,20 @@ class MockRedis(object):
             return None
         mode = "nx" if nx else "xx" if xx else None
         if self._should_set(key, mode):
-            if px or ex:
-                self._set(key, value)
-                if ex:
-                    if isinstance(ex, timedelta):
-                        ex = self._get_total_seconds(ex)
-                    self.expire(key, ex, currenttime)
-                if px:
-                    if isinstance(px, timedelta):
-                        px = self._get_total_milliseconds(px)
-                    self.pexpire(key, px, currenttime)
-                return True
-            return self._set(key, value)
+            expire = None
+            if ex is not None:
+                expire = ex if isinstance(ex, timedelta) else timedelta(seconds=ex)
+            if px is not None:
+                expire = px if isinstance(px, timedelta) else timedelta(milliseconds=px)
+            
+            if expire is not None and expire.total_seconds() <= 0:
+                raise ValueError("invalid expire time in SETEX")
+
+            result = self._set(key, value)
+            if expire:
+                self._expire(key, expire, currenttime=currenttime)
+
+            return result
 
     def _set(self, key, value):
         self.redis[key] = str(value)
@@ -273,8 +275,6 @@ class MockRedis(object):
         seconds. ``time`` can be represented by an integer or a Python
         timedelta object.
         """
-        if isinstance(time, int) and time <= 0:
-            raise ValueError("invalid expire time in SETEX")
         return self.set(key, value, ex=time, currenttime=currenttime)
 
     def psetex(self, key, time, value, currenttime=datetime.now()):
@@ -283,8 +283,6 @@ class MockRedis(object):
         milliseconds. ``time`` can be represented by an integer or a Python
         timedelta object.
         """
-        if isinstance(time, int) and time <= 0:
-            raise ValueError("invalid expire time in PSETEX")
         return self.set(key, value, px=time, currenttime=currenttime)
 
     def setnx(self, key, value):

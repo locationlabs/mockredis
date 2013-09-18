@@ -1,4 +1,4 @@
-from nose.tools import eq_, ok_
+from nose.tools import eq_, ok_, raises
 from datetime import timedelta
 
 from mockredis.redis import MockRedis
@@ -158,10 +158,26 @@ class TestRedisString(object):
         for case in test_cases:
             yield self._assert_set_with_timeout, case
 
+    @raises(ValueError)
+    def test_setex_invalid_expiration(self):
+        self.redis.setex('key', -2, 'value')
+
+    @raises(ValueError)
+    def test_setex_zero_expiration(self):
+        self.redis.setex('key', 0, 'value')
+        
     def test_psetex(self):
         test_cases = [200, timedelta(milliseconds=250)]
         for case in test_cases:
             yield self._assert_set_with_timeout_milliseconds, case
+
+    @raises(ValueError)
+    def test_psetex_invalid_expiration(self):
+        self.redis.psetex('key', -20, 'value')
+
+    @raises(ValueError)
+    def test_psetex_zero_expiration(self):
+        self.redis.psetex('key', 0, 'value')
 
     def _assert_set_with_timeout_milliseconds(self, milliseconds):
         """Assert that psetex sets a key with a value along with a timeout"""
