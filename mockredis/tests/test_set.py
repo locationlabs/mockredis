@@ -105,11 +105,21 @@ class TestRedisSet(TestCase):
 
     def test_sismember(self):
         key = "set"
-        self.assertEquals(0, self.redis.sismember(key, "one"))
+        self.assertFalse(self.redis.sismember(key, "one"))
         self.assertFalse(key in self.redis.redis)
         self.assertEquals(1, self.redis.sadd(key, "one"))
-        self.assertEquals(1, self.redis.sismember(key, "one"))
-        self.assertEquals(0, self.redis.sismember(key, "two"))
+        self.assertTrue(self.redis.sismember(key, "one"))
+        self.assertFalse(self.redis.sismember(key, "two"))
+
+    def test_ismember_numeric(self):
+        """
+        Verify string conversion.
+        """
+        key = "set"
+        self.assertEquals(1, self.redis.sadd(key,  1))
+        self.assertEquals(set(["1"]), self.redis.smembers(key))
+        self.assertTrue(self.redis.sismember(key, "1"))
+        self.assertTrue(self.redis.sismember(key, 1))
 
     def test_smembers(self):
         key = "set"
