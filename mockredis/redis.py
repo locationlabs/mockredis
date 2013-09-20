@@ -138,14 +138,14 @@ class MockRedis(object):
     def pexpire(self, key, milliseconds, currenttime=datetime.now()):
         """Emulate pexpire"""
         return self._expire(key, timedelta(milliseconds=milliseconds), currenttime)
-    
+
     def expireat(self, key, when):
         """Emulate expireat"""
         expire_time = datetime.fromtimestamp(when)
         if key in self.redis:
             self.timeouts[key] = expire_time
-            return 1
-        return 0
+            return True
+        return False
 
     def _time_to_live(self, key, output_ms, currenttime=datetime.now()):
         """
@@ -570,7 +570,7 @@ class MockRedis(object):
         """Emulate sismember."""
         redis_set = self._get_set(name, 'SISMEMBER')
         if not redis_set:
-            return 0
+            return False
         return str(value) in redis_set
 
     def smembers(self, name):
@@ -584,12 +584,12 @@ class MockRedis(object):
         dst_set = self._get_set(dst, 'SMOVE')
 
         if value not in src_set:
-            return 0
+            return False
 
         src_set.discard(value)
         dst_set.add(value)
         self.redis[src], self.redis[dst] = src_set, dst_set
-        return 1
+        return True
 
     def spop(self, name):
         """Emulate spop."""
