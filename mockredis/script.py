@@ -87,6 +87,9 @@ class Script(object):
         elif lua_globals.type(lval) == "userdata":
             # Lua userdata --> Python string
             return str(lval)
+        elif lua_globals.type(lval) == "string":
+            # Lua string --> Python string
+            return lval
         elif lua_globals.type(lval) == "boolean":
             # Lua boolean --> Python bool
             return bool(lval)
