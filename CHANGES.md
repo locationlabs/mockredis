@@ -2,6 +2,7 @@ Version 2.7.5.2
 
  - Added `list` operations: LSET
  - Added `key` operations: INCRBY, DECRBY
+ - Added `pubsub` operations: PUBLISH
  
 Version 2.7.5.1
 
