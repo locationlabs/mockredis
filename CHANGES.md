@@ -1,3 +1,7 @@
+Version 2.8.0.0
+
+ - Update LREM argument order to match redispy
+
 Version 2.7.5.2
 
  - Added `list` operations: LSET, LTRIM

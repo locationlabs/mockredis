@@ -3,7 +3,7 @@
 from setuptools import setup, find_packages
 
 # Match releases to redis-py versions
-__version__ = '2.7.5.3'
+__version__ = '2.8.0.0'
 
 # Jenkins will replace __build__ with a unique value.
 __build__ = ''
@@ -21,7 +21,7 @@ setup(name='mockredispy',
           'lua': ['lunatic-python-bugfix==1.1.1'],
       },
       tests_require=[
-          'redis>=2.7.2'
+          'redis>=2.8.0'
       ],
       test_suite='mockredis.tests',
       )
