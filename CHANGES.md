@@ -1,8 +1,11 @@
 Version 2.7.5.2
 
- - Added `list` operations: LSET
+ - Added `list` operations: LSET, LTRIM
  - Added `key` operations: INCRBY, DECRBY
- 
+ - Added `transaction` operations: WATCH, MULTI, UNWATCH
+ - Added expiration operations: EXPIREAT, PEXPIRE, PTTL, PSETX
+ - Fixed return values for some `set` operations
+
 Version 2.7.5.1
 
  - Changed DEL to support a list of keys as arguments and return the number of

@@ -4,6 +4,7 @@ from hashlib import sha1
 from operator import add
 from random import choice, sample
 import string
+
 from mockredis.lock import MockRedisLock
 from mockredis.exceptions import RedisError
 from mockredis.pipeline import MockRedisPipeline
@@ -153,11 +154,11 @@ class MockRedis(object):
         """
         if key not in self.timeouts:
             return None
-        
+
         get_result = self._get_total_milliseconds if output_ms else self._get_total_seconds
         time_to_live = get_result(self.timeouts[key] - currenttime)
         return max(-1, time_to_live)
-    
+
     def ttl(self, key, currenttime=datetime.now()):
         """
         Emulate ttl
@@ -176,7 +177,7 @@ class MockRedis(object):
     def pttl(self, key, currenttime=datetime.now()):
         """
         Emulate pttl
-        
+
         :param key: key for which pttl is requested.
         :returns: the number of milliseconds till timeout, None if the key does not exist or if the
                   key has no timeout(as per the redis-py lib behavior).
@@ -226,7 +227,7 @@ class MockRedis(object):
                 expire = ex if isinstance(ex, timedelta) else timedelta(seconds=ex)
             if px is not None:
                 expire = px if isinstance(px, timedelta) else timedelta(milliseconds=px)
-            
+
             if expire is not None and expire.total_seconds() <= 0:
                 raise ValueError("invalid expire time in SETEX")
 
@@ -238,11 +239,11 @@ class MockRedis(object):
 
     def _set(self, key, value):
         self.redis[key] = str(value)
-        
+
         # removing the timeout
         if key in self.timeouts:
             self.timeouts.pop(key, None)
-        
+
         return True
 
     def _should_set(self, key, mode):
