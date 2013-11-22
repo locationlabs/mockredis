@@ -1,3 +1,11 @@
+Version 2.7.5.2
+
+ - Added `list` operations: LSET, LTRIM
+ - Added `key` operations: INCRBY, DECRBY
+ - Added `transaction` operations: WATCH, MULTI, UNWATCH
+ - Added expiration operations: EXPIREAT, PEXPIRE, PTTL, PSETX
+ - Fixed return values for some `set` operations
+
 Version 2.7.5.1
 
  - Changed DEL to support a list of keys as arguments and return the number of
@@ -6,9 +14,9 @@ Version 2.7.5.1
 
 Version 2.7.5.0
 
- - Added 'script' operations: EVAL, EVALSHA, SCRIPT_EXISTS, SCRIPT_FLUSH,
+ - Added `script` operations: EVAL, EVALSHA, SCRIPT_EXISTS, SCRIPT_FLUSH,
    SCRIPT_LOAD, REGISTER_SCRIPT
- - Added 'list' operations: RPOPLPUSH
+ - Added `list` operations: RPOPLPUSH
  - Added `string` operations: SETEX, SETNX
  - Changed `string` operation SET to support EX, PX, NX and XX options
    (available in redis-py since 2.7.4).

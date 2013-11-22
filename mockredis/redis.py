@@ -4,6 +4,7 @@ from hashlib import sha1
 from operator import add
 from random import choice, sample
 import string
+
 from mockredis.lock import MockRedisLock
 from mockredis.exceptions import RedisError
 from mockredis.pipeline import MockRedisPipeline
@@ -54,6 +55,13 @@ class MockRedis(object):
     def watch(self, *argv, **kwargs):
         """
         Mock does not support command buffering so watch
+        is a no-op
+        """
+        pass
+
+    def unwatch(self):
+        """
+        Mock does not support command buffering so unwatch
         is a no-op
         """
         pass
@@ -117,18 +125,43 @@ class MockRedis(object):
 
         return key in self.redis
 
+    def _expire(self, key, delta, currenttime=datetime.now()):
+        if key not in self.redis:
+            return False
+
+        self.timeouts[key] = currenttime + delta
+        return True
+
     def expire(self, key, seconds, currenttime=datetime.now()):
         """Emulate expire"""
+        return self._expire(key, timedelta(seconds=seconds), currenttime)
 
+    def pexpire(self, key, milliseconds, currenttime=datetime.now()):
+        """Emulate pexpire"""
+        return self._expire(key, timedelta(milliseconds=milliseconds), currenttime)
+
+    def expireat(self, key, when):
+        """Emulate expireat"""
+        expire_time = datetime.fromtimestamp(when)
         if key in self.redis:
-            self.timeouts[key] = currenttime + timedelta(seconds=seconds)
-            return 1
-        return 0
+            self.timeouts[key] = expire_time
+            return True
+        return False
+
+    def _time_to_live(self, key, output_ms, currenttime=datetime.now()):
+        """
+        Returns time to live in milliseconds if output_ms is True, else returns seconds.
+        """
+        if key not in self.timeouts:
+            return None
+
+        get_result = self._get_total_milliseconds if output_ms else self._get_total_seconds
+        time_to_live = get_result(self.timeouts[key] - currenttime)
+        return max(-1, time_to_live)
 
     def ttl(self, key, currenttime=datetime.now()):
         """
         Emulate ttl
-        do_expire to get valid values.
 
         Even though the official redis commands documentation at http://redis.io/commands/ttl
         states "Return value: Integer reply: TTL in seconds, -2 when key does not exist or -1
@@ -139,23 +172,28 @@ class MockRedis(object):
         :returns: the number of seconds till timeout, None if the key does not exist or if the
                   key has no timeout(as per the redis-py lib behavior).
         """
+        return self._time_to_live(key, output_ms=False, currenttime=currenttime)
 
-        self.do_expire(currenttime)
+    def pttl(self, key, currenttime=datetime.now()):
+        """
+        Emulate pttl
 
-        if key not in self.timeouts:
-            return None
-        else:
-            # the return should be an int with the number seconds to timeout
-            return self._get_total_seconds(self.timeouts[key] - currenttime)
+        :param key: key for which pttl is requested.
+        :returns: the number of milliseconds till timeout, None if the key does not exist or if the
+                  key has no timeout(as per the redis-py lib behavior).
+        """
+        return self._time_to_live(key, output_ms=True, currenttime=currenttime)
 
     def do_expire(self, currenttime=datetime.now()):
         """
         Expire objects assuming now == time
         """
-
         for key, value in self.timeouts.items():
             if value - currenttime < timedelta(0):
                 del self.timeouts[key]
+                # removing the expired key
+                if key in self.redis:
+                    self.redis.pop(key, None)
 
     def flushdb(self):
         self.redis.clear()
@@ -183,15 +221,29 @@ class MockRedis(object):
         if nx and xx:
             return None
         mode = "nx" if nx else "xx" if xx else None
-        delta = int(px / 1000) if isinstance(px, int) else px or ex
         if self._should_set(key, mode):
-            if delta:
-                # set with expiration, if its ok to set
-                return self.setex(key, delta, value, currenttime=currenttime)
-            return self._set(key, value)
+            expire = None
+            if ex is not None:
+                expire = ex if isinstance(ex, timedelta) else timedelta(seconds=ex)
+            if px is not None:
+                expire = px if isinstance(px, timedelta) else timedelta(milliseconds=px)
+
+            if expire is not None and expire.total_seconds() <= 0:
+                raise ValueError("invalid expire time in SETEX")
+
+            result = self._set(key, value)
+            if expire:
+                self._expire(key, expire, currenttime=currenttime)
+
+            return result
 
     def _set(self, key, value):
         self.redis[key] = str(value)
+
+        # removing the timeout
+        if key in self.timeouts:
+            self.timeouts.pop(key, None)
+
         return True
 
     def _should_set(self, key, mode):
@@ -224,32 +276,37 @@ class MockRedis(object):
         seconds. ``time`` can be represented by an integer or a Python
         timedelta object.
         """
+        return self.set(key, value, ex=time, currenttime=currenttime)
 
-        seconds = time
-        if isinstance(time, timedelta):
-            seconds = time.seconds + time.days * 24 * 3600
-
-        self._set(key, value)
-        self.expire(key, seconds, currenttime)
-        return True
+    def psetex(self, key, time, value, currenttime=datetime.now()):
+        """
+        Set the value of ``key`` to ``value`` that expires in ``time``
+        milliseconds. ``time`` can be represented by an integer or a Python
+        timedelta object.
+        """
+        return self.set(key, value, px=time, currenttime=currenttime)
 
     def setnx(self, key, value):
         """Set the value of ``key`` to ``value`` if key doesn't exist"""
+        return self.set(key, value, nx=True)
 
-        return 1 if key not in self.redis and self._set(key, value) else 0
-
-    def decr(self, key, decrement=1):
+    def decr(self, key, amount=1):
         """Emulate decr."""
-
         previous_value = long(self.redis.get(key, '0'))
-        self.redis[key] = str(previous_value - decrement)
+        self.redis[key] = str(previous_value - amount)
         return long(self.redis[key])
 
-    def incr(self, key, increment=1):
+    def decrby(self, key, amount=1):
+        return self.decr(key, amount)
 
+    def incr(self, key, amount=1):
+        """Emulate incr."""
         previous_value = long(self.redis.get(key, '0'))
-        self.redis[key] = str(previous_value + increment)
+        self.redis[key] = str(previous_value + amount)
         return long(self.redis[key])
+
+    def incrby(self, key, amount=1):
+        return self.incr(key, amount)
 
     #### Hash Functions ####
 
@@ -357,14 +414,9 @@ class MockRedis(object):
 
     def lrange(self, key, start, stop):
         """Emulate lrange."""
-
-        # Does the set at this key already exist?
-        if key in self.redis:
-            # Yes, add this to the list
-            return map(str, self.redis[key][start:stop + 1 if stop != -1 else None])
-        else:
-            # No, override the defaultdict's default and create the list
-            self.redis[key] = list([])
+        redis_list = self._get_list(key, 'LRANGE')
+        start, stop = self._translate_range(len(redis_list), start, stop)
+        return redis_list[start:stop + 1]
 
     def lindex(self, key, index):
         """Emulate lindex."""
@@ -425,18 +477,20 @@ class MockRedis(object):
     def lrem(self, key, count, value):
         """Emulate lrem."""
         redis_list = self._get_list(key, 'LREM')
-
+        removed_count = 0
         if key in self.redis:
             if count == 0:
                 # Remove all ocurrences
                 while redis_list.count(value):
                     redis_list.remove(value)
+                    removed_count += 1
             elif count > 0:
                 counter = 0
                 # remove first 'count' ocurrences
                 while redis_list.count(value):
                     redis_list.remove(value)
                     counter += 1
+                    removed_count += 1
                     if counter >= count:
                         break
             elif count < 0:
@@ -446,15 +500,35 @@ class MockRedis(object):
                 for v in reversed(redis_list):
                     if v == value and counter > 0:
                         counter -= 1
+                        removed_count += 1
                     else:
                         new_list.append(v)
                 self.redis[key] = list(reversed(new_list))
+        return removed_count
+
+    def ltrim(self, key, start, stop):
+        """Emulate ltrim."""
+        redis_list = self._get_list(key, 'LTRIM')
+        if redis_list:
+            start, stop = self._translate_range(len(redis_list), start, stop)
+            self.redis[key] = redis_list[start:stop + 1]
+        return True
 
     def rpoplpush(self, source, destination):
         """Emulate rpoplpush"""
         transfer_item = self.rpop(source)
         self.lpush(destination, transfer_item)
         return transfer_item
+
+    def lset(self, key, index, value):
+        """Emulate lset."""
+        redis_list = self._get_list(key, 'LSET')
+        if redis_list is None:
+            raise ValueError("no such key")
+        try:
+            redis_list[index] = value
+        except IndexError:
+            raise ValueError("index out of range")
 
     #### SET COMMANDS ####
 
@@ -497,8 +571,8 @@ class MockRedis(object):
         """Emulate sismember."""
         redis_set = self._get_set(name, 'SISMEMBER')
         if not redis_set:
-            return 0
-        return 1 if value in redis_set else 0
+            return False
+        return str(value) in redis_set
 
     def smembers(self, name):
         """Emulate smembers."""
@@ -511,12 +585,12 @@ class MockRedis(object):
         dst_set = self._get_set(dst, 'SMOVE')
 
         if value not in src_set:
-            return 0
+            return False
 
         src_set.discard(value)
         dst_set.add(value)
         self.redis[src], self.redis[dst] = src_set, dst_set
-        return 1
+        return True
 
     def spop(self, name):
         """Emulate spop."""
@@ -638,8 +712,6 @@ class MockRedis(object):
             return []
 
         start, end = self._translate_range(len(zset), start, end)
-        if start == len(zset) or end < start:
-            return []
 
         func = self._range_func(withscores, score_cast_func)
         return [func(item) for item in zset.range(start, end, desc)]
@@ -794,8 +866,39 @@ class MockRedis(object):
         """
         Sends call to the function, whose name is specified by command.
         """
-        redis_function = getattr(self, string.lower(command))
-        return redis_function(*args)
+        command = self._normalize_command_name(command)
+        args = self._normalize_command_args(command, *args)
+
+        redis_function = getattr(self, command)
+        value = redis_function(*args)
+        return value
+
+    def _normalize_command_name(self, command):
+        """
+        Modifies the command string to match the redis client method name.
+        """
+        command = string.lower(command)
+
+        if command == 'del':
+            return 'delete'
+
+        return command
+
+    def _normalize_command_args(self, command, *args):
+        """
+        Modifies the command arguments to match the
+        strictness of the redis client.
+        """
+        if command == 'zadd' and not self.strict and len(args) >= 3:
+            # Reorder score and name
+            zadd_args = [x for tup in zip(args[2::2], args[1::2]) for x in tup]
+            return [args[0]] + zadd_args
+
+        if command == 'zrangebyscore' and len(args) == 6:
+            # Remove 'limit' from arguments
+            return args[:3] + args[4:]
+
+        return args
 
     #### Internal ####
 
@@ -804,6 +907,9 @@ class MockRedis(object):
         For python 2.6 support
         """
         return int((td.microseconds + (td.seconds + td.days * 24 * 3600) * 1e6) / 1e6)
+
+    def _get_total_milliseconds(self, td):
+        return int((td.days * 24 * 60 * 60 + td.seconds) * 1000 + td.microseconds / 1000.0)
 
     def _get_list(self, key, operation, create=False):
         """
@@ -846,13 +952,11 @@ class MockRedis(object):
         Translate range to valid bounds.
         """
         if start < 0:
-            start = len_ + max(start, -len_)
-        elif start > 0:
-            start = min(start, len_)
+            start += len_
+        start = max(0, min(start, len_))
         if end < 0:
-            end = len_ + max(end, -(len_ + 1))
-        elif end > 0:
-            end = min(end, len_ - 1)
+            end += len_
+        end = max(-1, min(end, len_ - 1))
         return start, end
 
     def _translate_limit(self, len_, start, num):
