@@ -517,7 +517,7 @@ class MockRedis(object):
     def rpoplpush(self, source, destination):
         """Emulate rpoplpush"""
         transfer_item = self.rpop(source)
-        if transfer_item:
+        if transfer_item is not None:
             self.lpush(destination, transfer_item)
         return transfer_item
 
