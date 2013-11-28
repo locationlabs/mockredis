@@ -125,6 +125,31 @@ class TestRedisList(TestCase):
         self.assertEqual([VAL1], self.redis.redis[LIST1])
         self.assertEqual([VAL2, VAL3, VAL4], self.redis.redis[LIST2])
 
+    def test_rpoplpush_with_empty_source(self):
+        # source list is empty
+        self.redis.redis[LIST1] = []
+        self.redis.redis[LIST2] = [VAL3, VAL4]
+        transfer_item = self.redis.rpoplpush(LIST1, LIST2)
+        self.assertEqual(None, transfer_item)
+        self.assertEqual([], self.redis.redis[LIST1])
+        # nothing has been added to the destination queue
+        self.assertEqual([VAL3, VAL4], self.redis.redis[LIST2])
+
+    def test_rpoplpush_source_with_empty_string(self):
+        # source list contains empty string
+        self.redis.redis[LIST1] = ['']
+        self.redis.redis[LIST2] = [VAL3, VAL4]
+        self.assertEqual(1, self.redis.llen(LIST1))
+        self.assertEqual(2, self.redis.llen(LIST2))
+        
+        transfer_item = self.redis.rpoplpush(LIST1, LIST2)
+        self.assertEqual('', transfer_item)
+        self.assertEqual(0, self.redis.llen(LIST1))
+        self.assertEqual(3, self.redis.llen(LIST2))
+        self.assertEqual([], self.redis.redis[LIST1])
+        # empty string is added to the destination queue
+        self.assertEqual(['', VAL3, VAL4], self.redis.redis[LIST2])
+
     def test_lrange_get_all(self):
         """Cases for returning entire list"""
         values = [VAL4, VAL3, VAL2, VAL1]

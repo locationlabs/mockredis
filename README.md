@@ -3,6 +3,8 @@
 Supports writing tests for code using the [redis-py][redis-py] library 
 without requiring a [redis-server][redis] install.
 
+[![Build Status](https://travis-ci.org/locationlabs/mockredis.png)](https://travis-ci.org/locationlabs/mockredis)
+
 ## Installation
 
 Use pip:
