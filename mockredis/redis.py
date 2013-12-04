@@ -96,7 +96,7 @@ class MockRedis(object):
             return 'zset'
         raise TypeError("unhandled type {}".format(type_))
 
-    def keys(self, pattern):
+    def keys(self, pattern='*'):
         """Emulate keys."""
         import re
 
@@ -119,11 +119,13 @@ class MockRedis(object):
             if key in self.timeouts:
                 del self.timeouts[key]
         return key_counter
+    __delitem__ = delete
 
     def exists(self, key):
         """Emulate exists."""
 
         return key in self.redis
+    __contains__ = exists
 
     def _expire(self, key, delta, currenttime=datetime.now()):
         if key not in self.redis:
@@ -207,6 +209,16 @@ class MockRedis(object):
         result = None if key not in self.redis else self.redis[key]
         return result
 
+    def __getitem__(self, name):
+        """
+        Return the value at key ``name``, raises a KeyError if the key
+        doesn't exist.
+        """
+        value = self.get(name)
+        if value:
+            return value
+        raise KeyError(name)
+
     def set(self, key, value, ex=None, px=None, nx=False, xx=False, currenttime=datetime.now()):
         """
         Set the ``value`` for the ``key`` in the context of the provided kwargs.
@@ -236,6 +248,7 @@ class MockRedis(object):
                 self._expire(key, expire, currenttime=currenttime)
 
             return result
+    __setitem__ = set
 
     def _set(self, key, value):
         self.redis[key] = str(value)
