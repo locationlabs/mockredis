@@ -276,6 +276,9 @@ class MockRedis(object):
         seconds. ``time`` can be represented by an integer or a Python
         timedelta object.
         """
+        if not self.strict:
+            # when not strict mode swap value and time args order
+            time, value = value, time
         return self.set(key, value, ex=time, currenttime=currenttime)
 
     def psetex(self, key, time, value, currenttime=datetime.now()):

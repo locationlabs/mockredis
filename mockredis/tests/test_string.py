@@ -9,7 +9,9 @@ class TestRedisString(object):
 
     def setUp(self):
         self.redis = MockRedis()
+        self.redis_strict = MockRedis(strict=True)
         self.redis.flushdb()
+        self.redis_strict.flushdb()
 
     def test_get(self):
         eq_(None, self.redis.get('key'))
@@ -141,16 +143,21 @@ class TestRedisString(object):
             yield self._assert_set_with_options, cases
 
     def _assert_set_with_timeout(self, seconds):
-        """Assert that setex sets a key with a value along with a timeout"""
+        """Assert both strict and non-strict that setex sets a key with a value along with a timeout"""
 
+        eq_(None, self.redis_strict.redis.get('key'))
         eq_(None, self.redis.redis.get('key'))
 
-        ok_(self.redis.setex('key', seconds, 'value'))
+        ok_(self.redis_strict.setex('key', seconds, 'value'))
+        ok_(self.redis.setex('key', 'value', seconds))
+        eq_('value', self.redis_strict.redis.get('key'))
         eq_('value', self.redis.redis.get('key'))
 
+        ok_(self.redis_strict.ttl('key'), "expiration was not set correctly")
         ok_(self.redis.ttl('key'), "expiration was not set correctly")
         if isinstance(seconds, timedelta):
             seconds = seconds.seconds + seconds.days * 24 * 3600
+        ok_(0 < self.redis_strict.ttl('key') <= seconds)
         ok_(0 < self.redis.ttl('key') <= seconds)
 
     def test_setex(self):
@@ -160,12 +167,20 @@ class TestRedisString(object):
 
     @raises(ValueError)
     def test_setex_invalid_expiration(self):
-        self.redis.setex('key', -2, 'value')
+        self.redis.setex('key', 'value', -2)
+
+    @raises(ValueError)
+    def test_strict_setex_invalid_expiration(self):
+        self.redis_strict.setex('key', -2, 'value')
 
     @raises(ValueError)
     def test_setex_zero_expiration(self):
-        self.redis.setex('key', 0, 'value')
+        self.redis.setex('key', 'value', 0)
         
+    @raises(ValueError)
+    def test_strict_setex_zero_expiration(self):
+        self.redis_strict.setex('key', 0, 'value')
+
     def test_psetex(self):
         test_cases = [200, timedelta(milliseconds=250)]
         for case in test_cases:
