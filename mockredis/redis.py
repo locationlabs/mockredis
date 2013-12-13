@@ -207,6 +207,10 @@ class MockRedis(object):
         result = None if key not in self.redis else self.redis[key]
         return result
 
+    def mget(self, keys, *args):
+        args = self._list_or_args(keys, args)
+        return [ self.get(a) for a in args ]
+
     def set(self, key, value, ex=None, px=None, nx=False, xx=False, currenttime=datetime.now()):
         """
         Set the ``value`` for the ``key`` in the context of the provided kwargs.
