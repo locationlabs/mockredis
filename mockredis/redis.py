@@ -241,6 +241,11 @@ class MockRedis(object):
 
             return result
 
+    def getset(self, key, value):
+        old_value = self.get(key)
+        self.set(key, value)
+        return old_value
+
     def _set(self, key, value):
         self.redis[key] = str(value)
 

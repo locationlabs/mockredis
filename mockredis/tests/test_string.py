@@ -237,3 +237,9 @@ class TestRedisString(object):
         # verify if the keys not to be deleted, were not deleted and their timeouts not removed.
         for key in set(to_create) - (set(to_create) & set(to_delete)):
             ok_(key in self.redis.redis and key in self.redis.timeouts)
+
+    def test_getset(self):
+        eq_(None, self.redis.get('getset_key'))
+        eq_(None, self.redis.getset('getset_key', '1'))
+        eq_('1', self.redis.getset('getset_key', '2'))
+        eq_('2', self.redis.get('getset_key'))
