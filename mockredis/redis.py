@@ -2,8 +2,8 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 from hashlib import sha1
 from operator import add
-import re
 from random import choice, sample
+import re
 import string
 
 from mockredis.lock import MockRedisLock
@@ -31,6 +31,8 @@ class MockRedis(object):
         self.strict = strict
         # The 'Redis' store
         self.redis = defaultdict(dict)
+        # The 'PubSub' store
+        self.pubsub = defaultdict(list)
         self.timeouts = defaultdict(dict)
         # Dictionary from script to sha ''Script''
         self.shas = dict()
@@ -200,6 +202,7 @@ class MockRedis(object):
 
     def flushdb(self):
         self.redis.clear()
+        self.pubsub.clear()
         self.timeouts.clear()
 
     #### String Functions ####
@@ -926,6 +929,11 @@ class MockRedis(object):
             return args[:3] + args[4:]
 
         return args
+
+    #### PubSub commands ####
+
+    def publish(self, channel, message):
+        self.pubsub[channel].append(message)
 
     #### Internal ####
 

@@ -16,8 +16,6 @@ class TestRedisString(object):
 
     def test_get(self):
         eq_(None, self.redis.get('key'))
-<<<<<<< HEAD
-
         self.redis.redis['key'] = 'value'
         eq_('value', self.redis.get('key'))
 
@@ -32,11 +30,6 @@ class TestRedisString(object):
         eq_(['value1', 'value2'], self.redis.mget('mget1', 'mget2'))
         eq_(['value1', 'value2'], self.redis.mget(['mget1', 'mget2']))
 
-=======
-        self.redis.redis['key'] = 'value'
-        eq_('value', self.redis.get('key'))
-
->>>>>>> Spearl-master
     def test_set_no_options(self):
         self.redis.set('key', 'value')
         eq_('value', self.redis.redis['key'])
@@ -193,15 +186,11 @@ class TestRedisString(object):
 
     @raises(ValueError)
     def test_setex_zero_expiration(self):
-<<<<<<< HEAD
         self.redis.setex('key', 'value', 0)
-        
+
     @raises(ValueError)
     def test_strict_setex_zero_expiration(self):
         self.redis_strict.setex('key', 0, 'value')
-=======
-        self.redis.setex('key', 0, 'value')
->>>>>>> Spearl-master
 
     def test_psetex(self):
         test_cases = [200, timedelta(milliseconds=250)]

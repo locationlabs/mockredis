@@ -1,3 +1,13 @@
+Version 2.8.0.2
+ - Added MGET and GETSET
+ - Updated KEYS
+ - Addded container functions: __getitem__, __setitem__, __delitem__, __member__
+ - Added `pubsub` operations: PUBLISH
+
+Version 2.8.0.1
+
+ - Fixed for RPOPLPUSH
+
 Version 2.8.0.0
 
  - Update LREM argument order to match redispy
@@ -9,7 +19,7 @@ Version 2.7.5.2
  - Added `transaction` operations: WATCH, MULTI, UNWATCH
  - Added expiration operations: EXPIREAT, PEXPIRE, PTTL, PSETX
  - Fixed return values for some `set` operations
-
+ 
 Version 2.7.5.1
 
  - Changed DEL to support a list of keys as arguments and return the number of
