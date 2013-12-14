@@ -2,6 +2,7 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 from hashlib import sha1
 from operator import add
+import re
 from random import choice, sample
 import string
 
@@ -98,8 +99,6 @@ class MockRedis(object):
 
     def keys(self, pattern='*'):
         """Emulate keys."""
-        import re
-
         # Make a regex out of pattern. The only special matching character we look for is '*'
         regex = '^' + pattern.replace('*', '.*') + '$'
 

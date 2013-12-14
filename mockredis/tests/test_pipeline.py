@@ -1,14 +1,14 @@
 from hashlib import sha1
-from unittest import TestCase
-from nose.tools import eq_
+
+from nose.tools import assert_raises, eq_
 
 from mockredis import MockRedis
 from mockredis.exceptions import RedisError
 
 
-class TestPipeline(TestCase):
+class TestPipeline(object):
 
-    def setUp(self):
+    def setup(self):
         self.redis = MockRedis()
         self.redis.flushdb()
 
@@ -91,7 +91,7 @@ class TestPipeline(TestCase):
         """
         with self.redis.pipeline() as pipeline:
             pipeline.multi()
-            with self.assertRaises(RedisError):
+            with assert_raises(RedisError):
                 pipeline.watch()
 
     def test_multiple_multi_calls(self):
@@ -100,7 +100,7 @@ class TestPipeline(TestCase):
         """
         with self.redis.pipeline() as pipeline:
             pipeline.multi()
-            with self.assertRaises(RedisError):
+            with assert_raises(RedisError):
                 pipeline.multi()
 
     def test_multi_on_implicit_transaction(self):
@@ -109,5 +109,5 @@ class TestPipeline(TestCase):
         """
         with self.redis.pipeline() as pipeline:
             pipeline.set("foo", "bar")
-            with self.assertRaises(RedisError):
+            with assert_raises(RedisError):
                 pipeline.multi()

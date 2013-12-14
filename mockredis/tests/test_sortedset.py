@@ -1,51 +1,52 @@
-from unittest import TestCase
+from nose.tools import assert_raises, eq_, ok_
+
 from mockredis.sortedset import SortedSet
 
 
-class TestSortedSet(TestCase):
+class TestSortedSet(object):
 
-    def setUp(self):
+    def setup(self):
         self.zset = SortedSet()
 
     def test_initially_empty(self):
         """
         Sorted set is created empty.
         """
-        self.assertEqual(0, len(self.zset))
+        eq_(0, len(self.zset))
 
     def test_insert(self):
         """
         Insertion maintains order and uniqueness.
         """
         # insert two values
-        self.assertTrue(self.zset.insert("one", 1.0))
-        self.assertTrue(self.zset.insert("two", 2.0))
+        ok_(self.zset.insert("one", 1.0))
+        ok_(self.zset.insert("two", 2.0))
 
         # validate insertion
-        self.assertEquals(2, len(self.zset))
-        self.assertTrue("one" in self.zset)
-        self.assertTrue("two" in self.zset)
-        self.assertFalse(1.0 in self.zset)
-        self.assertFalse(2.0 in self.zset)
-        self.assertEquals(1.0, self.zset["one"])
-        self.assertEquals(2.0, self.zset["two"])
-        with self.assertRaises(KeyError):
+        eq_(2, len(self.zset))
+        ok_("one" in self.zset)
+        ok_("two" in self.zset)
+        ok_(not 1.0 in self.zset)
+        ok_(not 2.0 in self.zset)
+        eq_(1.0, self.zset["one"])
+        eq_(2.0, self.zset["two"])
+        with assert_raises(KeyError):
             self.zset[1.0]
-        with self.assertRaises(KeyError):
+        with assert_raises(KeyError):
             self.zset[2.0]
-        self.assertEquals(0, self.zset.rank("one"))
-        self.assertEquals(1, self.zset.rank("two"))
-        self.assertEquals(None, self.zset.rank(1.0))
-        self.assertEquals(None, self.zset.rank(2.0))
+        eq_(0, self.zset.rank("one"))
+        eq_(1, self.zset.rank("two"))
+        eq_(None, self.zset.rank(1.0))
+        eq_(None, self.zset.rank(2.0))
 
         # re-insert a value
-        self.assertFalse(self.zset.insert("one", 3.0))
+        ok_(not self.zset.insert("one", 3.0))
 
         # validate the update
-        self.assertEquals(2, len(self.zset))
-        self.assertEquals(3.0, self.zset.score("one"))
-        self.assertEquals(0, self.zset.rank("two"))
-        self.assertEquals(1, self.zset.rank("one"))
+        eq_(2, len(self.zset))
+        eq_(3.0, self.zset.score("one"))
+        eq_(0, self.zset.rank("two"))
+        eq_(1, self.zset.rank("one"))
 
     def test_remove(self):
         """
@@ -58,29 +59,29 @@ class TestSortedSet(TestCase):
         self.zset["two"] = 2.0
 
         # cannot remove a member that is not present
-        self.assertEquals(False, self.zset.remove("four"))
+        eq_(False, self.zset.remove("four"))
 
         # removing an existing entry works
-        self.assertEquals(True, self.zset.remove("two"))
-        self.assertEquals(3, len(self.zset))
-        self.assertEquals(0, self.zset.rank("one"))
-        self.assertEquals(1, self.zset.rank("uno"))
-        self.assertEquals(None, self.zset.rank("two"))
-        self.assertEquals(2, self.zset.rank("three"))
+        eq_(True, self.zset.remove("two"))
+        eq_(3, len(self.zset))
+        eq_(0, self.zset.rank("one"))
+        eq_(1, self.zset.rank("uno"))
+        eq_(None, self.zset.rank("two"))
+        eq_(2, self.zset.rank("three"))
 
         # delete also works
         del self.zset["uno"]
-        self.assertEquals(2, len(self.zset))
-        self.assertEquals(0, self.zset.rank("one"))
-        self.assertEquals(None, self.zset.rank("uno"))
-        self.assertEquals(None, self.zset.rank("two"))
-        self.assertEquals(1, self.zset.rank("three"))
+        eq_(2, len(self.zset))
+        eq_(0, self.zset.rank("one"))
+        eq_(None, self.zset.rank("uno"))
+        eq_(None, self.zset.rank("two"))
+        eq_(1, self.zset.rank("three"))
 
     def test_scoremap(self):
         self.zset["one"] = 1.0
         self.zset["uno"] = 1.0
         self.zset["two"] = 2.0
         self.zset["three"] = 3.0
-        self.assertEquals([(1.0, "one"), (1.0, "uno")], self.zset.scorerange(1.0, 1.1))
-        self.assertEquals([(1.0, "one"), (1.0, "uno"), (2.0, "two")],
-                          self.zset.scorerange(1.0, 2.0))
+        eq_([(1.0, "one"), (1.0, "uno")], self.zset.scorerange(1.0, 1.1))
+        eq_([(1.0, "one"), (1.0, "uno"), (2.0, "two")],
+            self.zset.scorerange(1.0, 2.0))

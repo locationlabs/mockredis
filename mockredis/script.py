@@ -22,13 +22,7 @@ class Script(object):
         Sets KEYS and ARGV alongwith redis.call() function in lua globals
         and executes the lua redis script
         """
-        try:
-            import lua
-        except ImportError:
-            raise RuntimeError("LUA not installed")
-
-        lua_globals = lua.globals()
-        self._import_lua_dependencies(lua, lua_globals)
+        lua, lua_globals = Script._import_lua()
         lua_globals.KEYS = self._python_to_lua(keys)
         lua_globals.ARGV = self._python_to_lua(args)
 
@@ -39,7 +33,24 @@ class Script(object):
         lua_globals.redis = {"call": _call}
         return self._lua_to_python(lua.execute(self.script))
 
-    def _import_lua_dependencies(self, lua, lua_globals):
+    @staticmethod
+    def _import_lua():
+        """
+        Import lua and dependencies.
+
+        :raises: RuntimeError if LUA is not available
+        """
+        try:
+            import lua
+        except ImportError:
+            raise RuntimeError("LUA not installed")
+
+        lua_globals = lua.globals()
+        Script._import_lua_dependencies(lua, lua_globals)
+        return lua, lua_globals
+
+    @staticmethod
+    def _import_lua_dependencies(lua, lua_globals):
         """
         Imports lua dependencies that are supported by redis lua scripts.
         Included:
