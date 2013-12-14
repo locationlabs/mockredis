@@ -209,7 +209,7 @@ class MockRedis(object):
 
     def mget(self, keys, *args):
         args = self._list_or_args(keys, args)
-        return [ self.get(a) for a in args ]
+        return [self.get(arg) for arg in args]
 
     def set(self, key, value, ex=None, px=None, nx=False, xx=False, currenttime=datetime.now()):
         """

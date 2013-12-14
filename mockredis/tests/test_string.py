@@ -13,18 +13,20 @@ class TestRedisString(object):
 
     def test_get(self):
         eq_(None, self.redis.get('key'))
- 
+
         self.redis.redis['key'] = 'value'
         eq_('value', self.redis.get('key'))
- 
+
     def test_mget(self):
         eq_(None, self.redis.get('mget1'))
         eq_(None, self.redis.get('mget2'))
+        eq_([None, None], self.redis.mget('mget1', 'mget2'))
+        eq_([None, None], self.redis.mget(['mget1', 'mget2']))
 
         self.redis.redis['mget1'] = 'value1'
         self.redis.redis['mget2'] = 'value2'
-        eq_([ 'value1', 'value2'], self.redis.mget('mget1', 'mget2'))
-        eq_([ 'value1', 'value2'], self.redis.mget( ['mget1', 'mget2'] ))
+        eq_(['value1', 'value2'], self.redis.mget('mget1', 'mget2'))
+        eq_(['value1', 'value2'], self.redis.mget(['mget1', 'mget2']))
 
     def test_set_no_options(self):
         self.redis.set('key', 'value')
