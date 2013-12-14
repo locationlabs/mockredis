@@ -253,6 +253,14 @@ class TestRedisList(object):
         self.redis.lset(LIST1, 0, VAL1)
         eq_([VAL1], self.redis.lrange(LIST1, 0, -1))
 
+    def test_push_pop_returns_str(self):
+        key = 'l'
+        values = ['5', 5, [], {}]
+        for v in values:
+            self.redis.rpush(key, v)
+            eq_(self.redis.lpop(key),
+                str(v))
+
     def _reinitialize_list(self, key, *values):
         """
         Re-initialize the list

@@ -158,11 +158,3 @@ class TestRedis(object):
         ok_(isinstance(result, int))
         # should be less than the timeout originally set
         ok_(result <= 30)
-
-    def test_push_pop_returns_str(self):
-        key = 'l'
-        values = ['5', 5, [], {}]
-        for v in values:
-            self.redis.rpush(key, v)
-            eq_(self.redis.lpop(key),
-                str(v))
