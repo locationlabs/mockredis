@@ -109,7 +109,6 @@ class MockRedis(object):
 
     def delete(self, *keys):
         """Emulate delete."""
-
         key_counter = 0
         for key in keys:
             if key in self.redis:
@@ -118,11 +117,14 @@ class MockRedis(object):
             if key in self.timeouts:
                 del self.timeouts[key]
         return key_counter
-    __delitem__ = delete
+
+    def __delitem__(self, name):
+        if self.delete(name) == 0:
+            # redispy doesn't correctly raise KeyError here, so we don't either
+            pass
 
     def exists(self, key):
         """Emulate exists."""
-
         return key in self.redis
     __contains__ = exists
 
@@ -214,7 +216,7 @@ class MockRedis(object):
         doesn't exist.
         """
         value = self.get(name)
-        if value:
+        if value is not None:
             return value
         raise KeyError(name)
 

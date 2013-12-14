@@ -1,6 +1,6 @@
 from time import time
 
-from nose.tools import eq_, ok_
+from nose.tools import assert_raises, eq_, ok_
 
 from mockredis import MockRedis, mock_redis_client, mock_strict_redis_client
 
@@ -158,3 +158,46 @@ class TestRedis(object):
         ok_(isinstance(result, int))
         # should be less than the timeout originally set
         ok_(result <= 30)
+
+    def test_keys(self):
+        eq_([], self.redis.keys("*"))
+
+        self.redis.set("foo", "bar")
+        eq_(["foo"], self.redis.keys("*"))
+        eq_(["foo"], self.redis.keys("foo*"))
+        eq_(["foo"], self.redis.keys("foo"))
+        eq_([], self.redis.keys("bar"))
+
+        self.redis.set("food", "bbq")
+        eq_({"foo", "food"}, set(self.redis.keys("*")))
+        eq_({"foo", "food"}, set(self.redis.keys("foo*")))
+        eq_(["foo"], self.redis.keys("foo"))
+        eq_(["food"], self.redis.keys("food"))
+        eq_([], self.redis.keys("bar"))
+
+    def test_contains(self):
+        ok_("foo" not in self.redis)
+        self.redis.set("foo", "bar")
+        ok_("foo" in self.redis)
+
+    def test_getitem(self):
+        with assert_raises(KeyError):
+            self.redis["foo"]
+        self.redis.set("foo", "bar")
+        eq_("bar", self.redis["foo"])
+        self.redis.delete("foo")
+        with assert_raises(KeyError):
+            self.redis["foo"]
+
+    def test_setitem(self):
+        eq_(None, self.redis.get("foo"))
+        self.redis["foo"] = "bar"
+        eq_("bar", self.redis.get("foo"))
+
+    def test_delitem(self):
+        self.redis["foo"] = "bar"
+        eq_("bar", self.redis["foo"])
+        del self.redis["foo"]
+        eq_(None, self.redis.get("foo"))
+        # redispy does not correctly raise KeyError here, so we don't either
+        del self.redis["foo"]
