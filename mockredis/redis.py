@@ -2,6 +2,7 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 from hashlib import sha1
 from operator import add
+import re
 from random import choice, sample
 import string
 
@@ -96,10 +97,8 @@ class MockRedis(object):
             return 'zset'
         raise TypeError("unhandled type {}".format(type_))
 
-    def keys(self, pattern):
+    def keys(self, pattern='*'):
         """Emulate keys."""
-        import re
-
         # Make a regex out of pattern. The only special matching character we look for is '*'
         regex = '^' + pattern.replace('*', '.*') + '$'
 
@@ -110,7 +109,6 @@ class MockRedis(object):
 
     def delete(self, *keys):
         """Emulate delete."""
-
         key_counter = 0
         for key in keys:
             if key in self.redis:
@@ -120,10 +118,15 @@ class MockRedis(object):
                 del self.timeouts[key]
         return key_counter
 
+    def __delitem__(self, name):
+        if self.delete(name) == 0:
+            # redispy doesn't correctly raise KeyError here, so we don't either
+            pass
+
     def exists(self, key):
         """Emulate exists."""
-
         return key in self.redis
+    __contains__ = exists
 
     def _expire(self, key, delta, currenttime=datetime.now()):
         if key not in self.redis:
@@ -207,6 +210,16 @@ class MockRedis(object):
         result = None if key not in self.redis else self.redis[key]
         return result
 
+    def __getitem__(self, name):
+        """
+        Return the value at key ``name``, raises a KeyError if the key
+        doesn't exist.
+        """
+        value = self.get(name)
+        if value is not None:
+            return value
+        raise KeyError(name)
+
     def mget(self, keys, *args):
         args = self._list_or_args(keys, args)
         return [self.get(arg) for arg in args]
@@ -240,6 +253,7 @@ class MockRedis(object):
                 self._expire(key, expire, currenttime=currenttime)
 
             return result
+    __setitem__ = set
 
     def getset(self, key, value):
         old_value = self.get(key)
