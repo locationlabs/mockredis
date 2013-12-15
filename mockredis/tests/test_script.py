@@ -1,5 +1,6 @@
 from hashlib import sha1
 from unittest.case import SkipTest
+import sys
 
 from nose.tools import assert_raises, eq_, ok_
 
@@ -14,6 +15,10 @@ from mockredis.tests.test_constants import (
 )
 
 
+if sys.version_info >= (3, 0):
+    long = int
+
+
 class TestScript(object):
     """
     Tests for MockRedis scripting operations
@@ -21,7 +26,7 @@ class TestScript(object):
 
     def setup(self):
         self.redis = MockRedis()
-        self.LPOP_SCRIPT_SHA = sha1(LPOP_SCRIPT).hexdigest()
+        self.LPOP_SCRIPT_SHA = sha1(LPOP_SCRIPT.encode("utf-8")).hexdigest()
 
         try:
             lua, lua_globals = MockRedisScript._import_lua()
@@ -339,7 +344,7 @@ class TestScript(object):
         self.lua_assert_equal_list_with_pairs(lval_expected, lval)
 
     def test_python_to_lua_long(self):
-        pval = 10L
+        pval = long(10)
         lval = MockRedisScript._python_to_lua(pval)
         lval_expected = self.lua.eval('10')
         eq_("number", self.lua_globals.type(lval))

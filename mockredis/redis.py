@@ -1,3 +1,4 @@
+from __future__ import division
 from collections import defaultdict
 from datetime import datetime, timedelta
 from hashlib import sha1
@@ -5,12 +6,19 @@ from operator import add
 from random import choice, sample
 import re
 import string
+import sys
 
 from mockredis.lock import MockRedisLock
 from mockredis.exceptions import RedisError
 from mockredis.pipeline import MockRedisPipeline
 from mockredis.script import Script
 from mockredis.sortedset import SortedSet
+
+if sys.version_info >= (3, 0):
+    long = int
+    xrange = range
+    basestring = str
+    from functools import reduce
 
 
 class MockRedis(object):
@@ -330,10 +338,10 @@ class MockRedis(object):
         else:
             mapping = kwargs
 
-        for key, value in mapping.iteritems():
+        for key, value in mapping.items():
             if key in self.redis:
                 return False
-        for key, value in mapping.iteritems():
+        for key, value in mapping.items():
             self.set(key, value)
 
         return True
@@ -505,7 +513,7 @@ class MockRedis(object):
         redis_list = self._get_list(key, 'LPUSH', create=True)
 
         # Creates the list at this key if it doesn't exist, and appends args to its beginning
-        args_reversed = map(str, args)
+        args_reversed = [str(arg) for arg in args]
         args_reversed.reverse()
         self.redis[key] = args_reversed + redis_list
 
@@ -711,7 +719,7 @@ class MockRedis(object):
         if len(args) % 2 != 0:
             raise ValueError("ZADD requires an equal number of "
                              "values and scores")
-        for i in xrange(len(args) / 2):
+        for i in xrange(len(args) // 2):
             # interpretation of args order depends on whether Redis
             # or StrictRedis is used
             score = args[2 * i + (0 if self.strict else 1)]
@@ -760,7 +768,7 @@ class MockRedis(object):
                 members.setdefault(member, []).append(score)
 
         intersection = SortedSet()
-        for member, scores in members.iteritems():
+        for member, scores in members.items():
             if len(scores) != len(keys):
                 continue
             intersection[member] = reduce(aggregate_func, scores)
@@ -928,7 +936,7 @@ class MockRedis(object):
 
     def script_load(self, script):
         """Emulate script_load"""
-        sha_digest = sha1(script).hexdigest()
+        sha_digest = sha1(script.encode("utf-8")).hexdigest()
         self.shas[sha_digest] = script
         return sha_digest
 
@@ -985,7 +993,7 @@ class MockRedis(object):
         """
         For python 2.6 support
         """
-        return int((td.microseconds + (td.seconds + td.days * 24 * 3600) * 1e6) / 1e6)
+        return int((td.microseconds + (td.seconds + td.days * 24 * 3600) * 1e6) // 1e6)
 
     def _get_total_milliseconds(self, td):
         return int((td.days * 24 * 60 * 60 + td.seconds) * 1000 + td.microseconds / 1000.0)
@@ -1051,9 +1059,9 @@ class MockRedis(object):
         Return a suitable function from (score, member)
         """
         if withscores:
-            return lambda (score, member): (member, score_cast_func(score))
+            return lambda score_member: (score_member[1], score_cast_func(score_member[0]))
         else:
-            return lambda (score, member): member
+            return lambda score_member: score_member[1]
 
     def _aggregate_func(self, aggregate):
         """

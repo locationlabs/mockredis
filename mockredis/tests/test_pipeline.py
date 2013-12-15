@@ -47,7 +47,7 @@ class TestPipeline(object):
         state with the mock redis instance.
         """
         script_content = "redis.call('PING')"
-        sha = sha1(script_content).hexdigest()
+        sha = sha1(script_content.encode("utf-8")).hexdigest()
 
         self.redis.register_script(script_content)
 
