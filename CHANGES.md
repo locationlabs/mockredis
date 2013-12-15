@@ -1,4 +1,10 @@
+Version 2.8.0.3
+
+ - Support verifying unit tests against actual redis-server and redis-py.
+ - Update TTL to return -2 for unknown keys.
+
 Version 2.8.0.2
+
  - Added `string` operations: MGET, MSETNX, and GETSET
  - Added "*" support to KEYS
  - Added container functions: __getitem__, __setitem__, __delitem__, __member__

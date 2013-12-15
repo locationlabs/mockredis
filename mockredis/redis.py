@@ -165,12 +165,16 @@ class MockRedis(object):
         """
         Returns time to live in milliseconds if output_ms is True, else returns seconds.
         """
+        if key not in self.redis:
+            # as of redis 2.8, -2 returned if key does not exist
+            return long(-2)
         if key not in self.timeouts:
+            # redis-py returns None; command docs say -1
             return None
 
-        get_result = self._get_total_milliseconds if output_ms else self._get_total_seconds
+        get_result = get_total_milliseconds if output_ms else get_total_seconds
         time_to_live = get_result(self.timeouts[key] - currenttime)
-        return max(-1, time_to_live)
+        return long(max(-1, time_to_live))
 
     def ttl(self, key, currenttime=datetime.now()):
         """
@@ -989,15 +993,6 @@ class MockRedis(object):
 
     #### Internal ####
 
-    def _get_total_seconds(self, td):
-        """
-        For python 2.6 support
-        """
-        return int((td.microseconds + (td.seconds + td.days * 24 * 3600) * 1e6) // 1e6)
-
-    def _get_total_milliseconds(self, td):
-        return int((td.days * 24 * 60 * 60 + td.seconds) * 1000 + td.microseconds / 1000.0)
-
     def _get_list(self, key, operation, create=False):
         """
         Get (and maybe create) a list by name.
@@ -1101,6 +1096,17 @@ class MockRedis(object):
         if args:
             keys.extend(args)
         return keys
+
+
+def get_total_seconds(td):
+    """
+    For python 2.6 support
+    """
+    return int((td.microseconds + (td.seconds + td.days * 24 * 3600) * 1e6) // 1e6)
+
+
+def get_total_milliseconds(td):
+    return int((td.days * 24 * 60 * 60 + td.seconds) * 1000 + td.microseconds / 1000.0)
 
 
 def mock_redis_client(**kwargs):
