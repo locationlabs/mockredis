@@ -16,24 +16,25 @@ class TestRedisList(object):
         """
         List is created empty.
         """
-        eq_(0, len(self.redis.redis[LIST1]))
+        eq_(0, len(self.redis.lrange(LIST1, 0, -1)))
 
     def test_llen(self):
         eq_(0, self.redis.llen(LIST1))
-        self.redis.redis[LIST1] = [VAL1, VAL2]
+        self.redis.lpush(LIST1, VAL1, VAL2)
         eq_(2, self.redis.llen(LIST1))
-        self.redis.redis[LIST1].pop(0)
+        self.redis.lpop(LIST1)
         eq_(1, self.redis.llen(LIST1))
-        self.redis.redis[LIST1].pop(0)
+        self.redis.lpop(LIST1)
         eq_(0, self.redis.llen(LIST1))
 
     def test_lpop(self):
-        self.redis.redis[LIST1] = [VAL1, VAL2]
+        self.redis.rpush(LIST1, VAL1, VAL2)
         eq_(VAL1, self.redis.lpop(LIST1))
-        eq_(1, len(self.redis.redis[LIST1]))
+        eq_(1, len(self.redis.lrange(LIST1, 0, -1)))
         eq_(VAL2, self.redis.lpop(LIST1))
-        eq_(0, len(self.redis.redis[LIST1]))
+        eq_(0, len(self.redis.lrange(LIST1, 0, -1)))
         eq_(None, self.redis.lpop(LIST1))
+        eq_([], self.redis.keys("*"))
 
     def test_lpush(self):
         """
@@ -45,22 +46,23 @@ class TestRedisList(object):
 
         # validate insertion
         eq_("list", self.redis.type(LIST1))
-        eq_([VAL2, VAL1], self.redis.redis[LIST1])
+        eq_([VAL2, VAL1], self.redis.lrange(LIST1, 0, -1))
 
         # insert two more values with one repeated
         self.redis.lpush(LIST1, VAL1, VAL3)
 
         # validate the update
         eq_("list", self.redis.type(LIST1))
-        eq_([VAL3, VAL1, VAL2, VAL1], self.redis.redis[LIST1])
+        eq_([VAL3, VAL1, VAL2, VAL1], self.redis.lrange(LIST1, 0, -1))
 
     def test_rpop(self):
-        self.redis.redis[LIST1] = [VAL1, VAL2]
+        self.redis.rpush(LIST1, VAL1, VAL2)
         eq_(VAL2, self.redis.rpop(LIST1))
-        eq_(1, len(self.redis.redis[LIST1]))
+        eq_(1, len(self.redis.lrange(LIST1, 0, -1)))
         eq_(VAL1, self.redis.rpop(LIST1))
-        eq_(0, len(self.redis.redis[LIST1]))
+        eq_(0, len(self.redis.lrange(LIST1, 0, -1)))
         eq_(None, self.redis.lpop(LIST1))
+        eq_([], self.redis.keys("*"))
 
     def test_rpush(self):
         """
@@ -72,84 +74,85 @@ class TestRedisList(object):
 
         # validate insertion
         eq_("list", self.redis.type(LIST1))
-        eq_([VAL1, VAL2], self.redis.redis[LIST1])
+        eq_([VAL1, VAL2], self.redis.lrange(LIST1, 0, -1))
 
         # insert two more values with one repeated
         self.redis.rpush(LIST1, VAL1, VAL3)
 
         # validate the update
         eq_("list", self.redis.type(LIST1))
-        eq_([VAL1, VAL2, VAL1, VAL3], self.redis.redis[LIST1])
+        eq_([VAL1, VAL2, VAL1, VAL3], self.redis.lrange(LIST1, 0, -1))
 
     def test_lrem(self):
-        self.redis.redis[LIST1] = [VAL1, VAL2, VAL1, VAL3, VAL4, VAL2]
-        count = self.redis.lrem(LIST1, VAL1, 0)
-        eq_(2, count)
-        eq_([VAL2, VAL3, VAL4, VAL2], self.redis.redis[LIST1])
+        self.redis.rpush(LIST1, VAL1, VAL2, VAL1, VAL3, VAL4, VAL2)
+        eq_(2, self.redis.lrem(LIST1, VAL1, 0))
+        eq_([VAL2, VAL3, VAL4, VAL2], self.redis.lrange(LIST1, 0, -1))
 
-        self.redis.redis[LIST1] = [VAL1, VAL2, VAL1, VAL3, VAL4, VAL2]
-        count = self.redis.lrem(LIST1, VAL2, 1)
-        eq_(1, count)
-        eq_([VAL1, VAL1, VAL3, VAL4, VAL2],
-                             self.redis.redis[LIST1])
+        del self.redis[LIST1]
+        self.redis.rpush(LIST1, VAL1, VAL2, VAL1, VAL3, VAL4, VAL2)
+        eq_(1, self.redis.lrem(LIST1, VAL2, 1))
+        eq_([VAL1, VAL1, VAL3, VAL4, VAL2], self.redis.lrange(LIST1, 0, -1))
 
-        self.redis.redis[LIST1] = [VAL1, VAL2, VAL1, VAL3, VAL4, VAL2]
-        count = self.redis.lrem(LIST1, VAL1, 100)
-        eq_(2, count)
-        eq_([VAL2, VAL3, VAL4, VAL2], self.redis.redis[LIST1])
+        del self.redis[LIST1]
+        self.redis.rpush(LIST1, VAL1, VAL2, VAL1, VAL3, VAL4, VAL2)
+        eq_(2, self.redis.lrem(LIST1, VAL1, 100))
+        eq_([VAL2, VAL3, VAL4, VAL2], self.redis.lrange(LIST1, 0, -1))
 
-        self.redis.redis[LIST1] = [VAL1, VAL2, VAL1, VAL3, VAL4, VAL2]
-        count = self.redis.lrem(LIST1, VAL3, -1)
-        eq_(1, count)
-        eq_([VAL1, VAL2, VAL1, VAL4, VAL2],
-                             self.redis.redis[LIST1])
+        del self.redis[LIST1]
+        self.redis.rpush(LIST1, VAL1, VAL2, VAL1, VAL3, VAL4, VAL2)
+        eq_(1, self.redis.lrem(LIST1, VAL3, -1))
+        eq_([VAL1, VAL2, VAL1, VAL4, VAL2], self.redis.lrange(LIST1, 0, -1))
 
-        self.redis.redis[LIST1] = [VAL1, VAL2, VAL1, VAL3, VAL4, VAL2]
-        count = self.redis.lrem(LIST1, VAL2, -1)
-        eq_(1, count)
-        eq_([VAL1, VAL2, VAL1, VAL3, VAL4],
-                             self.redis.redis[LIST1])
+        del self.redis[LIST1]
+        self.redis.rpush(LIST1, VAL1, VAL2, VAL1, VAL3, VAL4, VAL2)
+        eq_(1, self.redis.lrem(LIST1, VAL2, -1))
+        eq_([VAL1, VAL2, VAL1, VAL3, VAL4], self.redis.lrange(LIST1, 0, -1))
 
-        self.redis.redis[LIST1] = [VAL1, VAL2, VAL1, VAL3, VAL4, VAL2]
-        count = self.redis.lrem(LIST1, VAL2, -2)
-        eq_(2, count)
-        eq_([VAL1, VAL1, VAL3, VAL4], self.redis.redis[LIST1])
+        del self.redis[LIST1]
+        self.redis.rpush(LIST1, VAL1, VAL2, VAL1, VAL3, VAL4, VAL2)
+        eq_(2, self.redis.lrem(LIST1, VAL2, -2))
+        eq_([VAL1, VAL1, VAL3, VAL4], self.redis.lrange(LIST1, 0, -1))
 
-        count = self.redis.lrem("NON_EXISTENT_LIST", VAL1, 0)
-        eq_(0, count)
+        del self.redis[LIST1]
+        self.redis.rpush(LIST1, VAL1)
+        eq_(1, self.redis.lrem(LIST1, VAL1))
+        eq_([], self.redis.lrange(LIST1, 0, -1))
+        eq_([], self.redis.keys("*"))
+
+        eq_(0, self.redis.lrem("NON_EXISTENT_LIST", VAL1, 0))
 
     def test_rpoplpush(self):
-        self.redis.redis[LIST1] = [VAL1, VAL2]
-        self.redis.redis[LIST2] = [VAL3, VAL4]
+        self.redis.rpush(LIST1, VAL1, VAL2)
+        self.redis.rpush(LIST2, VAL3, VAL4)
         transfer_item = self.redis.rpoplpush(LIST1, LIST2)
         eq_(VAL2, transfer_item)
-        eq_([VAL1], self.redis.redis[LIST1])
-        eq_([VAL2, VAL3, VAL4], self.redis.redis[LIST2])
+        eq_([VAL1], self.redis.lrange(LIST1, 0, -1))
+        eq_([VAL2, VAL3, VAL4], self.redis.lrange(LIST2, 0, -1))
 
     def test_rpoplpush_with_empty_source(self):
         # source list is empty
         self.redis.redis[LIST1] = []
-        self.redis.redis[LIST2] = [VAL3, VAL4]
+        self.redis.rpush(LIST2, VAL3, VAL4)
         transfer_item = self.redis.rpoplpush(LIST1, LIST2)
         eq_(None, transfer_item)
-        eq_([], self.redis.redis[LIST1])
+        eq_([], self.redis.lrange(LIST1, 0, -1))
         # nothing has been added to the destination queue
-        eq_([VAL3, VAL4], self.redis.redis[LIST2])
+        eq_([VAL3, VAL4], self.redis.lrange(LIST2, 0, -1))
 
     def test_rpoplpush_source_with_empty_string(self):
         # source list contains empty string
         self.redis.redis[LIST1] = ['']
-        self.redis.redis[LIST2] = [VAL3, VAL4]
+        self.redis.rpush(LIST2, VAL3, VAL4)
         eq_(1, self.redis.llen(LIST1))
         eq_(2, self.redis.llen(LIST2))
-        
+
         transfer_item = self.redis.rpoplpush(LIST1, LIST2)
         eq_('', transfer_item)
         eq_(0, self.redis.llen(LIST1))
         eq_(3, self.redis.llen(LIST2))
-        eq_([], self.redis.redis[LIST1])
+        eq_([], self.redis.lrange(LIST1, 0, -1))
         # empty string is added to the destination queue
-        eq_(['', VAL3, VAL4], self.redis.redis[LIST2])
+        eq_(['', VAL3, VAL4], self.redis.lrange(LIST2, 0, -1))
 
     def test_lrange_get_all(self):
         """Cases for returning entire list"""

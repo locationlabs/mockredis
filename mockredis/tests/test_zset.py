@@ -121,9 +121,11 @@ class TestRedisZset(object):
 
         self.redis.zadd(key, "one", 1.0)
         eq_(1, self.redis.zcard(key))
+        eq_(["zset"], self.redis.keys("*"))
 
         ok_(self.redis.zrem(key, "one"))
         eq_(0, self.redis.zcard(key))
+        eq_([], self.redis.keys("*"))
 
     def test_zscore(self):
         key = "zset"
@@ -193,7 +195,7 @@ class TestRedisZset(object):
         eq_([],
             self.redis.zrangebyscore(key, 1.0, 3.5, start=3, num=4))
 
-    def test_zremrank(self):
+    def test_zrevrank(self):
         key = "zset"
         eq_(None, self.redis.zrevrank(key, "two"))
 
@@ -247,6 +249,7 @@ class TestRedisZset(object):
         eq_(1, self.redis.zremrangebyrank(key, 0, -1))
 
         eq_([], self.redis.zrange(key, 0, -1))
+        eq_([], self.redis.keys("*"))
 
     def test_zremrangebyscore(self):
         key = "zset"
@@ -262,6 +265,7 @@ class TestRedisZset(object):
         eq_(2, self.redis.zremrangebyscore(key, 2.0, "inf"))
 
         eq_([], self.redis.zrange(key, 0, -1))
+        eq_([], self.redis.keys("*"))
 
     def test_zunionstore_no_keys(self):
         key = "zset"

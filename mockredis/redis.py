@@ -469,12 +469,17 @@ class MockRedis(object):
         """Emulate lpop."""
         redis_list = self._get_list(key, 'LPOP')
 
-        if key in self.redis:
-            try:
-                return str(redis_list.pop(0))
-            except (IndexError):
-                # Redis returns nil if popping from an empty list
-                pass
+        if key not in self.redis:
+            return None
+
+        try:
+            value = str(redis_list.pop(0))
+            if len(redis_list) == 0:
+                del self.redis[key]
+            return value
+        except (IndexError):
+            # Redis returns nil if popping from an empty list
+            return None
 
     def lpush(self, key, *args):
         """Emulate lpush."""
@@ -489,12 +494,17 @@ class MockRedis(object):
         """Emulate lpop."""
         redis_list = self._get_list(key, 'RPOP')
 
-        if key in self.redis:
-            try:
-                return str(redis_list.pop())
-            except (IndexError):
-                # Redis returns nil if popping from an empty list
-                pass
+        if key not in self.redis:
+            return None
+
+        try:
+            value = str(redis_list.pop())
+            if len(redis_list) == 0:
+                del self.redis[key]
+            return value
+        except (IndexError):
+            # Redis returns nil if popping from an empty list
+            return None
 
     def rpush(self, key, *args):
         """Emulate rpush."""
@@ -533,6 +543,8 @@ class MockRedis(object):
                     else:
                         new_list.append(v)
                 self.redis[key] = list(reversed(new_list))
+        if removed_count > 0 and len(redis_list) == 0:
+            del self.redis[key]
         return removed_count
 
     def ltrim(self, key, start, stop):
@@ -629,6 +641,8 @@ class MockRedis(object):
             return None
         member = choice(list(redis_set))
         redis_set.remove(member)
+        if len(redis_set) == 0:
+            del self.redis[name]
         return member
 
     def srandmember(self, name, number=None):
@@ -652,6 +666,8 @@ class MockRedis(object):
         for value in values:
             redis_set.discard(str(value))
         after_count = len(redis_set)
+        if before_count > 0 and len(redis_set) == 0:
+            del self.redis[key]
         return before_count - after_count
 
     def sunion(self, keys, *args):
@@ -775,8 +791,11 @@ class MockRedis(object):
         if not zset:
             return 0
 
-        remove_count = lambda value: 1 if zset.remove(value) else 0
-        return sum((remove_count(value) for value in values))
+        count_removals = lambda value: 1 if zset.remove(value) else 0
+        removal_count = sum((count_removals(value) for value in values))
+        if removal_count > 0 and len(zset) == 0:
+            del self.redis[name]
+        return removal_count
 
     def zremrangebyrank(self, name, start, end):
         zset = self._get_zset(name, "ZREMRANGEBYRANK")
@@ -785,8 +804,11 @@ class MockRedis(object):
             return 0
 
         start, end = self._translate_range(len(zset), start, end)
-        remove_count = lambda score, member: 1 if zset.remove(member) else 0
-        return sum((remove_count(score, member) for score, member in zset.range(start, end)))
+        count_removals = lambda score, member: 1 if zset.remove(member) else 0
+        removal_count = sum((count_removals(score, member) for score, member in zset.range(start, end)))
+        if removal_count > 0 and len(zset) == 0:
+            del self.redis[name]
+        return removal_count
 
     def zremrangebyscore(self, name, min_, max_):
         zset = self._get_zset(name, "ZREMRANGEBYSCORE")
@@ -794,9 +816,12 @@ class MockRedis(object):
         if not zset:
             return 0
 
-        remove_count = lambda score, member: 1 if zset.remove(member) else 0
-        return sum((remove_count(score, member)
-                    for score, member in zset.scorerange(float(min_), float(max_))))
+        count_removals = lambda score, member: 1 if zset.remove(member) else 0
+        removal_count = sum((count_removals(score, member)
+                             for score, member in zset.scorerange(float(min_), float(max_))))
+        if removal_count > 0 and len(zset) == 0:
+            del self.redis[name]
+        return removal_count
 
     def zrevrange(self, name, start, end, withscores=False,
                   score_cast_func=float):

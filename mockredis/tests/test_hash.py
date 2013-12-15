@@ -33,6 +33,7 @@ class TestRedisHash(object):
         eq_(1, self.redis.hdel(hashkey, "3", 4))
         eq_({}, self.redis.hgetall(hashkey))
         ok_(not self.redis.exists(hashkey))
+        eq_([], self.redis.keys("*"))
 
     def test_hlen(self):
         hashkey = "hash"

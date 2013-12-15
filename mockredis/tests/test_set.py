@@ -160,6 +160,7 @@ class TestRedisSet(object):
         second = self.redis.spop(key)
         eq_("one" if first == "two" else "two", second)
         eq_(0, self.redis.scard(key))
+        eq_([], self.redis.keys("*"))
 
     def test_srandmember(self):
         key = "set"
@@ -190,6 +191,7 @@ class TestRedisSet(object):
         eq_(0, self.redis.srem(key, "four"))
         eq_(2, self.redis.srem(key, "one", "three"))
         eq_(1, self.redis.srem(key, "two", "four"))
+        eq_([], self.redis.keys("*"))
 
     def test_sunion(self):
         self.redis.sadd("x", "one", "two", "three")
