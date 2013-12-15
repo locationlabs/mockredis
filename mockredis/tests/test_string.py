@@ -192,6 +192,11 @@ class TestRedisString(object):
     def test_strict_setex_zero_expiration(self):
         self.redis_strict.setex('key', 0, 'value')
 
+    def test_msetnx(self):
+        ok_(self.redis.msetnx({"key1": "hello", "key2": "there"}))
+        ok_(not self.redis.msetnx(**{"key3": "world", "key2": "there"}))
+        eq_(["hello", "there", None], self.redis.mget("key1", "key2", "key3"))
+
     def test_psetex(self):
         test_cases = [200, timedelta(milliseconds=250)]
         for case in test_cases:

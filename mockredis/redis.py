@@ -235,9 +235,7 @@ class MockRedis(object):
         If nx and xx are both set, the function does nothing and None is returned.
         If px and ex are both set, the preference is given to px.
         If the key is not set for some reason, the lib function returns None.
-
         """
-
         if nx and xx:
             return None
         mode = "nx" if nx else "xx" if xx else None
@@ -318,6 +316,27 @@ class MockRedis(object):
     def setnx(self, key, value):
         """Set the value of ``key`` to ``value`` if key doesn't exist"""
         return self.set(key, value, nx=True)
+
+    def msetnx(self, *args, **kwargs):
+        """
+        Sets key/values based on a mapping if none of the keys are already set.
+        Mapping can be supplied as a single dictionary argument or as kwargs.
+        Returns a boolean indicating if the operation was successful.
+        """
+        if args:
+            if len(args) != 1 or not isinstance(args[0], dict):
+                raise RedisError('MSETNX requires **kwargs or a single dict arg')
+            mapping = args[0]
+        else:
+            mapping = kwargs
+
+        for key, value in mapping.iteritems():
+            if key in self.redis:
+                return False
+        for key, value in mapping.iteritems():
+            self.set(key, value)
+
+        return True
 
     def decr(self, key, amount=1):
         """Emulate decr."""

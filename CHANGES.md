@@ -1,7 +1,7 @@
 Version 2.8.0.2
- - Added MGET and GETSET
- - Updated KEYS
- - Addded container functions: __getitem__, __setitem__, __delitem__, __member__
+ - Added `string` operations: MGET, MSETNX, and GETSET
+ - Added "*" support to KEYS
+ - Added container functions: __getitem__, __setitem__, __delitem__, __member__
  - Added `pubsub` operations: PUBLISH
 
 Version 2.8.0.1
