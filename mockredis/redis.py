@@ -51,9 +51,9 @@ class MockRedis(object):
         """Emulate lock."""
         return MockRedisLock(self, key, timeout, sleep)
 
-    def pipeline(self):
+    def pipeline(self, transaction=True, shard_hint=None):
         """Emulate a redis-python pipeline."""
-        return MockRedisPipeline(self)
+        return MockRedisPipeline(self, transaction, shard_hint)
 
     def watch(self, *argv, **kwargs):
         """

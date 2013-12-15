@@ -22,6 +22,13 @@ class TestPipeline(object):
 
             eq_(["foo", "bar"], pipeline.execute())
 
+    def test_pipeline_args(self):
+        """
+        It should be possible to pass transaction and shard_hint.
+        """
+        with self.redis.pipeline(transaction=False, shard_hint=None):
+            pass
+
     def test_set_and_get(self):
         """
         Pipeline execution returns the pipeline, not the intermediate value.
