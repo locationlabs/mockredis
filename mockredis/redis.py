@@ -8,6 +8,7 @@ import re
 import string
 import sys
 
+from mockredis.clock import SystemClock
 from mockredis.lock import MockRedisLock
 from mockredis.exceptions import RedisError, ResponseError
 from mockredis.pipeline import MockRedisPipeline
@@ -30,13 +31,14 @@ class MockRedis(object):
     expiry is NOT supported.
     """
 
-    def __init__(self, strict=False, **kwargs):
+    def __init__(self, strict=False, clock=None, **kwargs):
         """
         Initialize as either StrictRedis or Redis.
 
         Defaults to non-strict.
         """
         self.strict = strict
+        self.clock = SystemClock() if clock is None else clock
         # The 'Redis' store
         self.redis = defaultdict(dict)
         self.timeouts = defaultdict(dict)
@@ -138,20 +140,20 @@ class MockRedis(object):
         return key in self.redis
     __contains__ = exists
 
-    def _expire(self, key, delta, currenttime=datetime.now()):
+    def _expire(self, key, delta):
         if key not in self.redis:
             return False
 
-        self.timeouts[key] = currenttime + delta
+        self.timeouts[key] = self.clock.now() + delta
         return True
 
-    def expire(self, key, seconds, currenttime=datetime.now()):
+    def expire(self, key, seconds):
         """Emulate expire"""
-        return self._expire(key, timedelta(seconds=seconds), currenttime)
+        return self._expire(key, timedelta(seconds=seconds))
 
-    def pexpire(self, key, milliseconds, currenttime=datetime.now()):
+    def pexpire(self, key, milliseconds):
         """Emulate pexpire"""
-        return self._expire(key, timedelta(milliseconds=milliseconds), currenttime)
+        return self._expire(key, timedelta(milliseconds=milliseconds))
 
     def expireat(self, key, when):
         """Emulate expireat"""
@@ -161,7 +163,7 @@ class MockRedis(object):
             return True
         return False
 
-    def _time_to_live(self, key, output_ms, currenttime=datetime.now()):
+    def _time_to_live(self, key, output_ms):
         """
         Returns time to live in milliseconds if output_ms is True, else returns seconds.
         """
@@ -173,10 +175,10 @@ class MockRedis(object):
             return None
 
         get_result = get_total_milliseconds if output_ms else get_total_seconds
-        time_to_live = get_result(self.timeouts[key] - currenttime)
+        time_to_live = get_result(self.timeouts[key] - self.clock.now())
         return long(max(-1, time_to_live))
 
-    def ttl(self, key, currenttime=datetime.now()):
+    def ttl(self, key):
         """
         Emulate ttl
 
@@ -189,9 +191,9 @@ class MockRedis(object):
         :returns: the number of seconds till timeout, None if the key does not exist or if the
                   key has no timeout(as per the redis-py lib behavior).
         """
-        return self._time_to_live(key, output_ms=False, currenttime=currenttime)
+        return self._time_to_live(key, output_ms=False)
 
-    def pttl(self, key, currenttime=datetime.now()):
+    def pttl(self, key):
         """
         Emulate pttl
 
@@ -199,14 +201,14 @@ class MockRedis(object):
         :returns: the number of milliseconds till timeout, None if the key does not exist or if the
                   key has no timeout(as per the redis-py lib behavior).
         """
-        return self._time_to_live(key, output_ms=True, currenttime=currenttime)
+        return self._time_to_live(key, output_ms=True)
 
-    def do_expire(self, currenttime=datetime.now()):
+    def do_expire(self):
         """
         Expire objects assuming now == time
         """
         for key, value in self.timeouts.items():
-            if value - currenttime < timedelta(0):
+            if value - self.clock.now() < timedelta(0):
                 del self.timeouts[key]
                 # removing the expired key
                 if key in self.redis:
@@ -239,7 +241,7 @@ class MockRedis(object):
         args = self._list_or_args(keys, args)
         return [self.get(arg) for arg in args]
 
-    def set(self, key, value, ex=None, px=None, nx=False, xx=False, currenttime=datetime.now()):
+    def set(self, key, value, ex=None, px=None, nx=False, xx=False):
         """
         Set the ``value`` for the ``key`` in the context of the provided kwargs.
 
@@ -263,7 +265,7 @@ class MockRedis(object):
 
             result = self._set(key, value)
             if expire:
-                self._expire(key, expire, currenttime=currenttime)
+                self._expire(key, expire)
 
             return result
     __setitem__ = set
@@ -306,7 +308,7 @@ class MockRedis(object):
         # for all other cases, return true
         return True
 
-    def setex(self, key, time, value, currenttime=datetime.now()):
+    def setex(self, key, time, value):
         """
         Set the value of ``key`` to ``value`` that expires in ``time``
         seconds. ``time`` can be represented by an integer or a Python
@@ -315,15 +317,15 @@ class MockRedis(object):
         if not self.strict:
             # when not strict mode swap value and time args order
             time, value = value, time
-        return self.set(key, value, ex=time, currenttime=currenttime)
+        return self.set(key, value, ex=time)
 
-    def psetex(self, key, time, value, currenttime=datetime.now()):
+    def psetex(self, key, time, value):
         """
         Set the value of ``key`` to ``value`` that expires in ``time``
         milliseconds. ``time`` can be represented by an integer or a Python
         timedelta object.
         """
-        return self.set(key, value, px=time, currenttime=currenttime)
+        return self.set(key, value, px=time)
 
     def setnx(self, key, value):
         """Set the value of ``key`` to ``value`` if key doesn't exist"""

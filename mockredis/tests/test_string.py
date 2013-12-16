@@ -68,15 +68,16 @@ class TestRedisString(object):
             # check that the expiration was not set
             eq_(self.redis.ttl(key), -2)
 
-    def _assert_was_set(self, key, value, config, msg):
+    def _assert_was_set(self, key, value, config, msg, delta=1):
         """Assert that the key was set along with timeout if applicable"""
 
         eq_(value, self.redis.get(key))
-        if 'px' in config:
-            # px should have been preferred over ex if it was specified
-            ok_(int(config['px'] / 1000) == self.redis.ttl(key), msg)
-        elif 'ex' in config:
-            ok_(config['ex'] == self.redis.ttl(key), msg)
+        if "px" not in config and "ex" not in config:
+            return
+        # px should have been preferred over ex if it was specified
+        ttl = self.redis.ttl(key)
+        expected_ttl = int(config['px'] / 1000) if "px" in config else config["ex"]
+        ok_(expected_ttl - ttl <= delta, msg)
 
     def test_set_with_options(self):
         """Test the set function with various combinations of arguments"""
