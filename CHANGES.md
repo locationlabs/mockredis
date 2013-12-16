@@ -2,6 +2,7 @@ Version 2.8.0.3
 
  - Support verifying unit tests against actual redis-server and redis-py.
  - Update TTL to return -2 for unknown keys.
+ - Fix `zset` score_range_func behavior to expect string input
 
 Version 2.8.0.2
 
