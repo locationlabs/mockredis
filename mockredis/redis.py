@@ -1,15 +1,24 @@
+from __future__ import division
 from collections import defaultdict
 from datetime import datetime, timedelta
 from hashlib import sha1
 from operator import add
 from random import choice, sample
+import re
 import string
+import sys
 
 from mockredis.lock import MockRedisLock
 from mockredis.exceptions import RedisError
 from mockredis.pipeline import MockRedisPipeline
 from mockredis.script import Script
 from mockredis.sortedset import SortedSet
+
+if sys.version_info >= (3, 0):
+    long = int
+    xrange = range
+    basestring = str
+    from functools import reduce
 
 
 class MockRedis(object):
@@ -30,6 +39,8 @@ class MockRedis(object):
         self.strict = strict
         # The 'Redis' store
         self.redis = defaultdict(dict)
+        # The 'PubSub' store
+        self.pubsub = defaultdict(list)
         self.timeouts = defaultdict(dict)
         # Dictionary from script to sha ''Script''
         self.shas = dict()
@@ -48,9 +59,9 @@ class MockRedis(object):
         """Emulate lock."""
         return MockRedisLock(self, key, timeout, sleep)
 
-    def pipeline(self):
+    def pipeline(self, transaction=True, shard_hint=None):
         """Emulate a redis-python pipeline."""
-        return MockRedisPipeline(self)
+        return MockRedisPipeline(self, transaction, shard_hint)
 
     def watch(self, *argv, **kwargs):
         """
@@ -96,10 +107,8 @@ class MockRedis(object):
             return 'zset'
         raise TypeError("unhandled type {}".format(type_))
 
-    def keys(self, pattern):
+    def keys(self, pattern='*'):
         """Emulate keys."""
-        import re
-
         # Make a regex out of pattern. The only special matching character we look for is '*'
         regex = '^' + pattern.replace('*', '.*') + '$'
 
@@ -110,7 +119,6 @@ class MockRedis(object):
 
     def delete(self, *keys):
         """Emulate delete."""
-
         key_counter = 0
         for key in keys:
             if key in self.redis:
@@ -120,10 +128,15 @@ class MockRedis(object):
                 del self.timeouts[key]
         return key_counter
 
+    def __delitem__(self, name):
+        if self.delete(name) == 0:
+            # redispy doesn't correctly raise KeyError here, so we don't either
+            pass
+
     def exists(self, key):
         """Emulate exists."""
-
         return key in self.redis
+    __contains__ = exists
 
     def _expire(self, key, delta, currenttime=datetime.now()):
         if key not in self.redis:
@@ -197,6 +210,7 @@ class MockRedis(object):
 
     def flushdb(self):
         self.redis.clear()
+        self.pubsub.clear()
         self.timeouts.clear()
 
     #### String Functions ####
@@ -207,6 +221,20 @@ class MockRedis(object):
         result = None if key not in self.redis else self.redis[key]
         return result
 
+    def __getitem__(self, name):
+        """
+        Return the value at key ``name``, raises a KeyError if the key
+        doesn't exist.
+        """
+        value = self.get(name)
+        if value is not None:
+            return value
+        raise KeyError(name)
+
+    def mget(self, keys, *args):
+        args = self._list_or_args(keys, args)
+        return [self.get(arg) for arg in args]
+
     def set(self, key, value, ex=None, px=None, nx=False, xx=False, currenttime=datetime.now()):
         """
         Set the ``value`` for the ``key`` in the context of the provided kwargs.
@@ -215,9 +243,7 @@ class MockRedis(object):
         If nx and xx are both set, the function does nothing and None is returned.
         If px and ex are both set, the preference is given to px.
         If the key is not set for some reason, the lib function returns None.
-
         """
-
         if nx and xx:
             return None
         mode = "nx" if nx else "xx" if xx else None
@@ -236,6 +262,12 @@ class MockRedis(object):
                 self._expire(key, expire, currenttime=currenttime)
 
             return result
+    __setitem__ = set
+
+    def getset(self, key, value):
+        old_value = self.get(key)
+        self.set(key, value)
+        return old_value
 
     def _set(self, key, value):
         self.redis[key] = str(value)
@@ -276,6 +308,9 @@ class MockRedis(object):
         seconds. ``time`` can be represented by an integer or a Python
         timedelta object.
         """
+        if not self.strict:
+            # when not strict mode swap value and time args order
+            time, value = value, time
         return self.set(key, value, ex=time, currenttime=currenttime)
 
     def psetex(self, key, time, value, currenttime=datetime.now()):
@@ -289,6 +324,27 @@ class MockRedis(object):
     def setnx(self, key, value):
         """Set the value of ``key`` to ``value`` if key doesn't exist"""
         return self.set(key, value, nx=True)
+
+    def msetnx(self, *args, **kwargs):
+        """
+        Sets key/values based on a mapping if none of the keys are already set.
+        Mapping can be supplied as a single dictionary argument or as kwargs.
+        Returns a boolean indicating if the operation was successful.
+        """
+        if args:
+            if len(args) != 1 or not isinstance(args[0], dict):
+                raise RedisError('MSETNX requires **kwargs or a single dict arg')
+            mapping = args[0]
+        else:
+            mapping = kwargs
+
+        for key, value in mapping.items():
+            if key in self.redis:
+                return False
+        for key, value in mapping.items():
+            self.set(key, value)
+
+        return True
 
     def decr(self, key, amount=1):
         """Emulate decr."""
@@ -440,19 +496,24 @@ class MockRedis(object):
         """Emulate lpop."""
         redis_list = self._get_list(key, 'LPOP')
 
-        if key in self.redis:
-            try:
-                return str(redis_list.pop(0))
-            except (IndexError):
-                # Redis returns nil if popping from an empty list
-                pass
+        if key not in self.redis:
+            return None
+
+        try:
+            value = str(redis_list.pop(0))
+            if len(redis_list) == 0:
+                del self.redis[key]
+            return value
+        except (IndexError):
+            # Redis returns nil if popping from an empty list
+            return None
 
     def lpush(self, key, *args):
         """Emulate lpush."""
         redis_list = self._get_list(key, 'LPUSH', create=True)
 
         # Creates the list at this key if it doesn't exist, and appends args to its beginning
-        args_reversed = map(str, args)
+        args_reversed = [str(arg) for arg in args]
         args_reversed.reverse()
         self.redis[key] = args_reversed + redis_list
 
@@ -460,12 +521,17 @@ class MockRedis(object):
         """Emulate lpop."""
         redis_list = self._get_list(key, 'RPOP')
 
-        if key in self.redis:
-            try:
-                return str(redis_list.pop())
-            except (IndexError):
-                # Redis returns nil if popping from an empty list
-                pass
+        if key not in self.redis:
+            return None
+
+        try:
+            value = str(redis_list.pop())
+            if len(redis_list) == 0:
+                del self.redis[key]
+            return value
+        except (IndexError):
+            # Redis returns nil if popping from an empty list
+            return None
 
     def rpush(self, key, *args):
         """Emulate rpush."""
@@ -504,6 +570,8 @@ class MockRedis(object):
                     else:
                         new_list.append(v)
                 self.redis[key] = list(reversed(new_list))
+        if removed_count > 0 and len(redis_list) == 0:
+            del self.redis[key]
         return removed_count
 
     def ltrim(self, key, start, stop):
@@ -600,6 +668,8 @@ class MockRedis(object):
             return None
         member = choice(list(redis_set))
         redis_set.remove(member)
+        if len(redis_set) == 0:
+            del self.redis[name]
         return member
 
     def srandmember(self, name, number=None):
@@ -623,6 +693,8 @@ class MockRedis(object):
         for value in values:
             redis_set.discard(str(value))
         after_count = len(redis_set)
+        if before_count > 0 and len(redis_set) == 0:
+            del self.redis[key]
         return before_count - after_count
 
     def sunion(self, keys, *args):
@@ -647,7 +719,7 @@ class MockRedis(object):
         if len(args) % 2 != 0:
             raise ValueError("ZADD requires an equal number of "
                              "values and scores")
-        for i in xrange(len(args) / 2):
+        for i in xrange(len(args) // 2):
             # interpretation of args order depends on whether Redis
             # or StrictRedis is used
             score = args[2 * i + (0 if self.strict else 1)]
@@ -696,7 +768,7 @@ class MockRedis(object):
                 members.setdefault(member, []).append(score)
 
         intersection = SortedSet()
-        for member, scores in members.iteritems():
+        for member, scores in members.items():
             if len(scores) != len(keys):
                 continue
             intersection[member] = reduce(aggregate_func, scores)
@@ -746,8 +818,11 @@ class MockRedis(object):
         if not zset:
             return 0
 
-        remove_count = lambda value: 1 if zset.remove(value) else 0
-        return sum((remove_count(value) for value in values))
+        count_removals = lambda value: 1 if zset.remove(value) else 0
+        removal_count = sum((count_removals(value) for value in values))
+        if removal_count > 0 and len(zset) == 0:
+            del self.redis[name]
+        return removal_count
 
     def zremrangebyrank(self, name, start, end):
         zset = self._get_zset(name, "ZREMRANGEBYRANK")
@@ -756,8 +831,11 @@ class MockRedis(object):
             return 0
 
         start, end = self._translate_range(len(zset), start, end)
-        remove_count = lambda score, member: 1 if zset.remove(member) else 0
-        return sum((remove_count(score, member) for score, member in zset.range(start, end)))
+        count_removals = lambda score, member: 1 if zset.remove(member) else 0
+        removal_count = sum((count_removals(score, member) for score, member in zset.range(start, end)))
+        if removal_count > 0 and len(zset) == 0:
+            del self.redis[name]
+        return removal_count
 
     def zremrangebyscore(self, name, min_, max_):
         zset = self._get_zset(name, "ZREMRANGEBYSCORE")
@@ -765,9 +843,12 @@ class MockRedis(object):
         if not zset:
             return 0
 
-        remove_count = lambda score, member: 1 if zset.remove(member) else 0
-        return sum((remove_count(score, member)
-                    for score, member in zset.scorerange(float(min_), float(max_))))
+        count_removals = lambda score, member: 1 if zset.remove(member) else 0
+        removal_count = sum((count_removals(score, member)
+                             for score, member in zset.scorerange(float(min_), float(max_))))
+        if removal_count > 0 and len(zset) == 0:
+            del self.redis[name]
+        return removal_count
 
     def zrevrange(self, name, start, end, withscores=False,
                   score_cast_func=float):
@@ -855,7 +936,7 @@ class MockRedis(object):
 
     def script_load(self, script):
         """Emulate script_load"""
-        sha_digest = sha1(script).hexdigest()
+        sha_digest = sha1(script.encode("utf-8")).hexdigest()
         self.shas[sha_digest] = script
         return sha_digest
 
@@ -901,13 +982,18 @@ class MockRedis(object):
 
         return args
 
+    #### PubSub commands ####
+
+    def publish(self, channel, message):
+        self.pubsub[channel].append(message)
+
     #### Internal ####
 
     def _get_total_seconds(self, td):
         """
         For python 2.6 support
         """
-        return int((td.microseconds + (td.seconds + td.days * 24 * 3600) * 1e6) / 1e6)
+        return int((td.microseconds + (td.seconds + td.days * 24 * 3600) * 1e6) // 1e6)
 
     def _get_total_milliseconds(self, td):
         return int((td.days * 24 * 60 * 60 + td.seconds) * 1000 + td.microseconds / 1000.0)
@@ -973,9 +1059,9 @@ class MockRedis(object):
         Return a suitable function from (score, member)
         """
         if withscores:
-            return lambda (score, member): (member, score_cast_func(score))
+            return lambda score_member: (score_member[1], score_cast_func(score_member[0]))
         else:
-            return lambda (score, member): member
+            return lambda score_member: score_member[1]
 
     def _aggregate_func(self, aggregate):
         """

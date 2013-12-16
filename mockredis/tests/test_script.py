@@ -1,39 +1,40 @@
-from unittest import TestCase, skipUnless
 from hashlib import sha1
+from unittest.case import SkipTest
+import sys
+
+from nose.tools import assert_raises, eq_, ok_
+
 from mockredis.exceptions import RedisError
 from mockredis.redis import MockRedis
+from mockredis.script import Script as MockRedisScript
 from mockredis.tests.test_constants import (
     LIST1, LIST2,
     SET1,
     VAL1, VAL2, VAL3, VAL4,
     LPOP_SCRIPT
 )
-from mockredis.script import Script as MockredisScript
 
 
-def has_lua():
-    """
-    Test that lua is available.
-    """
-    try:
-        import lua  # noqa
-        return True
-    except ImportError:
-        return False
+if sys.version_info >= (3, 0):
+    long = int
 
 
-@skipUnless(has_lua(), "mockredispy was not installed with lua support")
-class TestScript(TestCase):
+class TestScript(object):
     """
     Tests for MockRedis scripting operations
     """
 
-    def setUp(self):
+    def setup(self):
         self.redis = MockRedis()
-        self.LPOP_SCRIPT_SHA = sha1(LPOP_SCRIPT).hexdigest()
-        import lua
+        self.LPOP_SCRIPT_SHA = sha1(LPOP_SCRIPT.encode("utf-8")).hexdigest()
+
+        try:
+            lua, lua_globals = MockRedisScript._import_lua()
+        except RuntimeError:
+            raise SkipTest("mockredispy was not installed with lua support")
+
         self.lua = lua
-        self.lua_globals = lua.globals()
+        self.lua_globals = lua_globals
 
         assert_equal_list = """
         function compare_list(list1, list2)
@@ -102,7 +103,7 @@ class TestScript(TestCase):
         script(keys=[LIST1], args=[VAL1, VAL2])
 
         # validate insertion
-        self.assertEquals([VAL2, VAL1], self.redis.lrange(LIST1, 0, -1))
+        eq_([VAL2, VAL1], self.redis.lrange(LIST1, 0, -1))
 
     def test_register_script_lpop(self):
         self.redis.lpush(LIST1, VAL2, VAL1)
@@ -113,8 +114,8 @@ class TestScript(TestCase):
         list_item = script(keys=[LIST1])
 
         # validate lpop
-        self.assertEquals(VAL1, list_item)
-        self.assertEquals([VAL2], self.redis.lrange(LIST1, 0, -1))
+        eq_(VAL1, list_item)
+        eq_([VAL2], self.redis.lrange(LIST1, 0, -1))
 
     def test_register_script_rpoplpush(self):
         self.redis.lpush(LIST1, VAL2, VAL1)
@@ -126,8 +127,8 @@ class TestScript(TestCase):
         script(keys=[LIST1, LIST2])
 
         #validate rpoplpush
-        self.assertEqual([VAL1], self.redis.lrange(LIST1, 0, -1))
-        self.assertEqual([VAL2, VAL3, VAL4], self.redis.lrange(LIST2, 0, -1))
+        eq_([VAL1], self.redis.lrange(LIST1, 0, -1))
+        eq_([VAL2, VAL3, VAL4], self.redis.lrange(LIST2, 0, -1))
 
     def test_register_script_rpop_lpush(self):
         self.redis.lpush(LIST1, VAL2, VAL1)
@@ -142,8 +143,8 @@ class TestScript(TestCase):
         script(keys=[LIST1, LIST2])
 
         #validate rpop and then lpush
-        self.assertEqual([VAL1], self.redis.lrange(LIST1, 0, -1))
-        self.assertEqual([VAL2, VAL3, VAL4], self.redis.lrange(LIST2, 0, -1))
+        eq_([VAL1], self.redis.lrange(LIST1, 0, -1))
+        eq_([VAL2, VAL3, VAL4], self.redis.lrange(LIST2, 0, -1))
 
     def test_register_script_client(self):
         # lpush two values in LIST1 in first instance of redis
@@ -161,9 +162,9 @@ class TestScript(TestCase):
         list_item = script(keys=[LIST1], client=redis2)
 
         # validate lpop from LIST1 in redis2
-        self.assertEquals(VAL3, list_item)
-        self.assertEquals([VAL4], redis2.lrange(LIST1, 0, -1))
-        self.assertEquals([VAL1, VAL2], self.redis.lrange(LIST1, 0, -1))
+        eq_(VAL3, list_item)
+        eq_([VAL4], redis2.lrange(LIST1, 0, -1))
+        eq_([VAL1, VAL2], self.redis.lrange(LIST1, 0, -1))
 
     def test_eval_lpush(self):
         # lpush two values
@@ -171,7 +172,7 @@ class TestScript(TestCase):
         self.redis.eval(script_content, 1, LIST1, VAL1, VAL2)
 
         # validate insertion
-        self.assertEquals([VAL2, VAL1], self.redis.lrange(LIST1, 0, -1))
+        eq_([VAL2, VAL1], self.redis.lrange(LIST1, 0, -1))
 
     def test_eval_lpop(self):
         self.redis.lpush(LIST1, VAL2, VAL1)
@@ -181,8 +182,8 @@ class TestScript(TestCase):
         list_item = self.redis.eval(script_content, 1, LIST1)
 
         # validate lpop
-        self.assertEquals(VAL1, list_item)
-        self.assertEquals([VAL2], self.redis.lrange(LIST1, 0, -1))
+        eq_(VAL1, list_item)
+        eq_([VAL2], self.redis.lrange(LIST1, 0, -1))
 
     def test_eval_zadd(self):
         # The score and member are reversed when the client is not strict.
@@ -190,7 +191,7 @@ class TestScript(TestCase):
         script_content = "return redis.call('zadd', KEYS[1], ARGV[1], ARGV[2])"
         self.redis.eval(script_content, 1, SET1, 42, VAL1)
 
-        self.assertEquals(42, self.redis.zscore(SET1, VAL1))
+        eq_(42, self.redis.zscore(SET1, VAL1))
 
     def test_eval_zrangebyscore(self):
         # Make sure the limit is removed.
@@ -209,10 +210,10 @@ class TestScript(TestCase):
         self.redis.zadd(SET1, VAL1, 1)
         self.redis.zadd(SET1, VAL2, 2)
 
-        self.assertEquals([],           self.redis.eval(script, 1, SET1, 0, 0))
-        self.assertEquals([VAL1],       self.redis.eval(script, 1, SET1, 0, 1))
-        self.assertEquals([VAL1, VAL2], self.redis.eval(script, 1, SET1, 0, 2))
-        self.assertEquals([VAL2],       self.redis.eval(script, 1, SET1, 2, 2))
+        eq_([],           self.redis.eval(script, 1, SET1, 0, 0))
+        eq_([VAL1],       self.redis.eval(script, 1, SET1, 0, 1))
+        eq_([VAL1, VAL2], self.redis.eval(script, 1, SET1, 0, 2))
+        eq_([VAL2],       self.redis.eval(script, 1, SET1, 2, 2))
 
     def test_table_type(self):
         self.redis.lpush(LIST1, VAL2, VAL1)
@@ -222,7 +223,7 @@ class TestScript(TestCase):
         """
         script = self.redis.register_script(script_content)
         itemType = script(keys=[LIST1], args=[0, -1])
-        self.assertEqual('table', itemType)
+        eq_('table', itemType)
 
     def test_script_hgetall(self):
         myhash = {"k1": "v1"}
@@ -232,8 +233,8 @@ class TestScript(TestCase):
         """
         script = self.redis.register_script(script_content)
         item = script(keys=["myhash"])
-        self.assertIsInstance(item, list)
-        self.assertEquals(["k1", "v1"], item)
+        ok_(isinstance(item, list))
+        eq_(["k1", "v1"], item)
 
     def test_evalsha(self):
         self.redis.lpush(LIST1, VAL1)
@@ -241,78 +242,79 @@ class TestScript(TestCase):
         sha = self.LPOP_SCRIPT_SHA
 
         # validator error when script not registered
-        with self.assertRaises(RedisError) as redisError:
+        with assert_raises(RedisError) as redis_error:
             self.redis.evalsha(self.LPOP_SCRIPT_SHA, 1, LIST1)
 
-        self.assertEqual("Sha not registered", str(redisError.exception))
+        eq_("Sha not registered", str(redis_error.exception))
 
-        self.assertRaises(RedisError, self.redis.evalsha, self.LPOP_SCRIPT_SHA, 1, LIST1)
+        with assert_raises(RedisError):
+            self.redis.evalsha(self.LPOP_SCRIPT_SHA, 1, LIST1)
 
         # load script and then evalsha
-        self.assertEquals(sha, self.redis.script_load(script))
-        self.assertEquals(VAL1, self.redis.evalsha(sha, 1, LIST1))
-        self.assertEquals(0, self.redis.llen(LIST1))
+        eq_(sha, self.redis.script_load(script))
+        eq_(VAL1, self.redis.evalsha(sha, 1, LIST1))
+        eq_(0, self.redis.llen(LIST1))
 
     def test_script_exists(self):
         script = LPOP_SCRIPT
         sha = self.LPOP_SCRIPT_SHA
-        self.assertEquals([False], self.redis.script_exists(sha))
+        eq_([False], self.redis.script_exists(sha))
         self.redis.register_script(script)
-        self.assertEquals([True], self.redis.script_exists(sha))
+        eq_([True], self.redis.script_exists(sha))
 
     def test_script_flush(self):
         script = LPOP_SCRIPT
         sha = self.LPOP_SCRIPT_SHA
         self.redis.register_script(script)
-        self.assertEquals([True], self.redis.script_exists(sha))
+        eq_([True], self.redis.script_exists(sha))
         self.redis.script_flush()
-        self.assertEquals([False], self.redis.script_exists(sha))
+        eq_([False], self.redis.script_exists(sha))
 
     def test_script_load(self):
         script = LPOP_SCRIPT
         sha = self.LPOP_SCRIPT_SHA
-        self.assertEquals([False], self.redis.script_exists(sha))
-        self.assertEquals(sha, self.redis.script_load(script))
-        self.assertEquals([True], self.redis.script_exists(sha))
+        eq_([False], self.redis.script_exists(sha))
+        eq_(sha, self.redis.script_load(script))
+        eq_([True], self.redis.script_exists(sha))
 
     def test_lua_to_python_none(self):
         lval = self.lua.eval("")
-        pval = MockredisScript._lua_to_python(lval)
-        self.assertTrue(pval is None)
+        pval = MockRedisScript._lua_to_python(lval)
+        ok_(pval is None)
 
     def test_lua_to_python_list(self):
         lval = self.lua.eval('{"val1", "val2"}')
-        pval = MockredisScript._lua_to_python(lval)
-        self.assertIsInstance(pval, list)
-        self.assertEqual(["val1", "val2"], pval)
+        pval = MockRedisScript._lua_to_python(lval)
+        ok_(isinstance(pval, list))
+        eq_(["val1", "val2"], pval)
 
     def test_lua_to_python_long(self):
         lval = self.lua.eval('22')
-        pval = MockredisScript._lua_to_python(lval)
-        self.assertIsInstance(pval, long)
-        self.assertEqual(22, pval)
+        pval = MockRedisScript._lua_to_python(lval)
+        ok_(isinstance(pval, long))
+        eq_(22, pval)
 
     def test_lua_to_python_flota(self):
         lval = self.lua.eval('22.2')
-        pval = MockredisScript._lua_to_python(lval)
-        self.assertIsInstance(pval, float)
-        self.assertEqual(22.2, pval)
+        pval = MockRedisScript._lua_to_python(lval)
+        ok_(isinstance(pval, float))
+        eq_(22.2, pval)
 
     def test_lua_to_python_string(self):
         lval = self.lua.eval('"somestring"')
-        pval = MockredisScript._lua_to_python(lval)
-        self.assertIsInstance(pval, str)
-        self.assertEqual("somestring", pval)
+        pval = MockRedisScript._lua_to_python(lval)
+        ok_(isinstance(pval, str))
+        eq_("somestring", pval)
 
     def test_lua_to_python_bool(self):
         lval = self.lua.eval('true')
-        pval = MockredisScript._lua_to_python(lval)
-        self.assertIsInstance(pval, bool)
-        self.assertEqual(True, pval)
+        pval = MockRedisScript._lua_to_python(lval)
+        ok_(isinstance(pval, bool))
+        eq_(True, pval)
 
     def test_python_to_lua_none(self):
         pval = None
-        lval = MockredisScript._python_to_lua(pval)
+        lval = MockRedisScript._python_to_lua(pval)
         is_null = """
         function is_null(var1)
             return var1 == nil
@@ -320,43 +322,43 @@ class TestScript(TestCase):
         return is_null
         """
         lua_is_null = self.lua.execute(is_null)
-        self.assertTrue(MockredisScript._lua_to_python(lua_is_null(lval)))
+        ok_(MockRedisScript._lua_to_python(lua_is_null(lval)))
 
     def test_python_to_lua_string(self):
         pval = "somestring"
-        lval = MockredisScript._python_to_lua(pval)
+        lval = MockRedisScript._python_to_lua(pval)
         lval_expected = self.lua.eval('"somestring"')
-        self.assertEqual("string", self.lua_globals.type(lval))
-        self.assertEqual(lval_expected, lval)
+        eq_("string", self.lua_globals.type(lval))
+        eq_(lval_expected, lval)
 
     def test_python_to_lua_list(self):
         pval = ["abc", "xyz"]
-        lval = MockredisScript._python_to_lua(pval)
+        lval = MockRedisScript._python_to_lua(pval)
         lval_expected = self.lua.eval('{"abc", "xyz"}')
         self.lua_assert_equal_list(lval_expected, lval)
 
     def test_python_to_lua_dict(self):
         pval = {"k1": "v1", "k2": "v2"}
-        lval = MockredisScript._python_to_lua(pval)
+        lval = MockRedisScript._python_to_lua(pval)
         lval_expected = self.lua.eval('{"k1", "v1", "k2", "v2"}')
         self.lua_assert_equal_list_with_pairs(lval_expected, lval)
 
     def test_python_to_lua_long(self):
-        pval = 10L
-        lval = MockredisScript._python_to_lua(pval)
+        pval = long(10)
+        lval = MockRedisScript._python_to_lua(pval)
         lval_expected = self.lua.eval('10')
-        self.assertEqual("number", self.lua_globals.type(lval))
-        self.assertTrue(MockredisScript._lua_to_python(self.lua_compare_val(lval_expected, lval)))
+        eq_("number", self.lua_globals.type(lval))
+        ok_(MockRedisScript._lua_to_python(self.lua_compare_val(lval_expected, lval)))
 
     def test_python_to_lua_float(self):
         pval = 10.1
-        lval = MockredisScript._python_to_lua(pval)
+        lval = MockRedisScript._python_to_lua(pval)
         lval_expected = self.lua.eval('10.1')
-        self.assertEqual("number", self.lua_globals.type(lval))
-        self.assertTrue(MockredisScript._lua_to_python(self.lua_compare_val(lval_expected, lval)))
+        eq_("number", self.lua_globals.type(lval))
+        ok_(MockRedisScript._lua_to_python(self.lua_compare_val(lval_expected, lval)))
 
     def test_python_to_lua_boolean(self):
         pval = True
-        lval = MockredisScript._python_to_lua(pval)
-        self.assertEqual("boolean", self.lua_globals.type(lval))
-        self.assertTrue(MockredisScript._lua_to_python(lval))
+        lval = MockRedisScript._python_to_lua(pval)
+        eq_("boolean", self.lua_globals.type(lval))
+        ok_(MockRedisScript._lua_to_python(lval))

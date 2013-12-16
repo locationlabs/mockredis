@@ -1,5 +1,6 @@
-from nose.tools import eq_, ok_, raises
 from datetime import timedelta
+
+from nose.tools import eq_, ok_, raises
 
 from mockredis.redis import MockRedis
 
@@ -7,16 +8,28 @@ from mockredis.redis import MockRedis
 class TestRedisString(object):
     """string tests"""
 
-    def setUp(self):
+    def setup(self):
         self.redis = MockRedis()
+        self.redis_strict = MockRedis(strict=True)
         self.redis.flushdb()
+        self.redis_strict.flushdb()
 
     def test_get(self):
         eq_(None, self.redis.get('key'))
- 
         self.redis.redis['key'] = 'value'
         eq_('value', self.redis.get('key'))
- 
+
+    def test_mget(self):
+        eq_(None, self.redis.get('mget1'))
+        eq_(None, self.redis.get('mget2'))
+        eq_([None, None], self.redis.mget('mget1', 'mget2'))
+        eq_([None, None], self.redis.mget(['mget1', 'mget2']))
+
+        self.redis.redis['mget1'] = 'value1'
+        self.redis.redis['mget2'] = 'value2'
+        eq_(['value1', 'value2'], self.redis.mget('mget1', 'mget2'))
+        eq_(['value1', 'value2'], self.redis.mget(['mget1', 'mget2']))
+
     def test_set_no_options(self):
         self.redis.set('key', 'value')
         eq_('value', self.redis.redis['key'])
@@ -66,46 +79,46 @@ class TestRedisString(object):
 
     def test_set_with_options(self):
         """Test the set function with various combinations of arguments"""
- 
+
         test_cases = [("1. px and ex are set, nx is always true & set on non-existing key",
                       False,
                       [(('key1', 'value1', None), dict(ex=20, px=70000, xx=True, nx=True)),
                       (('key2', 'value1', True), dict(ex=20, px=70000, xx=False, nx=True)),
                       (('key3', 'value2', True), dict(ex=20, px=70000, nx=True))]),
- 
+
                       ("2. px and ex are set, nx is always true & set on existing key",
                       True,
                       [(('key', 'value1', None), dict(ex=20, px=70000, xx=True, nx=True)),
                       (('key', 'value1', None), dict(ex=20, px=7000, xx=False, nx=True)),
                       (('key', 'value1', None), dict(ex=20, px=70000, nx=True))]),
- 
+
                       ("3. px and ex are set, xx is always true & set on existing key",
                       True,
                       [(('key', 'value1', None), dict(ex=20, px=70000, xx=True, nx=True)),
                       (('key', 'value1', True), dict(ex=20, px=70000, xx=True, nx=False)),
                       (('key', 'value4', True), dict(ex=20, px=70000, xx=True))]),
- 
+
                       ("4. px and ex are set, xx is always true & set on non-existing key",
                       False,
                       [(('key1', 'value1', None), dict(ex=20, px=70000, xx=True, nx=True)),
                       (('key2', 'value2', None), dict(ex=20, px=70000, xx=True, nx=False)),
                       (('key3', 'value3', None), dict(ex=20, px=70000, xx=True))]),
- 
+
                       ("5. either nx or xx defined and set to false or none defined" +
                        " & set on existing key",
                       True,
                       [(('key', 'value1', True), dict(ex=20, px=70000, xx=False)),
                       (('key', 'value2', True), dict(ex=20, px=70000, nx=False)),
                       (('key', 'value3', True), dict(ex=20, px=70000))]),
- 
+
                       ("6. either nx or xx defined and set to false or none defined" +
                        " & set on non-existing key",
                       False,
                       [(('key1', 'value1', True), dict(ex=20, px=70000, xx=False)),
                       (('key2', 'value2', True), dict(ex=20, px=70000, nx=False)),
                       (('key3', 'value3', True), dict(ex=20, px=70000))]),
- 
                       ("7: where neither px nor ex defined + set on existing key",
+
                       True,
                       [(('key', 'value2', None), dict(xx=True, nx=True)),
                       (('key', 'value2', None), dict(xx=False, nx=True)),
@@ -114,7 +127,7 @@ class TestRedisString(object):
                       (('key', 'value4', None), dict(nx=True)),
                       (('key', 'value4', True), dict(xx=False)),
                       (('key', 'value5', True), dict(nx=False))]),
- 
+
                       ("8: where neither px nor ex defined + set on non-existing key",
                       False,
                       [(('key1', 'value1', None), dict(xx=True, nx=True)),
@@ -124,33 +137,38 @@ class TestRedisString(object):
                       (('key5', 'value4', True), dict(nx=True)),
                       (('key6', 'value4', True), dict(xx=False)),
                       (('key7', 'value5', True), dict(nx=False))]),
- 
+
                       ("9: where neither nx nor xx defined + set on existing key",
                       True,
                       [(('key', 'value1', True), dict(ex=20, px=70000)),
                       (('key1', 'value12', True), dict(ex=20)),
                       (('key1', 'value11', True), dict(px=20000))]),
- 
+
                       ("10: where neither nx nor xx is defined + set on non-existing key",
                       False,
                       [(('key1', 'value1', True), dict(ex=20, px=70000)),
                       (('key2', 'value2', True), dict(ex=20)),
                       (('key3', 'value3', True), dict(px=20000))])]
- 
+
         for cases in test_cases:
             yield self._assert_set_with_options, cases
 
     def _assert_set_with_timeout(self, seconds):
-        """Assert that setex sets a key with a value along with a timeout"""
+        """Assert both strict and non-strict that setex sets a key with a value along with a timeout"""
 
+        eq_(None, self.redis_strict.redis.get('key'))
         eq_(None, self.redis.redis.get('key'))
 
-        ok_(self.redis.setex('key', seconds, 'value'))
+        ok_(self.redis_strict.setex('key', seconds, 'value'))
+        ok_(self.redis.setex('key', 'value', seconds))
+        eq_('value', self.redis_strict.redis.get('key'))
         eq_('value', self.redis.redis.get('key'))
 
+        ok_(self.redis_strict.ttl('key'), "expiration was not set correctly")
         ok_(self.redis.ttl('key'), "expiration was not set correctly")
         if isinstance(seconds, timedelta):
             seconds = seconds.seconds + seconds.days * 24 * 3600
+        ok_(0 < self.redis_strict.ttl('key') <= seconds)
         ok_(0 < self.redis.ttl('key') <= seconds)
 
     def test_setex(self):
@@ -160,12 +178,25 @@ class TestRedisString(object):
 
     @raises(ValueError)
     def test_setex_invalid_expiration(self):
-        self.redis.setex('key', -2, 'value')
+        self.redis.setex('key', 'value', -2)
+
+    @raises(ValueError)
+    def test_strict_setex_invalid_expiration(self):
+        self.redis_strict.setex('key', -2, 'value')
 
     @raises(ValueError)
     def test_setex_zero_expiration(self):
-        self.redis.setex('key', 0, 'value')
-        
+        self.redis.setex('key', 'value', 0)
+
+    @raises(ValueError)
+    def test_strict_setex_zero_expiration(self):
+        self.redis_strict.setex('key', 0, 'value')
+
+    def test_msetnx(self):
+        ok_(self.redis.msetnx({"key1": "hello", "key2": "there"}))
+        ok_(not self.redis.msetnx(**{"key3": "world", "key2": "there"}))
+        eq_(["hello", "there", None], self.redis.mget("key1", "key2", "key3"))
+
     def test_psetex(self):
         test_cases = [200, timedelta(milliseconds=250)]
         for case in test_cases:
@@ -190,19 +221,19 @@ class TestRedisString(object):
         ok_(self.redis.pttl('key'), "expiration was not set correctly")
         if isinstance(milliseconds, timedelta):
             milliseconds = self.redis._get_total_milliseconds(milliseconds)
-            
+
         ok_(0 < self.redis.pttl('key') <= milliseconds)
 
     def test_setnx(self):
         """Check whether setnx sets a key iff it does not already exist"""
- 
+
         ok_(self.redis.setnx('key', 'value'))
         ok_(not self.redis.setnx('key', 'different_value'))
         eq_('value', self.redis.get('key'))
- 
+
     def test_delete(self):
         """Test if delete works"""
- 
+
         test_cases = [('1', '1'),
                       (('1', '2'), ('1', '2')),
                       (('1', '2', '3'), ('1', '3')),
@@ -226,3 +257,9 @@ class TestRedisString(object):
         # verify if the keys not to be deleted, were not deleted and their timeouts not removed.
         for key in set(to_create) - (set(to_create) & set(to_delete)):
             ok_(key in self.redis.redis and key in self.redis.timeouts)
+
+    def test_getset(self):
+        eq_(None, self.redis.get('getset_key'))
+        eq_(None, self.redis.getset('getset_key', '1'))
+        eq_('1', self.redis.getset('getset_key', '2'))
+        eq_('2', self.redis.get('getset_key'))

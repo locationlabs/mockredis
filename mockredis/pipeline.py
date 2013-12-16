@@ -6,7 +6,7 @@ class MockRedisPipeline(object):
     Simulates a redis-python pipeline object.
     """
 
-    def __init__(self, mock_redis):
+    def __init__(self, mock_redis, transaction=True, shard_hint=None):
         self.mock_redis = mock_redis
         self._reset()
 
