@@ -638,7 +638,7 @@ class MockRedis(object):
         if by != 'nosort':
             # if sorting, do alpha sort or float (default) and take desc flag into account
             sort_type = alpha and str or float
-            items.sort(key=lambda x: x[1], reverse=bool(desc))
+            items.sort(key=lambda x: sort_type(x[1]), reverse=bool(desc))
 
         # results is a list of lists to support different styles of get and also groups
         results = []

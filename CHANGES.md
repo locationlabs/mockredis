@@ -5,6 +5,7 @@ Version 2.8.0.3
  - Update TTL to return -2 for unknown keys.
  - Fix `zset` `score_range_func` behavior to expect string input
  - Raise `WatchError` in `MockRedisPipeline.execute()`
+ - Added `list` operations: SORT
 
 Version 2.8.0.2
 

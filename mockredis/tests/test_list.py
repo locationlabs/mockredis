@@ -253,6 +253,15 @@ class TestRedisList(object):
         # test straightforward sort
         eq_(self.redis.sort(LIST1), ['0.1', '1.3', '2'])
 
+        # test alpha vs numeric sort
+        values = [-1, -2]
+        self._reinitialize_list(LIST1, *values)
+        eq_(self.redis.sort(LIST1, alpha=True), ['-1', '-2'])
+        eq_(self.redis.sort(LIST1, alpha=False), ['-2', '-1'])
+
+        values = ['0.1', '2', '1.3']
+        self._reinitialize_list(LIST1, *values)
+
         # test returning values sorted by values of other keys
         self.redis.set('by_0.1', '3')
         self.redis.set('by_2', '2')
