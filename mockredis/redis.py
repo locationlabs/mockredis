@@ -1,6 +1,7 @@
 from __future__ import division
 from collections import defaultdict
 from itertools import chain
+from functools import cmp_to_key
 from datetime import datetime, timedelta
 from hashlib import sha1
 from operator import add
@@ -629,7 +630,7 @@ class MockRedis(object):
         if by != 'nosort':
             # if sorting, do alpha sort or float (default) and take desc flag into account
             sort_type = alpha and str or float
-            items.sort(cmp=lambda x, y: cmp(sort_type(x[1]), sort_type(y[1])), reverse=bool(desc))
+            items.sort(key=lambda x: x[1], reverse=bool(desc))
 
         # results is a list of lists to support different styles of get and also groups
         results = []
