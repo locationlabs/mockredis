@@ -23,7 +23,13 @@ For example, using the [mock][mock] library:
 Or:
                                        
     @patch('redis.StrictRedis', mock_strict_redis_client)
-                                               
+
+## Testing
+
+Many unit tests exist to verify correctness of mock functionality. In addition, most
+unit tests support testing against an actual redis-server instance to verify the tests
+against ground truth. See `mockredis.tests.fixtures` for more details and disclaimers.
+
 ## Attribution
 
 This code is shamelessly derived from work by [John DeRosa][john].

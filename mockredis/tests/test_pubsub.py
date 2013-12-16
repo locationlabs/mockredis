@@ -1,3 +1,6 @@
+"""
+Tests for pubsub don't yet support verification against redis-server.
+"""
 from nose.tools import eq_
 
 from mockredis import MockRedis

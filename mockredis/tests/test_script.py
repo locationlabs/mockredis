@@ -1,3 +1,6 @@
+"""
+Tests for scripts don't yet support verification against redis-server.
+"""
 from hashlib import sha1
 from unittest.case import SkipTest
 import sys

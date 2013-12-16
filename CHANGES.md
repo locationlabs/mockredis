@@ -1,4 +1,13 @@
+Version 2.8.0.3
+
+ - Support verifying unit tests against actual redis-server and redis-py.
+ - Improve exception representation/mapping.
+ - Update TTL to return -2 for unknown keys.
+ - Fix `zset` `score_range_func` behavior to expect string input
+ - Raise `WatchError` in `MockRedisPipeline.execute()`
+
 Version 2.8.0.2
+
  - Added `string` operations: MGET, MSETNX, and GETSET
  - Added "*" support to KEYS
  - Added container functions: __getitem__, __setitem__, __delitem__, __member__

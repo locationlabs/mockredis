@@ -1,16 +1,16 @@
 from hashlib import sha1
 
-from nose.tools import assert_raises, eq_
+from nose.tools import eq_
 
-from mockredis import MockRedis
-from mockredis.exceptions import RedisError
+from mockredis.tests.fixtures import (assert_raises_redis_error,
+                                      assert_raises_watch_error,
+                                      setup)
 
 
 class TestPipeline(object):
 
     def setup(self):
-        self.redis = MockRedis()
-        self.redis.flushdb()
+        setup(self)
 
     def test_pipeline(self):
         """
@@ -81,6 +81,22 @@ class TestPipeline(object):
         """
         Test explicit transaction with watched keys.
         """
+        self.redis.set("foo", "bar")
+
+        with self.redis.pipeline() as pipeline:
+            pipeline.watch("foo")
+            eq_("bar", pipeline.get("foo"))
+
+            pipeline.multi()
+            eq_(pipeline, pipeline.set("foo", "baz"))
+            eq_(pipeline, pipeline.get("foo"))
+
+            eq_([True, "baz"], pipeline.execute())
+
+    def test_multi_with_watch_error(self):
+        """
+        Test explicit transaction with watched keys.
+        """
         with self.redis.pipeline() as pipeline:
             pipeline.watch("foo")
             eq_(True, pipeline.set("foo", "bar"))
@@ -90,7 +106,8 @@ class TestPipeline(object):
             eq_(pipeline, pipeline.set("foo", "baz"))
             eq_(pipeline, pipeline.get("foo"))
 
-            eq_([True, "baz"], pipeline.execute())
+            with assert_raises_watch_error():
+                eq_([True, "baz"], pipeline.execute())
 
     def test_watch_after_multi(self):
         """
@@ -98,7 +115,7 @@ class TestPipeline(object):
         """
         with self.redis.pipeline() as pipeline:
             pipeline.multi()
-            with assert_raises(RedisError):
+            with assert_raises_redis_error():
                 pipeline.watch()
 
     def test_multiple_multi_calls(self):
@@ -107,7 +124,7 @@ class TestPipeline(object):
         """
         with self.redis.pipeline() as pipeline:
             pipeline.multi()
-            with assert_raises(RedisError):
+            with assert_raises_redis_error():
                 pipeline.multi()
 
     def test_multi_on_implicit_transaction(self):
@@ -116,5 +133,5 @@ class TestPipeline(object):
         """
         with self.redis.pipeline() as pipeline:
             pipeline.set("foo", "bar")
-            with assert_raises(RedisError):
+            with assert_raises_redis_error():
                 pipeline.multi()

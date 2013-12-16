@@ -1,14 +1,13 @@
 from nose.tools import eq_, ok_
 
-from mockredis import MockRedis
+from mockredis.tests.fixtures import setup
 
 
 class TestRedisHash(object):
     """hash tests"""
 
     def setup(self):
-        self.redis = MockRedis()
-        self.redis.flushdb()
+        setup(self)
 
     def test_hexists(self):
         hashkey = "hash"

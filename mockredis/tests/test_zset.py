@@ -1,14 +1,13 @@
 from nose.tools import assert_raises, eq_, ok_
 
-from mockredis import MockRedis
+from mockredis.tests.fixtures import setup
 
 
 class TestRedisZset(object):
     """zset tests"""
 
     def setup(self):
-        self.redis = MockRedis()
-        self.redis.flushdb()
+        setup(self)
 
     def test_zadd(self):
         key = "zset"
@@ -18,11 +17,10 @@ class TestRedisZset(object):
 
     def test_zadd_strict(self):
         """Argument order for zadd depends on strictness"""
-        self.redis.strict = True
         key = "zset"
         values = [("one", 1), ("uno", 1), ("two", 2), ("three", 3)]
         for member, score in values:
-            eq_(1, self.redis.zadd(key, score, member))
+            eq_(1, self.redis_strict.zadd(key, score, member))
 
     def test_zadd_duplicate_key(self):
         key = "zset"
@@ -85,9 +83,17 @@ class TestRedisZset(object):
         # withscores
         eq_([("one", 1.5), ("two", 2.5), ("three", 3.5)],
             self.redis.zrange(key, 0, -1, withscores=True))
+
+        with assert_raises(ValueError):
+            # invalid literal for int() with base 10
+            self.redis.zrange(key, 0, -1, withscores=True, score_cast_func=int)
+
         # score_cast_func
+        def cast_to_int(score):
+            return int(float(score))
+
         eq_([("one", 1), ("two", 2), ("three", 3)],
-            self.redis.zrange(key, 0, -1, withscores=True, score_cast_func=int))
+            self.redis.zrange(key, 0, -1, withscores=True, score_cast_func=cast_to_int))
 
         # positive ranges
         eq_(["one"], self.redis.zrange(key, 0, 0))
@@ -175,12 +181,24 @@ class TestRedisZset(object):
             self.redis.zrangebyscore(key, "-inf", "inf"))
         eq_([("one", 1.5), ("two", 2.5), ("three", 3.5)],
             self.redis.zrangebyscore(key, "-inf", "inf", withscores=True))
+
+        with assert_raises(ValueError):
+            # invalid literal for int() with base 10
+            self.redis.zrangebyscore(key,
+                                     "-inf",
+                                     "inf",
+                                     withscores=True,
+                                     score_cast_func=int)
+
+        def cast_score(score):
+            return int(float(score))
+
         eq_([("one", 1), ("two", 2), ("three", 3)],
             self.redis.zrangebyscore(key,
                                      "-inf",
                                      "inf",
                                      withscores=True,
-                                     score_cast_func=int))
+                                     score_cast_func=cast_score))
 
         eq_(["one"],
             self.redis.zrangebyscore(key, 1.0, 2.0))
@@ -215,12 +233,24 @@ class TestRedisZset(object):
             self.redis.zrevrangebyscore(key, "inf", "-inf"))
         eq_([("three", 3.5), ("two", 2.5), ("one", 1.5)],
             self.redis.zrevrangebyscore(key, "inf", "-inf", withscores=True))
+
+        with assert_raises(ValueError):
+            # invalid literal for int() with base 10
+            self.redis.zrevrangebyscore(key,
+                                        "inf",
+                                        "-inf",
+                                        withscores=True,
+                                        score_cast_func=int)
+
+        def cast_score(score):
+            return int(float(score))
+
         eq_([("three", 3), ("two", 2), ("one", 1)],
             self.redis.zrevrangebyscore(key,
                                         "inf",
                                         "-inf",
                                         withscores=True,
-                                        score_cast_func=int))
+                                        score_cast_func=cast_score))
 
         eq_(["one"],
             self.redis.zrevrangebyscore(key, 2.0, 1.0))

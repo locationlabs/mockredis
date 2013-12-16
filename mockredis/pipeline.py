@@ -1,4 +1,6 @@
-from mockredis.exceptions import RedisError
+from copy import deepcopy
+
+from mockredis.exceptions import RedisError, WatchError
 
 
 class MockRedisPipeline(object):
@@ -36,6 +38,8 @@ class MockRedisPipeline(object):
         if self.explicit_transaction:
             raise RedisError("Cannot issue a WATCH after a MULTI")
         self.watching = True
+        for key in keys:
+            self._watched_keys[key] = deepcopy(self.mock_redis.redis[key])
 
     def multi(self):
         """
@@ -53,6 +57,9 @@ class MockRedisPipeline(object):
         Execute all of the saved commands and return results.
         """
         try:
+            for key, value in self._watched_keys.items():
+                if self.mock_redis.redis.get(key) != value:
+                    raise WatchError("Watched variable changed.")
             return [command() for command in self.commands]
         finally:
             self._reset()
@@ -63,6 +70,7 @@ class MockRedisPipeline(object):
         """
         self.commands = []
         self.watching = False
+        self._watched_keys = {}
         self.explicit_transaction = False
 
     def __exit__(self, *argv, **kwargs):
