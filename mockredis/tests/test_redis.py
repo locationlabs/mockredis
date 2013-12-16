@@ -154,7 +154,7 @@ class TestRedis(object):
         result = self.redis.ttl('key')
         ok_(isinstance(result, long))
         # should be less than the timeout originally set
-        ok_(result <= 30)
+        ok_(result <= 30, "Expected {} to be less than 30".format(result))
 
     def test_keys(self):
         eq_([], self.redis.keys("*"))
