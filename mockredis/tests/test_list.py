@@ -243,6 +243,54 @@ class TestRedisList(object):
         self.redis.ltrim(LIST1, -100, 2)
         eq_(values[-100:3], self.redis.lrange(LIST1, 0, -1))
 
+    def test_sort(self):
+        values = ['0.1', '2', '1.3']
+        self._reinitialize_list(LIST1, *values)
+
+        # test unsorted
+        eq_(self.redis.sort(LIST1, by='nosort'), values)
+
+        # test straightforward sort
+        eq_(self.redis.sort(LIST1), ['0.1', '1.3', '2'])
+
+        # test returning values sorted by values of other keys
+        self.redis.set('by_0.1', '3')
+        self.redis.set('by_2', '2')
+        self.redis.set('by_1.3', '1')
+        eq_(self.redis.sort(LIST1, by='by_*'), ['1.3', '2', '0.1'])
+
+        # test returning values from other keys sorted by list
+        self.redis.set('get1_0.1', 'a')
+        self.redis.set('get1_2', 'b')
+        self.redis.set('get1_1.3', 'c')
+        eq_(self.redis.sort(LIST1, get='get1_*'), ['a', 'c', 'b'])
+
+        # test storing result
+        eq_(self.redis.sort(LIST1, get='get1_*', store='result'), 3)
+        eq_(self.redis.llen('result'), 3)
+        eq_(self.redis.lrange('result', 0, -1), ['a', 'c', 'b'])
+
+        # test desc (reverse order)
+        eq_(self.redis.sort(LIST1, get='get1_*', desc=True), ['b', 'c', 'a'])
+
+        # test multiple gets without grouping
+        self.redis.set('get2_0.1', 'x')
+        self.redis.set('get2_2', 'y')
+        self.redis.set('get2_1.3', 'z')
+        eq_(self.redis.sort(LIST1, get=['get1_*', 'get2_*']), ['a', 'x', 'c', 'z', 'b', 'y'])
+
+        # test start and num apply to sorted items not final flat list of values
+        eq_(self.redis.sort(LIST1, get=['get1_*', 'get2_*'], start=1, num=1), ['c', 'z']) 
+
+        # test multiple gets with grouping
+        eq_(self.redis.sort(LIST1, get=['get1_*', 'get2_*'], groups=True), [ ('a', 'x'), ('c', 'z'), ('b', 'y')])
+
+        # test start and num
+        eq_(self.redis.sort(LIST1, get=['get1_*', 'get2_*'], groups=True, start=1, num=1), [ ('c', 'z')])
+        eq_(self.redis.sort(LIST1, get=['get1_*', 'get2_*'], groups=True, start=1, num=2), [ ('c', 'z'), ('b', 'y')])
+
+        
+
     def test_lset(self):
         with assert_raises(Exception):
             self.redis.lset(LIST1, 1, VAL1)
