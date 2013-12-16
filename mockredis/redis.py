@@ -1,7 +1,6 @@
 from __future__ import division
 from collections import defaultdict
 from itertools import chain
-from functools import cmp_to_key
 from datetime import datetime, timedelta
 from hashlib import sha1
 from operator import add
@@ -607,8 +606,15 @@ class MockRedis(object):
         except IndexError:
             raise ResponseError("index out of range")
 
-    def sort(self, name, start=None, num=None, by=None, get=None,
-             desc=False, alpha=False, store=None, groups=False):
+    def sort(self, name,
+             start=None,
+             num=None,
+             by=None,
+             get=None,
+             desc=False,
+             alpha=False,
+             store=None,
+             groups=False):
         # check valid parameter combos
         if [start, num] != [None, None] and None in [start, num]:
             raise ValueError('start and num must both be specified together')
@@ -623,9 +629,9 @@ class MockRedis(object):
 
         # always organize the items as tuples of the value from the list itself and the value to sort by
         if by and '*' in by:
-            items = [ (i, self.get(by.replace('*', str(i)))) for i in items ]
+            items = [(i, self.get(by.replace('*', str(i)))) for i in items]
         elif by in [None, 'nosort']:
-            items = [ (i, i) for i in items ]
+            items = [(i, i) for i in items]
         else:
             raise ValueError('invalid value for "by": %s' % by)
 
@@ -639,19 +645,19 @@ class MockRedis(object):
         if get:
             if isinstance(get, basestring):
                 # always deal with get specifiers as a list
-                get = [ get ]
+                get = [get]
             for g in get:
                 if g == '#':
-                    results.append([ self.get(i) for i in items])
+                    results.append([self.get(i) for i in items])
                 else:
-                    results.append([ self.get(g.replace('*', str(i[0]))) for i in items ])
+                    results.append([self.get(g.replace('*', str(i[0]))) for i in items])
         else:
             # if not using GET then returning just the item itself
-            results.append([ i[0] for i in items ])
+            results.append([i[0] for i in items])
 
         # results to either list of tuples or list of values
         if len(results) > 1:
-            results = zip(*results)
+            results = list(zip(*results))
         elif results:
             results = results[0]
 

@@ -280,16 +280,14 @@ class TestRedisList(object):
         eq_(self.redis.sort(LIST1, get=['get1_*', 'get2_*']), ['a', 'x', 'c', 'z', 'b', 'y'])
 
         # test start and num apply to sorted items not final flat list of values
-        eq_(self.redis.sort(LIST1, get=['get1_*', 'get2_*'], start=1, num=1), ['c', 'z']) 
+        eq_(self.redis.sort(LIST1, get=['get1_*', 'get2_*'], start=1, num=1), ['c', 'z'])
 
         # test multiple gets with grouping
-        eq_(self.redis.sort(LIST1, get=['get1_*', 'get2_*'], groups=True), [ ('a', 'x'), ('c', 'z'), ('b', 'y')])
+        eq_(self.redis.sort(LIST1, get=['get1_*', 'get2_*'], groups=True), [('a', 'x'), ('c', 'z'), ('b', 'y')])
 
         # test start and num
-        eq_(self.redis.sort(LIST1, get=['get1_*', 'get2_*'], groups=True, start=1, num=1), [ ('c', 'z')])
-        eq_(self.redis.sort(LIST1, get=['get1_*', 'get2_*'], groups=True, start=1, num=2), [ ('c', 'z'), ('b', 'y')])
-
-        
+        eq_(self.redis.sort(LIST1, get=['get1_*', 'get2_*'], groups=True, start=1, num=1), [('c', 'z')])
+        eq_(self.redis.sort(LIST1, get=['get1_*', 'get2_*'], groups=True, start=1, num=2), [('c', 'z'), ('b', 'y')])
 
     def test_lset(self):
         with assert_raises(Exception):
