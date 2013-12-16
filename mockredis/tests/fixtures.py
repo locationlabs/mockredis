@@ -26,11 +26,12 @@ For this plugin to work, several things need to be true:
     that means testing GET and SET together instead of separately and looking at the contents
     of `self.redis.redis` (because this won't exist for redis-py).
 """
+from contextlib import contextmanager
 from functools import partial
 import os
 
 from nose.plugins import Plugin
-from nose.tools import raises
+from nose.tools import assert_raises, raises
 
 from mockredis import MockRedis
 
@@ -52,15 +53,21 @@ class WithRedis(Plugin):
 
     def configure(self, options, conf):
         if options.use_redis:
-            from redis import Redis, ResponseError, StrictRedis
+            from redis import Redis, RedisError, ResponseError, StrictRedis, WatchError
 
             WithRedis.Redis = partial(Redis, db=options.redis_database)
             WithRedis.StrictRedis = partial(StrictRedis, db=options.redis_database)
             WithRedis.ResponseError = ResponseError
+            WithRedis.RedisError = RedisError
+            WithRedis.WatchError = WatchError
         else:
+            from mockredis.exceptions import RedisError, ResponseError, WatchError
+
             WithRedis.Redis = MockRedis
             WithRedis.StrictRedis = partial(MockRedis, strict=True)
-            WithRedis.ResponseError = ValueError
+            WithRedis.ResponseError = ResponseError
+            WithRedis.RedisError = RedisError
+            WithRedis.WatchError = WatchError
 
 
 def setup(self):
@@ -82,3 +89,29 @@ def raises_response_error(func):
     does not current depend on redis-py strictly.
     """
     return raises(WithRedis.ResponseError)(func)
+
+
+@contextmanager
+def assert_raises_redis_error():
+    """
+    Test context manager that asserts that a RedisError or its mock equivalent
+    (currently `redis.exceptions.RedisError`) were raised.
+
+    mockredis does not currently raise redis-py's exceptions because it
+    does not current depend on redis-py strictly.
+    """
+    with assert_raises(WithRedis.RedisError) as capture:
+        yield capture
+
+
+@contextmanager
+def assert_raises_watch_error():
+    """
+    Test context manager that asserts that a WatchError or its mock equivalent
+    (currently `watch.exceptions.WatchError`) were raised.
+
+    mockwatch does not currently raise watch-py's exceptions because it
+    does not current depend on watch-py strictly.
+    """
+    with assert_raises(WithRedis.WatchError) as capture:
+        yield capture

@@ -1,6 +1,6 @@
 from nose.tools import assert_raises, eq_
 
-from mockredis.redis import MockRedis
+from mockredis.tests.fixtures import setup
 from mockredis.tests.test_constants import (
     LIST1, LIST2, VAL1, VAL2, VAL3, VAL4
 )
@@ -10,7 +10,7 @@ class TestRedisList(object):
     """list tests"""
 
     def setup(self):
-        self.redis = MockRedis()
+        setup(self)
 
     def test_initially_empty(self):
         """
@@ -131,7 +131,7 @@ class TestRedisList(object):
 
     def test_rpoplpush_with_empty_source(self):
         # source list is empty
-        self.redis.redis[LIST1] = []
+        del self.redis[LIST1]
         self.redis.rpush(LIST2, VAL3, VAL4)
         transfer_item = self.redis.rpoplpush(LIST1, LIST2)
         eq_(None, transfer_item)
@@ -141,7 +141,7 @@ class TestRedisList(object):
 
     def test_rpoplpush_source_with_empty_string(self):
         # source list contains empty string
-        self.redis.redis[LIST1] = ['']
+        self.redis.rpush(LIST1, '')
         self.redis.rpush(LIST2, VAL3, VAL4)
         eq_(1, self.redis.llen(LIST1))
         eq_(2, self.redis.llen(LIST2))

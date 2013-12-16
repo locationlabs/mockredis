@@ -1,14 +1,13 @@
 from nose.tools import assert_raises, eq_, ok_
 
-from mockredis import MockRedis
+from mockredis.tests.fixtures import setup
 
 
 class TestRedisSet(object):
     """set tests"""
 
     def setup(self):
-        self.redis = MockRedis()
-        self.redis.flushdb()
+        setup(self)
 
     def test_sadd(self):
         key = "set"
@@ -29,7 +28,7 @@ class TestRedisSet(object):
     def test_scard(self):
         key = "set"
         eq_(0, self.redis.scard(key))
-        ok_(not key in self.redis.redis)
+        ok_(not key in self.redis)
         values = ["one", "uno", "two", "three"]
         eq_(4, self.redis.sadd(key, *values))
         eq_(4, self.redis.scard(key))
@@ -107,7 +106,7 @@ class TestRedisSet(object):
     def test_sismember(self):
         key = "set"
         ok_(not self.redis.sismember(key, "one"))
-        ok_(not key in self.redis.redis)
+        ok_(key not in self.redis)
         eq_(1, self.redis.sadd(key, "one"))
         ok_(self.redis.sismember(key, "one"))
         ok_(not self.redis.sismember(key, "two"))
@@ -125,7 +124,7 @@ class TestRedisSet(object):
     def test_smembers(self):
         key = "set"
         eq_(set(), self.redis.smembers(key))
-        ok_(not key in self.redis.redis)
+        ok_(key not in self.redis)
         eq_(1, self.redis.sadd(key, "one"))
         eq_(set(["one"]), self.redis.smembers(key))
         eq_(1, self.redis.sadd(key, "two"))

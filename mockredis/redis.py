@@ -9,7 +9,7 @@ import string
 import sys
 
 from mockredis.lock import MockRedisLock
-from mockredis.exceptions import RedisError
+from mockredis.exceptions import RedisError, ResponseError
 from mockredis.pipeline import MockRedisPipeline
 from mockredis.script import Script
 from mockredis.sortedset import SortedSet
@@ -39,9 +39,9 @@ class MockRedis(object):
         self.strict = strict
         # The 'Redis' store
         self.redis = defaultdict(dict)
+        self.timeouts = defaultdict(dict)
         # The 'PubSub' store
         self.pubsub = defaultdict(list)
-        self.timeouts = defaultdict(dict)
         # Dictionary from script to sha ''Script''
         self.shas = dict()
 
@@ -259,7 +259,7 @@ class MockRedis(object):
                 expire = px if isinstance(px, timedelta) else timedelta(milliseconds=px)
 
             if expire is not None and expire.total_seconds() <= 0:
-                raise ValueError("invalid expire time in SETEX")
+                raise ResponseError("invalid expire time in SETEX")
 
             result = self._set(key, value)
             if expire:
@@ -597,11 +597,11 @@ class MockRedis(object):
         """Emulate lset."""
         redis_list = self._get_list(key, 'LSET')
         if redis_list is None:
-            raise ValueError("no such key")
+            raise ResponseError("no such key")
         try:
             redis_list[index] = value
         except IndexError:
-            raise ValueError("index out of range")
+            raise ResponseError("index out of range")
 
     #### SET COMMANDS ####
 
@@ -721,7 +721,7 @@ class MockRedis(object):
 
         # args
         if len(args) % 2 != 0:
-            raise ValueError("ZADD requires an equal number of "
+            raise RedisError("ZADD requires an equal number of "
                              "values and scores")
         for i in xrange(len(args) // 2):
             # interpretation of args order depends on whether Redis
@@ -796,7 +796,7 @@ class MockRedis(object):
     def zrangebyscore(self, name, min_, max_, start=None, num=None,
                       withscores=False, score_cast_func=float):
         if (start is None) ^ (num is None):
-            raise TypeError('`start` and `num` must both be specified')
+            raise RedisError('`start` and `num` must both be specified')
 
         zset = self._get_zset(name, "ZRANGEBYSCORE")
 
@@ -862,7 +862,7 @@ class MockRedis(object):
     def zrevrangebyscore(self, name, max_, min_, start=None, num=None,
                          withscores=False, score_cast_func=float):
         if (start is None) ^ (num is None):
-            raise TypeError('`start` and `num` must both be specified')
+            raise RedisError('`start` and `num` must both be specified')
 
         zset = self._get_zset(name, "ZREVRANGEBYSCORE")
         if not zset:
@@ -1073,7 +1073,7 @@ class MockRedis(object):
         """Helper function for sdiff, sinter, and sunion"""
         keys = self._list_or_args(keys, args)
         if not keys:
-            raise ValueError("wrong number of arguments for '{}' command".format(operation.lower()))
+            raise TypeError("{} takes at least two arguments".format(operation.lower()))
         left = self._get_set(keys[0], operation) or set()
         for key in keys[1:]:
             right = self._get_set(key, operation) or set()
