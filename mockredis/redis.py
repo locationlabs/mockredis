@@ -1,5 +1,7 @@
 from __future__ import division
 from collections import defaultdict
+from itertools import chain
+from functools import cmp_to_key
 from datetime import datetime, timedelta
 from hashlib import sha1
 from operator import add
@@ -604,6 +606,76 @@ class MockRedis(object):
             redis_list[index] = value
         except IndexError:
             raise ResponseError("index out of range")
+
+    def sort(self, name, start=None, num=None, by=None, get=None,
+             desc=False, alpha=False, store=None, groups=False):
+        # check valid parameter combos
+        if [start, num] != [None, None] and None in [start, num]:
+            raise ValueError('start and num must both be specified together')
+
+        # check up-front if there's anything to actually do
+        items = num != 0 and self.get(name)
+        if not items:
+            if store:
+                return 0
+            else:
+                return []
+
+        # always organize the items as tuples of the value from the list itself and the value to sort by
+        if by and '*' in by:
+            items = [ (i, self.get(by.replace('*', str(i)))) for i in items ]
+        elif by in [None, 'nosort']:
+            items = [ (i, i) for i in items ]
+        else:
+            raise ValueError('invalid value for "by": %s' % by)
+
+        if by != 'nosort':
+            # if sorting, do alpha sort or float (default) and take desc flag into account
+            sort_type = alpha and str or float
+            items.sort(key=lambda x: x[1], reverse=bool(desc))
+
+        # results is a list of lists to support different styles of get and also groups
+        results = []
+        if get:
+            if isinstance(get, basestring):
+                # always deal with get specifiers as a list
+                get = [ get ]
+            for g in get:
+                if g == '#':
+                    results.append([ self.get(i) for i in items])
+                else:
+                    results.append([ self.get(g.replace('*', str(i[0]))) for i in items ])
+        else:
+            # if not using GET then returning just the item itself
+            results.append([ i[0] for i in items ])
+
+        # results to either list of tuples or list of values
+        if len(results) > 1:
+            results = zip(*results)
+        elif results:
+            results = results[0]
+
+        # apply the 'start' and 'num' to the results
+        if not start:
+            start = 0
+        if not num:
+            if start:
+                results = results[start:]
+        else:
+            end = start + num
+            results = results[start:end]
+
+        # if more than one GET then flatten if groups not wanted
+        if get and len(get) > 1:
+            if not groups:
+                results = list(chain(*results))
+
+        # either store value and return length of results or just return results
+        if store:
+            self.redis[store] = results
+            return len(results)
+        else:
+            return results
 
     #### SET COMMANDS ####
 
