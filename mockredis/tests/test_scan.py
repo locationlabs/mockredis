@@ -1,6 +1,7 @@
-from nose.tools import eq_, ok_
+from nose.tools import eq_
 
-from mockredis.tests.fixtures import raises_response_error, setup
+from mockredis.tests.fixtures import setup
+
 
 class TestRedisEmptyScans(object):
     """zero scan results tests"""
@@ -218,4 +219,3 @@ class TestRedisHScan(object):
         eq_(do_full_scan('key', '*', 1), abcxyz)
         eq_(do_full_scan('key', '*', 2), abcxyz)
         eq_(do_full_scan('key', '*', 10), abcxyz)
-

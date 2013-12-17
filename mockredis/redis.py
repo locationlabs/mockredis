@@ -683,13 +683,13 @@ class MockRedis(object):
         else:
             return results
 
-
     #### SCAN COMMANDS ####
 
     def _common_scan(self, values_function, cursor='0', match=None, count=10, key=None):
-        """common function used to do scanning
+        """
+        Common scanning skeleton.
 
-        key - optional function used to identify what 'match' is applied to
+        :param key: optional function used to identify what 'match' is applied to
         """
         if count is None:
             count = 10
@@ -713,12 +713,12 @@ class MockRedis(object):
                 key = lambda v: v
             values = filter(lambda v: re.match(regex, key(v)), values)
 
-        return [ result_cursor, values ]
+        return [result_cursor, values]
 
     def scan(self, cursor='0', match=None, count=10):
         """Emulate scan."""
         def value_function():
-            return sorted(self.redis.keys()) # sorted list for consistent order
+            return sorted(self.redis.keys())  # sorted list for consistent order
         return self._common_scan(value_function, cursor=cursor, match=match, count=count)
 
     def sscan(self, name, cursor='0', match=None, count=10):
@@ -741,11 +741,11 @@ class MockRedis(object):
         """Emulate hscan."""
         def value_function():
             values = self.hgetall(name)
-            values = values.items() # list of tuples for sorting and matching
+            values = list(values.items())  # list of tuples for sorting and matching
             values.sort(key=lambda x: x[0])  # sort for consistent order
             return values
         scanned = self._common_scan(value_function, cursor=cursor, match=match, count=count, key=lambda v: v[0])
-        scanned[1] = dict(scanned[1]) # from list of tuples back to dict
+        scanned[1] = dict(scanned[1])  # from list of tuples back to dict
         return scanned
 
     #### SET COMMANDS ####
