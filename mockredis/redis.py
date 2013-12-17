@@ -683,6 +683,69 @@ class MockRedis(object):
         else:
             return results
 
+
+    #### SCAN COMMANDS ####
+
+    def _common_scan(self, values_function, cursor='0', match=None, count=10, key=None):
+        """common function used to do scanning
+
+        key - optional function used to identify what 'match' is applied to
+        """
+        if count is None:
+            count = 10
+        cursor = int(cursor)
+        count = int(count)
+        if not count:
+            raise ValueError('if specified, count must be > 0: %s' % count)
+
+        values = values_function()
+        if cursor + count >= len(values):
+            # we reached the end, back to zero
+            result_cursor = '0'
+        else:
+            result_cursor = str(cursor + count)
+
+        values = values[cursor:cursor+count]
+
+        if match is not None:
+            regex = '^' + match.replace('*', '.*') + '$'
+            if not key:
+                key = lambda v: v
+            values = filter(lambda v: re.match(regex, key(v)), values)
+
+        return [ result_cursor, values ]
+
+    def scan(self, cursor='0', match=None, count=10):
+        """Emulate scan."""
+        return self._common_scan(self.redis.keys, cursor=cursor, match=match, count=count)
+
+    def sscan(self, name, cursor='0', match=None, count=10):
+        """Emulate sscan."""
+        def value_function():
+            members = list(self.smembers(name))
+            members.sort()  # sort for consistent order
+            return members
+        return self._common_scan(value_function, cursor=cursor, match=match, count=count)
+
+    def zscan(self, name, cursor='0', match=None, count=10):
+        """Emulate zscan."""
+        def value_function():
+            values = self.zrange(name, 0, -1, withscores=True)
+            values.sort(key=lambda x: x[1])  # sort for consistent order
+            return values
+        return self._common_scan(value_function, cursor=cursor, match=match, count=count, key=lambda v: v[0])
+
+    def hscan(self, name, cursor='0', match=None, count=10):
+        """Emulate hscan."""
+        def value_function():
+            values = self.hgetall(name)
+            values = values.items() # list of tuples for sorting and matching
+            values.sort(key=lambda x: x[0])  # sort for consistent order
+            return values
+        scanned = self._common_scan(value_function, cursor=cursor, match=match, count=count, key=lambda v: v[0])
+        scanned[1] = dict(scanned[1]) # from list of tuples back to dict
+        return scanned
+
     #### SET COMMANDS ####
 
     def sadd(self, key, *values):
