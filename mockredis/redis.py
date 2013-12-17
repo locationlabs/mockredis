@@ -717,7 +717,9 @@ class MockRedis(object):
 
     def scan(self, cursor='0', match=None, count=10):
         """Emulate scan."""
-        return self._common_scan(self.redis.keys, cursor=cursor, match=match, count=count)
+        def value_function():
+            return sorted(self.redis.keys()) # sorted list for consistent order
+        return self._common_scan(value_function, cursor=cursor, match=match, count=count)
 
     def sscan(self, name, cursor='0', match=None, count=10):
         """Emulate sscan."""
