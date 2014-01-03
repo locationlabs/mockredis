@@ -1,6 +1,6 @@
 from nose.tools import assert_raises, eq_
 
-from mockredis.redis import MockRedis
+from mockredis.tests.fixtures import setup
 from mockredis.tests.test_constants import (
     LIST1, LIST2, VAL1, VAL2, VAL3, VAL4
 )
@@ -10,7 +10,7 @@ class TestRedisList(object):
     """list tests"""
 
     def setup(self):
-        self.redis = MockRedis()
+        setup(self)
 
     def test_initially_empty(self):
         """
@@ -131,7 +131,7 @@ class TestRedisList(object):
 
     def test_rpoplpush_with_empty_source(self):
         # source list is empty
-        self.redis.redis[LIST1] = []
+        del self.redis[LIST1]
         self.redis.rpush(LIST2, VAL3, VAL4)
         transfer_item = self.redis.rpoplpush(LIST1, LIST2)
         eq_(None, transfer_item)
@@ -141,7 +141,7 @@ class TestRedisList(object):
 
     def test_rpoplpush_source_with_empty_string(self):
         # source list contains empty string
-        self.redis.redis[LIST1] = ['']
+        self.redis.rpush(LIST1, '')
         self.redis.rpush(LIST2, VAL3, VAL4)
         eq_(1, self.redis.llen(LIST1))
         eq_(2, self.redis.llen(LIST2))
@@ -242,6 +242,61 @@ class TestRedisList(object):
         self._reinitialize_list(LIST1, *values)
         self.redis.ltrim(LIST1, -100, 2)
         eq_(values[-100:3], self.redis.lrange(LIST1, 0, -1))
+
+    def test_sort(self):
+        values = ['0.1', '2', '1.3']
+        self._reinitialize_list(LIST1, *values)
+
+        # test unsorted
+        eq_(self.redis.sort(LIST1, by='nosort'), values)
+
+        # test straightforward sort
+        eq_(self.redis.sort(LIST1), ['0.1', '1.3', '2'])
+
+        # test alpha vs numeric sort
+        values = [-1, -2]
+        self._reinitialize_list(LIST1, *values)
+        eq_(self.redis.sort(LIST1, alpha=True), ['-1', '-2'])
+        eq_(self.redis.sort(LIST1, alpha=False), ['-2', '-1'])
+
+        values = ['0.1', '2', '1.3']
+        self._reinitialize_list(LIST1, *values)
+
+        # test returning values sorted by values of other keys
+        self.redis.set('by_0.1', '3')
+        self.redis.set('by_2', '2')
+        self.redis.set('by_1.3', '1')
+        eq_(self.redis.sort(LIST1, by='by_*'), ['1.3', '2', '0.1'])
+
+        # test returning values from other keys sorted by list
+        self.redis.set('get1_0.1', 'a')
+        self.redis.set('get1_2', 'b')
+        self.redis.set('get1_1.3', 'c')
+        eq_(self.redis.sort(LIST1, get='get1_*'), ['a', 'c', 'b'])
+
+        # test storing result
+        eq_(self.redis.sort(LIST1, get='get1_*', store='result'), 3)
+        eq_(self.redis.llen('result'), 3)
+        eq_(self.redis.lrange('result', 0, -1), ['a', 'c', 'b'])
+
+        # test desc (reverse order)
+        eq_(self.redis.sort(LIST1, get='get1_*', desc=True), ['b', 'c', 'a'])
+
+        # test multiple gets without grouping
+        self.redis.set('get2_0.1', 'x')
+        self.redis.set('get2_2', 'y')
+        self.redis.set('get2_1.3', 'z')
+        eq_(self.redis.sort(LIST1, get=['get1_*', 'get2_*']), ['a', 'x', 'c', 'z', 'b', 'y'])
+
+        # test start and num apply to sorted items not final flat list of values
+        eq_(self.redis.sort(LIST1, get=['get1_*', 'get2_*'], start=1, num=1), ['c', 'z'])
+
+        # test multiple gets with grouping
+        eq_(self.redis.sort(LIST1, get=['get1_*', 'get2_*'], groups=True), [('a', 'x'), ('c', 'z'), ('b', 'y')])
+
+        # test start and num
+        eq_(self.redis.sort(LIST1, get=['get1_*', 'get2_*'], groups=True, start=1, num=1), [('c', 'z')])
+        eq_(self.redis.sort(LIST1, get=['get1_*', 'get2_*'], groups=True, start=1, num=2), [('c', 'z'), ('b', 'y')])
 
     def test_lset(self):
         with assert_raises(Exception):

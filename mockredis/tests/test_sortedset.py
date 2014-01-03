@@ -4,6 +4,9 @@ from mockredis.sortedset import SortedSet
 
 
 class TestSortedSet(object):
+    """
+    Tests the sorted set data structure, not the redis commands.
+    """
 
     def setup(self):
         self.zset = SortedSet()

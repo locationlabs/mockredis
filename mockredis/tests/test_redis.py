@@ -1,30 +1,18 @@
 from time import time
+import sys
 
 from nose.tools import assert_raises, eq_, ok_
 
-from mockredis import MockRedis, mock_redis_client, mock_strict_redis_client
+from mockredis.tests.fixtures import setup
 
-
-class TestFactories(object):
-
-    def test_mock_redis_client(self):
-        """
-        Test that we can pass kwargs to the Redis mock/patch target.
-        """
-        ok_(not mock_redis_client(host="localhost", port=6379).strict)
-
-    def test_mock_strict_redis_client(self):
-        """
-        Test that we can pass kwargs to the StrictRedis mock/patch target.
-        """
-        ok_(mock_strict_redis_client(host="localhost", port=6379).strict)
+if sys.version_info >= (3, 0):
+    long = int
 
 
 class TestRedis(object):
 
     def setup(self):
-        self.redis = MockRedis()
-        self.redis.flushdb()
+        setup(self)
 
     def test_get_types(self):
         '''
@@ -106,15 +94,20 @@ class TestRedis(object):
         self.redis.expire('key', 30)
 
         result = self.redis.ttl('key')
-        # should be an int
-        ok_(isinstance(result, int))
+        ok_(isinstance(result, long))
         # should be less than the timeout originally set
         ok_(result <= 30)
 
-    def test_ttl_when_key_absent(self):
-        """Test whether, like the redis-py lib, ttl returns None if the key is absent"""
+    def test_ttl_when_absent(self):
+        """
+        Test absent ttl handling.
+        """
+        # redis >= 2.8.0 return -2 if key does exist
+        eq_(self.redis.ttl("invalid_key"), -2)
 
-        eq_(self.redis.ttl('invalid_key'), None)
+        # redis-py return None if there is no pttl
+        self.redis.set("key", "value")
+        eq_(self.redis.ttl("key"), None)
 
     def test_ttl_no_timeout(self):
         """
@@ -129,15 +122,20 @@ class TestRedis(object):
         self.redis.pexpire('key', expiration_ms)
 
         result = self.redis.pttl('key')
-        # should be an int
-        ok_(isinstance(result, int))
+        ok_(isinstance(result, long))
         # should be less than the timeout originally set
         ok_(result <= expiration_ms)
 
-    def test_pttl_when_key_absent(self):
-        """Test whether, like the redis-py lib, pttl returns None if the key is absent"""
+    def test_pttl_when_absent(self):
+        """
+        Test absent pttl handling.
+        """
+        # redis >= 2.8.0 return -2 if key does exist
+        eq_(self.redis.pttl("invalid_key"), -2)
 
-        eq_(self.redis.pttl('invalid_key'), None)
+        # redis-py return None if there is no pttl
+        self.redis.set("key", "value")
+        eq_(self.redis.pttl("key"), None)
 
     def test_pttl_no_timeout(self):
         """
@@ -154,10 +152,9 @@ class TestRedis(object):
         self.redis.expireat('key', int(time()) + 30)
 
         result = self.redis.ttl('key')
-        # should be an int
-        ok_(isinstance(result, int))
+        ok_(isinstance(result, long))
         # should be less than the timeout originally set
-        ok_(result <= 30)
+        ok_(result <= 30, "Expected {} to be less than 30".format(result))
 
     def test_keys(self):
         eq_([], self.redis.keys("*"))

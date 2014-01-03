@@ -1,22 +1,20 @@
 from datetime import timedelta
 
-from nose.tools import eq_, ok_, raises
+from nose.tools import eq_, ok_
 
-from mockredis.redis import MockRedis
+from mockredis.redis import get_total_milliseconds
+from mockredis.tests.fixtures import raises_response_error, setup
 
 
 class TestRedisString(object):
     """string tests"""
 
     def setup(self):
-        self.redis = MockRedis()
-        self.redis_strict = MockRedis(strict=True)
-        self.redis.flushdb()
-        self.redis_strict.flushdb()
+        setup(self)
 
     def test_get(self):
         eq_(None, self.redis.get('key'))
-        self.redis.redis['key'] = 'value'
+        self.redis.set('key', 'value')
         eq_('value', self.redis.get('key'))
 
     def test_mget(self):
@@ -25,14 +23,14 @@ class TestRedisString(object):
         eq_([None, None], self.redis.mget('mget1', 'mget2'))
         eq_([None, None], self.redis.mget(['mget1', 'mget2']))
 
-        self.redis.redis['mget1'] = 'value1'
-        self.redis.redis['mget2'] = 'value2'
+        self.redis.set('mget1', 'value1')
+        self.redis.set('mget2', 'value2')
         eq_(['value1', 'value2'], self.redis.mget('mget1', 'mget2'))
         eq_(['value1', 'value2'], self.redis.mget(['mget1', 'mget2']))
 
     def test_set_no_options(self):
         self.redis.set('key', 'value')
-        eq_('value', self.redis.redis['key'])
+        eq_('value', self.redis.get('key'))
 
     def _assert_set_with_options(self, test_cases):
         """
@@ -43,7 +41,6 @@ class TestRedisString(object):
         E.g. verifying that a non-existent key does not get set if xx=True or gets set with nx=True
         iff it is absent.
         """
-
         category, existing_key, cases = test_cases
         msg = "Failed in: {}".format(category)
         if existing_key:
@@ -64,18 +61,23 @@ class TestRedisString(object):
 
         # check that the value wasn't updated
         ok_(value != self.redis.get(key), msg)
-        # check that the expiration was not set
-        ok_(self.redis.ttl(key) is None, msg)
+        if self.redis.exists(key):
+            # check that the expiration was not set
+            eq_(self.redis.ttl(key), None)
+        else:
+            # check that the expiration was not set
+            eq_(self.redis.ttl(key), -2)
 
-    def _assert_was_set(self, key, value, config, msg):
+    def _assert_was_set(self, key, value, config, msg, delta=1):
         """Assert that the key was set along with timeout if applicable"""
 
         eq_(value, self.redis.get(key))
-        if 'px' in config:
-            # px should have been preferred over ex if it was specified
-            ok_(int(config['px'] / 1000) == self.redis.ttl(key), msg)
-        elif 'ex' in config:
-            ok_(config['ex'] == self.redis.ttl(key), msg)
+        if "px" not in config and "ex" not in config:
+            return
+        # px should have been preferred over ex if it was specified
+        ttl = self.redis.ttl(key)
+        expected_ttl = int(config['px'] / 1000) if "px" in config else config["ex"]
+        ok_(expected_ttl - ttl <= delta, msg)
 
     def test_set_with_options(self):
         """Test the set function with various combinations of arguments"""
@@ -117,8 +119,8 @@ class TestRedisString(object):
                       [(('key1', 'value1', True), dict(ex=20, px=70000, xx=False)),
                       (('key2', 'value2', True), dict(ex=20, px=70000, nx=False)),
                       (('key3', 'value3', True), dict(ex=20, px=70000))]),
-                      ("7: where neither px nor ex defined + set on existing key",
 
+                      ("7: where neither px nor ex defined + set on existing key",
                       True,
                       [(('key', 'value2', None), dict(xx=True, nx=True)),
                       (('key', 'value2', None), dict(xx=False, nx=True)),
@@ -156,13 +158,13 @@ class TestRedisString(object):
     def _assert_set_with_timeout(self, seconds):
         """Assert both strict and non-strict that setex sets a key with a value along with a timeout"""
 
-        eq_(None, self.redis_strict.redis.get('key'))
-        eq_(None, self.redis.redis.get('key'))
+        eq_(None, self.redis_strict.get('key'))
+        eq_(None, self.redis.get('key'))
 
         ok_(self.redis_strict.setex('key', seconds, 'value'))
         ok_(self.redis.setex('key', 'value', seconds))
-        eq_('value', self.redis_strict.redis.get('key'))
-        eq_('value', self.redis.redis.get('key'))
+        eq_('value', self.redis_strict.get('key'))
+        eq_('value', self.redis.get('key'))
 
         ok_(self.redis_strict.ttl('key'), "expiration was not set correctly")
         ok_(self.redis.ttl('key'), "expiration was not set correctly")
@@ -176,19 +178,19 @@ class TestRedisString(object):
         for case in test_cases:
             yield self._assert_set_with_timeout, case
 
-    @raises(ValueError)
+    @raises_response_error
     def test_setex_invalid_expiration(self):
         self.redis.setex('key', 'value', -2)
 
-    @raises(ValueError)
+    @raises_response_error
     def test_strict_setex_invalid_expiration(self):
         self.redis_strict.setex('key', -2, 'value')
 
-    @raises(ValueError)
+    @raises_response_error
     def test_setex_zero_expiration(self):
         self.redis.setex('key', 'value', 0)
 
-    @raises(ValueError)
+    @raises_response_error
     def test_strict_setex_zero_expiration(self):
         self.redis_strict.setex('key', 0, 'value')
 
@@ -202,25 +204,25 @@ class TestRedisString(object):
         for case in test_cases:
             yield self._assert_set_with_timeout_milliseconds, case
 
-    @raises(ValueError)
+    @raises_response_error
     def test_psetex_invalid_expiration(self):
         self.redis.psetex('key', -20, 'value')
 
-    @raises(ValueError)
+    @raises_response_error
     def test_psetex_zero_expiration(self):
         self.redis.psetex('key', 0, 'value')
 
     def _assert_set_with_timeout_milliseconds(self, milliseconds):
         """Assert that psetex sets a key with a value along with a timeout"""
 
-        eq_(None, self.redis.redis.get('key'))
+        eq_(None, self.redis.get('key'))
 
         ok_(self.redis.psetex('key', milliseconds, 'value'))
-        eq_('value', self.redis.redis.get('key'))
+        eq_('value', self.redis.get('key'))
 
         ok_(self.redis.pttl('key'), "expiration was not set correctly")
         if isinstance(milliseconds, timedelta):
-            milliseconds = self.redis._get_total_milliseconds(milliseconds)
+            milliseconds = get_total_milliseconds(milliseconds)
 
         ok_(0 < self.redis.pttl('key') <= milliseconds)
 
@@ -252,11 +254,13 @@ class TestRedisString(object):
 
         # verify if the keys that were to be deleted, were deleted along with the timeouts.
         for key in set(to_create) & set(to_delete):
-            ok_(key not in self.redis.redis and key not in self.redis.timeouts)
+            ok_(key not in self.redis)
+            eq_(self.redis.ttl(key), -2)
 
         # verify if the keys not to be deleted, were not deleted and their timeouts not removed.
         for key in set(to_create) - (set(to_create) & set(to_delete)):
-            ok_(key in self.redis.redis and key in self.redis.timeouts)
+            ok_(key in self.redis)
+            ok_(self.redis.ttl(key) > 0)
 
     def test_getset(self):
         eq_(None, self.redis.get('getset_key'))
