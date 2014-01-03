@@ -1,3 +1,7 @@
+Version 2.8.0.0
+
+ - Support: SCAN, SSCAN, HSCAN, and ZSCAN
+
 Version 2.8.0.3
 
  - Support verifying unit tests against actual redis-server and redis-py.
