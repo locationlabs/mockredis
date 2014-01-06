@@ -484,13 +484,16 @@ class MockRedis(object):
     def lindex(self, key, index):
         """Emulate lindex."""
 
-        if not key in self.redis:
-            self.redis[key] = list([])
+        redis_list = self._get_list(key, 'LINDEX')
+
+        if key not in self.redis:
+            return None
+
         try:
-            return self.redis[key][index]
+            return redis_list[index]
         except (IndexError):
             # Redis returns nil if the index doesn't exist
-            pass
+            return None
 
     def llen(self, key):
         """Emulate llen."""

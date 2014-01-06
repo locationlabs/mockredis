@@ -63,6 +63,8 @@ class TestPipeline(object):
         """
         with self.redis.pipeline() as pipeline:
             pipeline.watch("key1", "key2")
+            eq_(None, pipeline.get("key1"))
+            eq_(None, pipeline.get("key2"))
             eq_(True, pipeline.set("foo", "bar"))
             eq_("bar", pipeline.get("foo"))
 
