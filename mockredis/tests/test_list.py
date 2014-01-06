@@ -27,6 +27,20 @@ class TestRedisList(object):
         self.redis.lpop(LIST1)
         eq_(0, self.redis.llen(LIST1))
 
+    def test_lindex(self):
+        eq_(None, self.redis.lindex(LIST1, 0))
+        eq_(False, self.redis.exists(LIST1))
+        self.redis.rpush(LIST1, VAL1, VAL2)
+        eq_(VAL1, self.redis.lindex(LIST1, 0))
+        eq_(VAL2, self.redis.lindex(LIST1, 1))
+        eq_(None, self.redis.lindex(LIST1, 2))
+        eq_(VAL2, self.redis.lindex(LIST1, -1))
+        eq_(VAL1, self.redis.lindex(LIST1, -2))
+        eq_(None, self.redis.lindex(LIST1, -3))
+        self.redis.lpop(LIST1)
+        eq_(VAL2, self.redis.lindex(LIST1, 0))
+        eq_(None, self.redis.lindex(LIST1, 1))
+
     def test_lpop(self):
         self.redis.rpush(LIST1, VAL1, VAL2)
         eq_(VAL1, self.redis.lpop(LIST1))
