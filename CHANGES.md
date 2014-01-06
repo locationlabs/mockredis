@@ -1,5 +1,6 @@
-Version 2.8.0.0
+Version 2.9.0.0
 
+ - Support redis-py 2.9.0
  - Support: SCAN, SSCAN, HSCAN, and ZSCAN
 
 Version 2.8.0.3
