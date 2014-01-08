@@ -2,7 +2,7 @@ from datetime import timedelta
 
 from nose.tools import eq_, ok_
 
-from mockredis.redis import get_total_milliseconds
+from mockredis.client import get_total_milliseconds
 from mockredis.tests.fixtures import raises_response_error, setup
 
 
@@ -193,6 +193,11 @@ class TestRedisString(object):
     @raises_response_error
     def test_strict_setex_zero_expiration(self):
         self.redis_strict.setex('key', 0, 'value')
+
+    def test_mset(self):
+        ok_(self.redis.mset({"key1": "hello", "key2": ""}))
+        ok_(self.redis.mset(**{"key3": "world", "key2": "there"}))
+        eq_(["hello", "there", "world"], self.redis.mget("key1", "key2", "key3"))
 
     def test_msetnx(self):
         ok_(self.redis.msetnx({"key1": "hello", "key2": "there"}))

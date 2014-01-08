@@ -3,7 +3,7 @@
 from setuptools import setup, find_packages
 
 # Match releases to redis-py versions
-__version__ = '2.9.0.0'
+__version__ = '2.9.0.1'
 
 # Jenkins will replace __build__ with a unique value.
 __build__ = ''
@@ -26,6 +26,6 @@ setup(name='mockredispy',
       test_suite='mockredis.tests',
       entry_points={
           'nose.plugins.0.10': [
-              'with_redis = mockredis.tests.fixtures:WithRedis'
+              'with_redis = mockredis.noseplugin:WithRedis'
           ]
       })

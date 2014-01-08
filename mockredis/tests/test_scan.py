@@ -10,10 +10,20 @@ class TestRedisEmptyScans(object):
         setup(self)
 
     def test_scans(self):
-        eq_(self.redis.scan(), ['0', []])
-        eq_(self.redis.sscan('foo'), ['0', []])
-        eq_(self.redis.zscan('foo'), ['0', []])
-        eq_(self.redis.hscan('foo'), ['0', {}])
+        def eq_scan(results, cursor, elements):
+            """
+            Explicitly compare cursor and element by index as there
+            redis-py currently returns a tuple for HSCAN and a list
+            for the others, mockredis-py only returns lists, and it's
+            not clear that emulating redis-py in this regard is "correct".
+            """
+            eq_(results[0], cursor)
+            eq_(results[1], elements)
+
+        eq_scan(self.redis.scan(), '0', [])
+        eq_scan(self.redis.sscan("foo"), '0', [])
+        eq_scan(self.redis.zscan("foo"), '0', [])
+        eq_scan(self.redis.hscan("foo"), '0', {})
 
 
 class TestRedisScan(object):
