@@ -26,6 +26,6 @@ setup(name='mockredispy',
       test_suite='mockredis.tests',
       entry_points={
           'nose.plugins.0.10': [
-              'with_redis = mockredis.tests.fixtures:WithRedis'
+              'with_redis = mockredis.noseplugin:WithRedis'
           ]
       })

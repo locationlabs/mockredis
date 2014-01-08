@@ -7,8 +7,8 @@ import sys
 
 from nose.tools import assert_raises, eq_, ok_
 
+from mockredis import MockRedis
 from mockredis.exceptions import RedisError
-from mockredis.redis import MockRedis
 from mockredis.script import Script as MockRedisScript
 from mockredis.tests.test_constants import (
     LIST1, LIST2,

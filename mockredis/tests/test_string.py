@@ -2,7 +2,7 @@ from datetime import timedelta
 
 from nose.tools import eq_, ok_
 
-from mockredis.redis import get_total_milliseconds
+from mockredis.client import get_total_milliseconds
 from mockredis.tests.fixtures import raises_response_error, setup
 
 

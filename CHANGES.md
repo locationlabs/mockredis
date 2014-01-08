@@ -1,3 +1,8 @@
+Version 2.9.0.1
+
+ - Rename `redis.py` module as `client.py` to avoid naming conflicts from the nose plugin.
+ - Support contextmanager uses of `MockRedisLock`
+
 Version 2.9.0.0
 
  - Support redis-py 2.9.0
