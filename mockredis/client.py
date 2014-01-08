@@ -332,6 +332,21 @@ class MockRedis(object):
         """Set the value of ``key`` to ``value`` if key doesn't exist"""
         return self.set(key, value, nx=True)
 
+    def mset(self, *args, **kwargs):
+        """
+        Sets key/values based on a mapping. Mapping can be supplied as a single
+        dictionary argument or as kwargs.
+        """
+        if args:
+            if len(args) != 1 or not isinstance(args[0], dict):
+                raise RedisError('MSET requires **kwargs or a single dict arg')
+            mapping = args[0]
+        else:
+            mapping = kwargs
+        for key, value in mapping.items():
+            self.set(key, value)
+        return True
+
     def msetnx(self, *args, **kwargs):
         """
         Sets key/values based on a mapping if none of the keys are already set.
