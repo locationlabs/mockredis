@@ -130,6 +130,17 @@ class TestRedisSet(object):
         eq_(1, self.redis.sadd(key, "two"))
         eq_(set(["one", "two"]), self.redis.smembers(key))
 
+    def test_smembers_copy(self):
+        key = "set"
+        self.redis.sadd(key, "one")
+        self.redis.sadd(key, "two")
+        self.redis.sadd(key, "three")
+        members = self.redis.smembers(key)
+        eq_(set(["one", "two", "three"]), members)
+        for member in members:
+            self.redis.srem(key, member)
+        eq_(set(), self.redis.smembers(key))
+
     def test_smove(self):
         eq_(0, self.redis.smove("x", "y", "one"))
 
