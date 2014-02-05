@@ -132,12 +132,13 @@ class TestRedisSet(object):
 
     def test_smembers_copy(self):
         key = "set"
-        self.redis.sadd(key, "one")
-        self.redis.sadd(key, "two")
-        self.redis.sadd(key, "three")
+        self.redis.sadd(key, "one", "two", "three")
         members = self.redis.smembers(key)
-        eq_(set(["one", "two", "three"]), members)
+        eq_({"one", "two", "three"}, members)
         for member in members:
+            # Checking that SMEMBERS returns the copy of internal data structure instead of
+            # direct references. Otherwise SREM operation may give following error.
+            # RuntimeError: Set changed size during iteration
             self.redis.srem(key, member)
         eq_(set(), self.redis.smembers(key))
 
