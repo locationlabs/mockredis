@@ -812,8 +812,7 @@ class MockRedis(object):
 
     def smembers(self, name):
         """Emulate smembers."""
-        redis_set = self._get_set(name, 'SMEMBERS')
-        return redis_set or set()
+        return self._get_set(name, 'SMEMBERS').copy()
 
     def smove(self, src, dst, value):
         """Emulate smove."""
