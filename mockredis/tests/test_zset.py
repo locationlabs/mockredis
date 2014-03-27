@@ -140,6 +140,13 @@ class TestRedisZset(object):
         self.redis.zadd(key, "one", 1.0)
         eq_(1.0, self.redis.zscore(key, "one"))
 
+    def test_zscore_int_member(self):
+        key = "zset"
+        eq_(None, self.redis.zscore(key, 1))
+
+        self.redis.zadd(key, 1, 1.0)
+        eq_(1.0, self.redis.zscore(key, 1))
+
     def test_zrank(self):
         key = "zset"
         eq_(None, self.redis.zrank(key, "two"))
@@ -148,6 +155,15 @@ class TestRedisZset(object):
         self.redis.zadd(key, "two", 2.0)
         eq_(0, self.redis.zrank(key, "one"))
         eq_(1, self.redis.zrank(key, "two"))
+
+    def test_zrank_int_member(self):
+        key = "zset"
+        eq_(None, self.redis.zrank(key, 2))
+
+        self.redis.zadd(key, "one", 1.0)
+        self.redis.zadd(key, 2, 2.0)
+        eq_(0, self.redis.zrank(key, "one"))
+        eq_(1, self.redis.zrank(key, 2))
 
     def test_zcount(self):
         key = "zset"
