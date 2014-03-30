@@ -34,7 +34,7 @@ class SortedSet(object):
         return len(self._members)
 
     def __contains__(self, member):
-        return member in self._members
+        return str(member) in self._members
 
     def __str__(self):
         return self.__repr__()
@@ -84,6 +84,7 @@ class SortedSet(object):
         """
         Identical to __delitem__, but returns whether a member was removed.
         """
+        member = str(member)
         if member not in self:
             return False
         score = self._members[member]
@@ -97,12 +98,13 @@ class SortedSet(object):
         Identical to __getitem__, but returns None instead of raising
         KeyError if member is not found.
         """
-        return self._members.get(member)
+        return self._members.get(str(member))
 
     def rank(self, member):
         """
         Get the rank (index of a member).
         """
+        member = str(member)
         score = self._members.get(member)
         if score is None:
             return None
