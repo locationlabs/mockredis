@@ -42,14 +42,11 @@ class SortedSet(object):
     def __repr__(self):
         return "SortedSet({})".format(self._scores)
 
-    def __cmp__(self, other):
-        return self.__eq__(other)
-
     def __eq__(self, other):
-        return self._scores == other._scores
+        return self._scores == other._scores and self._members == other._members
 
     def __ne__(self, other):
-        return self._scores != other._scores
+        return not self == other
 
     def __setitem__(self, member, score):
         """
