@@ -32,7 +32,7 @@ class MockRedis(object):
     expiry is NOT supported.
     """
 
-    def __init__(self, strict=False, clock=None, **kwargs):
+    def __init__(self, strict=False, clock=None, load_lua_dependencies=True, **kwargs):
         """
         Initialize as either StrictRedis or Redis.
 
@@ -40,6 +40,7 @@ class MockRedis(object):
         """
         self.strict = strict
         self.clock = SystemClock() if clock is None else clock
+        self.load_lua_dependencies = load_lua_dependencies
         # The 'Redis' store
         self.redis = defaultdict(dict)
         self.timeouts = defaultdict(dict)
@@ -1081,7 +1082,7 @@ class MockRedis(object):
         """Emulates evalsha"""
         if not self.script_exists(sha)[0]:
             raise RedisError("Sha not registered")
-        script_callable = Script(self, self.shas[sha])
+        script_callable = Script(self, self.shas[sha], self.load_lua_dependencies)
         numkeys = max(numkeys, 0)
         keys = keys_and_args[:numkeys]
         args = keys_and_args[numkeys:]
@@ -1108,7 +1109,7 @@ class MockRedis(object):
 
     def register_script(self, script):
         """Emulate register_script"""
-        return Script(self, script)
+        return Script(self, script, self.load_lua_dependencies)
 
     def call(self, command, *args):
         """

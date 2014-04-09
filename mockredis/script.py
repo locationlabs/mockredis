@@ -1,11 +1,12 @@
 class Script(object):
     """
-    An executable LUA script object returned by ``MockRedis.register_script``.
+    An executable Lua script object returned by ``MockRedis.register_script``.
     """
 
-    def __init__(self, registered_client, script):
+    def __init__(self, registered_client, script, load_dependencies=True):
         self.registered_client = registered_client
         self.script = script
+        self.load_dependencies = load_dependencies
         self.sha = registered_client.script_load(script)
 
     def __call__(self, keys=[], args=[], client=None):
@@ -22,7 +23,7 @@ class Script(object):
         Sets KEYS and ARGV alongwith redis.call() function in lua globals
         and executes the lua redis script
         """
-        lua, lua_globals = Script._import_lua()
+        lua, lua_globals = Script._import_lua(self.load_dependencies)
         lua_globals.KEYS = self._python_to_lua(keys)
         lua_globals.ARGV = self._python_to_lua(args)
 
@@ -34,25 +35,31 @@ class Script(object):
         return self._lua_to_python(lua.execute(self.script))
 
     @staticmethod
-    def _import_lua():
+    def _import_lua(load_dependencies=True):
         """
         Import lua and dependencies.
 
-        :raises: RuntimeError if LUA is not available
+        :param load_dependencies: should Lua library dependencies be loaded?
+        :raises: RuntimeError if Lua is not available
         """
         try:
             import lua
         except ImportError:
-            raise RuntimeError("LUA not installed")
+            raise RuntimeError("Lua not installed")
 
         lua_globals = lua.globals()
-        Script._import_lua_dependencies(lua, lua_globals)
+        if load_dependencies:
+            Script._import_lua_dependencies(lua, lua_globals)
         return lua, lua_globals
 
     @staticmethod
     def _import_lua_dependencies(lua, lua_globals):
         """
         Imports lua dependencies that are supported by redis lua scripts.
+
+        The current implementation is fragile to the target platform and lua version
+        and may be disabled if these imports are not needed.
+
         Included:
             - cjson lib.
         Pending:
@@ -63,7 +70,6 @@ class Script(object):
             - debug lib.
             - cmsgpack lib.
         """
-
         import ctypes
         ctypes.CDLL('liblua5.2.so', mode=ctypes.RTLD_GLOBAL)
 
