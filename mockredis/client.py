@@ -970,7 +970,7 @@ class MockRedis(object):
 
         scorerange = zset.scorerange(float(min_), float(max_))
         if start is not None and num is not None:
-            start, num = self._translate_limit(len(scorerange), start, num)
+            start, num = self._translate_limit(len(scorerange), int(start), int(num))
             scorerange = scorerange[start:start + num]
         return [func(item) for item in scorerange]
 
@@ -1024,6 +1024,7 @@ class MockRedis(object):
 
     def zrevrangebyscore(self, name, max_, min_, start=None, num=None,
                          withscores=False, score_cast_func=float):
+
         if (start is None) ^ (num is None):
             raise RedisError('`start` and `num` must both be specified')
 
@@ -1035,7 +1036,7 @@ class MockRedis(object):
 
         scorerange = [x for x in reversed(zset.scorerange(float(min_), float(max_)))]
         if start is not None and num is not None:
-            start, num = self._translate_limit(len(scorerange), start, num)
+            start, num = self._translate_limit(len(scorerange), int(start), int(num))
             scorerange = scorerange[start:start + num]
         return [func(item) for item in scorerange]
 
@@ -1114,19 +1115,22 @@ class MockRedis(object):
     def call(self, command, *args):
         """
         Sends call to the function, whose name is specified by command.
+
+        Used by Script invocations and normalizes calls using standard
+        Redis arguments to use the expected redis-py arguments.
         """
         command = self._normalize_command_name(command)
         args = self._normalize_command_args(command, *args)
 
         redis_function = getattr(self, command)
         value = redis_function(*args)
-        return value
+        return self._normalize_command_response(command, value)
 
     def _normalize_command_name(self, command):
         """
         Modifies the command string to match the redis client method name.
         """
-        command = string.lower(command)
+        command = command.lower()
 
         if command == 'del':
             return 'delete'
@@ -1143,11 +1147,35 @@ class MockRedis(object):
             zadd_args = [x for tup in zip(args[2::2], args[1::2]) for x in tup]
             return [args[0]] + zadd_args
 
-        if command == 'zrangebyscore' and len(args) == 6:
-            # Remove 'limit' from arguments
-            return args[:3] + args[4:]
+        if command in ('zrangebyscore', 'zrevrangebyscore'):
+            # expected format is: <command> name min max start num with_scores score_cast_func
+            if len(args) <= 3:
+                # just plain min/max
+                return args
+
+            # handle "limit"
+            if "limit" in args:
+                # add start and num
+                limit_index = args.index("limit")
+                start, num = args[limit_index + 1], args[limit_index + 2]
+            else:
+                start, num = None, None
+
+            # handle "withscores"
+            withscores = "withscores" in args
+
+            # do not expect to set score_cast_func
+
+            return args[:3] + (start, num, withscores)
 
         return args
+
+    def _normalize_command_response(self, command, response):
+        if command in ('zrange', 'zrevrange', 'zrangebyscore', 'zrevrangebyscore'):
+            if response and isinstance(response[0], tuple):
+                return [value for tpl in response for value in tpl]
+
+        return response
 
     #### PubSub commands ####
 
