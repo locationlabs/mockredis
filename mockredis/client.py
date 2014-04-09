@@ -1130,7 +1130,7 @@ class MockRedis(object):
         """
         Modifies the command string to match the redis client method name.
         """
-        command = string.lower(command)
+        command = command.lower()
 
         if command == 'del':
             return 'delete'

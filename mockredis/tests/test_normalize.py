@@ -8,8 +8,10 @@ from mockredis.client import MockRedis
 
 def test_normalize_command_name():
     cases = [
+        ("DEL", "delete"),
         ("del", "delete"),
         ("ping", "ping"),
+        ("PING", "ping"),
     ]
 
     def _test(command, expected):
