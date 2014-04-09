@@ -1166,7 +1166,7 @@ class MockRedis(object):
 
             # do not expect to set score_cast_func
 
-            return args[:3] + (start, num) + (withscores,)
+            return args[:3] + (start, num, withscores)
 
         return args
 
