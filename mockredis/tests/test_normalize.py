@@ -43,6 +43,10 @@ def test_normalize_command_args():
         (True, "zrevrangebyscore",
          ("key", "inf", "-inf", "withscores", "limit", 0, 10),
          ("key", "inf", "-inf", 0, 10, True)),
+
+        (True, "zrevrangebyscore",
+         ("key", "inf", "-inf", "WITHSCORES", "LIMIT", 0, 10),
+         ("key", "inf", "-inf", 0, 10, True)),
     ]
 
     def _test(strict, command, args, expected):
