@@ -6,7 +6,6 @@ from hashlib import sha1
 from operator import add
 from random import choice, sample
 import re
-import string
 import sys
 
 from mockredis.clock import SystemClock
@@ -1153,16 +1152,20 @@ class MockRedis(object):
                 # just plain min/max
                 return args
 
-            # handle "limit"
-            if "limit" in args:
-                # add start and num
-                limit_index = args.index("limit")
-                start, num = args[limit_index + 1], args[limit_index + 2]
-            else:
-                start, num = None, None
+            start, num = None, None
+            withscores = False
 
-            # handle "withscores"
-            withscores = "withscores" in args
+            for i, arg in enumerate(args[3:], 3):
+                # keywords are case-insensitive
+                lower_arg = str(arg).lower()
+
+                # handle "limit"
+                if lower_arg == "limit" and i + 2 < len(args):
+                    start, num = args[i + 1], args[i + 2]
+
+                # handle "withscores"
+                if lower_arg == "withscores":
+                    withscores = True
 
             # do not expect to set score_cast_func
 
