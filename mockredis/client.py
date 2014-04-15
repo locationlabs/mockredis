@@ -6,7 +6,6 @@ from hashlib import sha1
 from operator import add
 from random import choice, sample
 import re
-import string
 import sys
 
 from mockredis.clock import SystemClock
@@ -1159,7 +1158,7 @@ class MockRedis(object):
             for i, arg in enumerate(args[3:], 3):
                 # keywords are case-insensitive
                 lower_arg = str(arg).lower()
-                
+
                 # handle "limit"
                 if lower_arg == "limit" and i + 2 < len(args):
                     start, num = args[i + 1], args[i + 2]
