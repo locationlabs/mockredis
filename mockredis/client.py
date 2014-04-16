@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from hashlib import sha1
 from operator import add
 from random import choice, sample
+import time
 import re
 import sys
 
@@ -516,6 +517,26 @@ class MockRedis(object):
 
         # Redis returns 0 if list doesn't exist
         return len(redis_list)
+
+    def _bpop(self, pop_func, key, timeout=100000):
+        """Emulate blocking pop functionality"""
+        wait = 0
+
+        while wait < timeout:
+            val = pop_func(key)
+            if val: break
+            
+            wait += 1
+            time.sleep(1)
+        return (key, val) if val else None
+
+    def blpop(self, *args, **kwargs):
+        """Emulate blpop"""
+        return self._bpop(self.lpop, *args, **kwargs)
+
+    def brpop(self, *args, **kwargs):
+        """Emulate brpop"""
+        return self._bpop(self.rpop, *args, **kwargs)
 
     def lpop(self, key):
         """Emulate lpop."""

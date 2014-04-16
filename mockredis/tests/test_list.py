@@ -50,6 +50,17 @@ class TestRedisList(object):
         eq_(None, self.redis.lpop(LIST1))
         eq_([], self.redis.keys("*"))
 
+
+    def test_blpop(self):
+        self.redis.rpush(LIST1, VAL1, VAL2)
+        eq_((LIST1, VAL1), self.redis.blpop(LIST1))
+        eq_(1, len(self.redis.lrange(LIST1, 0, -1)))
+        eq_((LIST1, VAL2), self.redis.blpop(LIST1))
+        eq_(0, len(self.redis.lrange(LIST1, 0, -1)))
+        eq_(None, self.redis.blpop(LIST1, 1))
+        eq_([], self.redis.keys("*"))
+
+
     def test_lpush(self):
         """
         Insertion maintains order but not uniqueness.
@@ -75,7 +86,16 @@ class TestRedisList(object):
         eq_(1, len(self.redis.lrange(LIST1, 0, -1)))
         eq_(VAL1, self.redis.rpop(LIST1))
         eq_(0, len(self.redis.lrange(LIST1, 0, -1)))
-        eq_(None, self.redis.lpop(LIST1))
+        eq_(None, self.redis.rpop(LIST1))
+        eq_([], self.redis.keys("*"))
+
+    def test_brpop(self):
+        self.redis.rpush(LIST1, VAL1, VAL2)
+        eq_((LIST1, VAL2), self.redis.brpop(LIST1))
+        eq_(1, len(self.redis.lrange(LIST1, 0, -1)))
+        eq_((LIST1, VAL1), self.redis.brpop(LIST1))
+        eq_(0, len(self.redis.lrange(LIST1, 0, -1)))
+        eq_(None, self.redis.brpop(LIST1, 1))
         eq_([], self.redis.keys("*"))
 
     def test_rpush(self):
