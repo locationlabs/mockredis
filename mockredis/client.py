@@ -32,7 +32,7 @@ class MockRedis(object):
     expiry is NOT supported.
     """
 
-    def __init__(self, strict=False, clock=None, load_lua_dependencies=True, **kwargs):
+    def __init__(self, strict=False, clock=None, load_lua_dependencies=True, blocking_timeout=1000, **kwargs):
         """
         Initialize as either StrictRedis or Redis.
 
@@ -41,6 +41,7 @@ class MockRedis(object):
         self.strict = strict
         self.clock = SystemClock() if clock is None else clock
         self.load_lua_dependencies = load_lua_dependencies
+        self.blocking_timeout = blocking_timeout
         # The 'Redis' store
         self.redis = defaultdict(dict)
         self.timeouts = defaultdict(dict)
@@ -518,25 +519,43 @@ class MockRedis(object):
         # Redis returns 0 if list doesn't exist
         return len(redis_list)
 
-    def _bpop(self, pop_func, key, timeout=100000):
+    def _bpop(self, pop_func, keys, timeout):
         """Emulate blocking pop functionality"""
-        wait = 0
+        if not isinstance(timeout, (int, long)):
+            raise RuntimeError('timeout is not an integer')
 
+        if timeout is None or timeout == 0:
+            timeout = self.blocking_timeout
+
+        if isinstance(keys, basestring):
+            keys = [keys]
+        else:
+            keys = list(keys)
+
+        wait = 0
+        sleep_timeout = .01
         while wait < timeout:
-            val = pop_func(key)
-            if val: break
-            
-            wait += 1
-            time.sleep(1)
+            key, val = self._pop_first_available(pop_func, keys)
+            if val:
+                break
+            wait += sleep_timeout
+            time.sleep(sleep_timeout)
         return (key, val) if val else None
 
-    def blpop(self, *args, **kwargs):
-        """Emulate blpop"""
-        return self._bpop(self.lpop, *args, **kwargs)
+    def _pop_first_available(self, pop_func, keys):
+        for key in keys:
+            val = pop_func(key)
+            if val:
+                return key, val
+        return None, None
 
-    def brpop(self, *args, **kwargs):
+    def blpop(self, keys, timeout=0):
+        """Emulate blpop"""
+        return self._bpop(self.lpop, keys, timeout)
+
+    def brpop(self, keys, timeout=0):
         """Emulate brpop"""
-        return self._bpop(self.rpop, *args, **kwargs)
+        return self._bpop(self.rpop, keys, timeout)
 
     def lpop(self, key):
         """Emulate lpop."""
@@ -634,6 +653,14 @@ class MockRedis(object):
         if transfer_item is not None:
             self.lpush(destination, transfer_item)
         return transfer_item
+
+    def brpoplpush(self, source, destination, timeout=0):
+        """Emulate brpoplpush"""
+        transfer_item = self.brpop(source, timeout)
+        if transfer_item is not None:
+            self.lpush(destination, transfer_item[1])
+            return transfer_item[1]
+        return None
 
     def lset(self, key, index, value):
         """Emulate lset."""

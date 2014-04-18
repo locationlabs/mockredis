@@ -1,3 +1,5 @@
+import time
+
 from nose.tools import assert_raises, eq_
 
 from mockredis.tests.fixtures import setup
@@ -50,16 +52,17 @@ class TestRedisList(object):
         eq_(None, self.redis.lpop(LIST1))
         eq_([], self.redis.keys("*"))
 
-
     def test_blpop(self):
         self.redis.rpush(LIST1, VAL1, VAL2)
-        eq_((LIST1, VAL1), self.redis.blpop(LIST1))
+        eq_((LIST1, VAL1), self.redis.blpop((LIST1, LIST2)))
         eq_(1, len(self.redis.lrange(LIST1, 0, -1)))
         eq_((LIST1, VAL2), self.redis.blpop(LIST1))
         eq_(0, len(self.redis.lrange(LIST1, 0, -1)))
+        timeout = 1
+        start = time.time()
         eq_(None, self.redis.blpop(LIST1, 1))
+        eq_(timeout, int(time.time() - start))
         eq_([], self.redis.keys("*"))
-
 
     def test_lpush(self):
         """
@@ -91,11 +94,14 @@ class TestRedisList(object):
 
     def test_brpop(self):
         self.redis.rpush(LIST1, VAL1, VAL2)
-        eq_((LIST1, VAL2), self.redis.brpop(LIST1))
+        eq_((LIST1, VAL2), self.redis.brpop((LIST2, LIST1)))
         eq_(1, len(self.redis.lrange(LIST1, 0, -1)))
         eq_((LIST1, VAL1), self.redis.brpop(LIST1))
         eq_(0, len(self.redis.lrange(LIST1, 0, -1)))
-        eq_(None, self.redis.brpop(LIST1, 1))
+        timeout = 1
+        start = time.time()
+        eq_(None, self.redis.brpop(LIST1, timeout))
+        eq_(timeout, int(time.time() - start))
         eq_([], self.redis.keys("*"))
 
     def test_rpush(self):
@@ -154,6 +160,22 @@ class TestRedisList(object):
         eq_([], self.redis.keys("*"))
 
         eq_(0, self.redis.lrem("NON_EXISTENT_LIST", VAL1, 0))
+
+    def test_brpoplpush(self):
+        self.redis.rpush(LIST1, VAL1, VAL2)
+        self.redis.rpush(LIST2, VAL3, VAL4)
+        transfer_item = self.redis.brpoplpush(LIST1, LIST2)
+        eq_(VAL2, transfer_item)
+        eq_([VAL1], self.redis.lrange(LIST1, 0, -1))
+        eq_([VAL2, VAL3, VAL4], self.redis.lrange(LIST2, 0, -1))
+        transfer_item = self.redis.brpoplpush(LIST1, LIST2)
+        eq_(VAL1, transfer_item)
+        eq_([], self.redis.lrange(LIST1, 0, -1))
+        eq_([VAL1, VAL2, VAL3, VAL4], self.redis.lrange(LIST2, 0, -1))
+        timeout = 1
+        start = time.time()
+        eq_(None, self.redis.brpoplpush(LIST1, LIST2, timeout))
+        eq_(timeout, int(time.time() - start))
 
     def test_rpoplpush(self):
         self.redis.rpush(LIST1, VAL1, VAL2)
