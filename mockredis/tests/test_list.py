@@ -60,7 +60,7 @@ class TestRedisList(object):
         eq_(0, len(self.redis.lrange(LIST1, 0, -1)))
         timeout = 1
         start = time.time()
-        eq_(None, self.redis.blpop(LIST1, 1))
+        eq_(None, self.redis.blpop(LIST1, timeout))
         eq_(timeout, int(time.time() - start))
         eq_([], self.redis.keys("*"))
 

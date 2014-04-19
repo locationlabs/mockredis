@@ -519,10 +519,10 @@ class MockRedis(object):
         # Redis returns 0 if list doesn't exist
         return len(redis_list)
 
-    def _bpop(self, pop_func, keys, timeout):
+    def _blocking_pop(self, pop_func, keys, timeout):
         """Emulate blocking pop functionality"""
         if not isinstance(timeout, (int, long)):
-            raise RuntimeError('timeout is not an integer')
+            raise RuntimeError('timeout is not an integer or out of range')
 
         if timeout is None or timeout == 0:
             timeout = self.blocking_timeout
@@ -532,15 +532,14 @@ class MockRedis(object):
         else:
             keys = list(keys)
 
-        wait = 0
-        sleep_timeout = .01
-        while wait < timeout:
+        elapsed_time = 0
+        start = time.time()
+        while elapsed_time < timeout:
             key, val = self._pop_first_available(pop_func, keys)
             if val:
-                break
-            wait += sleep_timeout
-            time.sleep(sleep_timeout)
-        return (key, val) if val else None
+                return key, val
+            elapsed_time = time.time() - start
+        return None
 
     def _pop_first_available(self, pop_func, keys):
         for key in keys:
@@ -551,11 +550,11 @@ class MockRedis(object):
 
     def blpop(self, keys, timeout=0):
         """Emulate blpop"""
-        return self._bpop(self.lpop, keys, timeout)
+        return self._blocking_pop(self.lpop, keys, timeout)
 
     def brpop(self, keys, timeout=0):
         """Emulate brpop"""
-        return self._bpop(self.rpop, keys, timeout)
+        return self._blocking_pop(self.rpop, keys, timeout)
 
     def lpop(self, key):
         """Emulate lpop."""
@@ -657,10 +656,12 @@ class MockRedis(object):
     def brpoplpush(self, source, destination, timeout=0):
         """Emulate brpoplpush"""
         transfer_item = self.brpop(source, timeout)
-        if transfer_item is not None:
-            self.lpush(destination, transfer_item[1])
-            return transfer_item[1]
-        return None
+        if transfer_item is None:
+            return None
+
+        key, val = transfer_item
+        self.lpush(destination, val)
+        return val
 
     def lset(self, key, index, value):
         """Emulate lset."""
