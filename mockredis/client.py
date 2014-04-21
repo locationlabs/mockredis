@@ -32,7 +32,13 @@ class MockRedis(object):
     expiry is NOT supported.
     """
 
-    def __init__(self, strict=False, clock=None, load_lua_dependencies=True, blocking_timeout=1000, **kwargs):
+    def __init__(self,
+                 strict=False,
+                 clock=None,
+                 load_lua_dependencies=True,
+                 blocking_timeout=1000,
+                 blocking_sleep_interval=0.01,
+                 **kwargs):
         """
         Initialize as either StrictRedis or Redis.
 
@@ -42,6 +48,7 @@ class MockRedis(object):
         self.clock = SystemClock() if clock is None else clock
         self.load_lua_dependencies = load_lua_dependencies
         self.blocking_timeout = blocking_timeout
+        self.blocking_sleep_interval = blocking_sleep_interval
         # The 'Redis' store
         self.redis = defaultdict(dict)
         self.timeouts = defaultdict(dict)
@@ -538,6 +545,8 @@ class MockRedis(object):
             key, val = self._pop_first_available(pop_func, keys)
             if val:
                 return key, val
+            # small delay to avoid high cpu utilization
+            time.sleep(self.blocking_sleep_interval)
             elapsed_time = time.time() - start
         return None
 
