@@ -132,7 +132,7 @@ class MockRedis(object):
     def delete(self, *keys):
         """Emulate delete."""
         key_counter = 0
-        for key in keys:
+        for key in map(str, keys):
             if key in self.redis:
                 del self.redis[key]
                 key_counter += 1

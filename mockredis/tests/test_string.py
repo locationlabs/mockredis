@@ -249,8 +249,14 @@ class TestRedisString(object):
         for case in test_cases:
             yield self._assert_delete, case
 
+    def test_delete_int(self):
+        self.redis.set("1", "value")
+        eq_(self.redis.delete(1), 1)
+
     def _assert_delete(self, data):
-        """Asserts that key(s) deletion along with removing timeouts if any, succeeds as expected"""
+        """
+        Asserts that key(s) deletion along with removing timeouts if any, succeeds as expected
+        """
         to_create, to_delete = data
         for key in to_create:
             self.redis.set(key, "value", ex=200)
