@@ -153,6 +153,13 @@ class TestRedisList(object):
         eq_(2, self.redis.lrem(LIST1, VAL2, -2))
         eq_([VAL1, VAL1, VAL3, VAL4], self.redis.lrange(LIST1, 0, -1))
 
+        # string conversion
+        self.redis.rpush(1, 1, "2", 3)
+        eq_(1, self.redis.lrem(1, "1"))
+        eq_(1, self.redis.lrem("1", 2))
+        eq_(["3"], self.redis.lrange(1, 0, -1))
+        del self.redis["1"]
+
         del self.redis[LIST1]
         self.redis.rpush(LIST1, VAL1)
         eq_(1, self.redis.lrem(LIST1, VAL1))

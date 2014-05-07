@@ -615,6 +615,7 @@ class MockRedis(object):
 
     def lrem(self, key, value, count=0):
         """Emulate lrem."""
+        key, value = str(key), str(value)
         redis_list = self._get_list(key, 'LREM')
         removed_count = 0
         if key in self.redis:
@@ -1273,6 +1274,7 @@ class MockRedis(object):
         """
         Get (and maybe create) a redis data structure by name and type.
         """
+        key = str(key)
         if self.type(key) in [type_, 'none']:
             if create:
                 return self.redis.setdefault(key, default)
