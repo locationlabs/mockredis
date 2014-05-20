@@ -157,9 +157,10 @@ class MockRedis(object):
         self.timeouts[key] = self.clock.now() + delta
         return True
 
-    def expire(self, key, seconds):
+    def expire(self, key, delta):
         """Emulate expire"""
-        return self._expire(key, timedelta(seconds=seconds))
+        delta = delta if isinstance(delta, timedelta) else timedelta(seconds=delta)
+        return self._expire(key, delta)
 
     def pexpire(self, key, milliseconds):
         """Emulate pexpire"""
