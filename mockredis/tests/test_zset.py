@@ -313,6 +313,30 @@ class TestRedisZset(object):
         eq_([], self.redis.zrange(key, 0, -1))
         eq_([], self.redis.keys("*"))
 
+    def test_zremrangebyscore_inclusive(self):
+        key = "zset"
+        eq_(0, self.redis.zremrangebyscore(key, "-inf", "inf"))
+
+        self.redis.zadd(key, "one", 1.0)
+        self.redis.zadd(key, "two", 2.0)
+        self.redis.zadd(key, "three", 3.0)
+        self.redis.zadd(key, "four", 4.0)
+        self.redis.zadd(key, "five", 5.0)
+
+        eq_(0, self.redis.zremrangebyscore(key, 0, '(1'))
+        eq_(1, self.redis.zremrangebyscore(key, 0, '(2'))  # remove "one"
+
+        eq_(["two", "three", "four", "five"], self.redis.zrange(key, 0, -1))
+
+        eq_(2, self.redis.zremrangebyscore(key, '(2', 4))  #remove "three" & "four"
+        eq_(["two", "five"], self.redis.zrange(key, 0, -1))
+
+        eq_(1, self.redis.zremrangebyscore(key, "(2.0", "inf"))
+
+        eq_(["two"], self.redis.zrange(key, 0, -1))
+        eq_(1, self.redis.zremrangebyscore(key, "-inf", "(3"))
+        eq_([], self.redis.keys("*"))
+
     def test_zunionstore_no_keys(self):
         key = "zset"
 
