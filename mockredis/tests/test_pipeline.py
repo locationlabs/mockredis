@@ -95,6 +95,19 @@ class TestPipeline(object):
 
             eq_([True, "baz"], pipeline.execute())
 
+    def test_multi_with_watch_zset(self):
+        """
+        Test explicit transaction with watched keys, this time with zset
+        """
+        self.redis.zadd("foo", "bar", 1.0)
+
+        with self.redis.pipeline() as pipeline:
+            pipeline.watch("foo")
+            eq_(1, pipeline.zcard("foo"))
+            pipeline.multi()
+            eq_(pipeline, pipeline.zadd("foo", "baz", 2.0))
+            eq_([1], pipeline.execute())
+
     def test_multi_with_watch_error(self):
         """
         Test explicit transaction with watched keys.
