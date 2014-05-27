@@ -1097,8 +1097,11 @@ class MockRedis(object):
             return []
 
         func = self._range_func(withscores, score_cast_func)
+        include_start, min_ = self._score_inclusive(min_)
+        include_end, max_ = self._score_inclusive(max_)
 
-        scorerange = [x for x in reversed(zset.scorerange(float(min_), float(max_)))]
+        scorerange = [x for x in reversed(zset.scorerange(float(min_), float(max_),
+                                                          start_inclusive=include_start, end_inclusive=include_end))]
         if start is not None and num is not None:
             start, num = self._translate_limit(len(scorerange), int(start), int(num))
             scorerange = scorerange[start:start + num]
