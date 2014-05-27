@@ -1,3 +1,6 @@
+
+ - Expire can accept a timedelta value
+
 Version 2.9.0.1
 
  - Rename `redis.py` module as `client.py` to avoid naming conflicts from the nose plugin.
