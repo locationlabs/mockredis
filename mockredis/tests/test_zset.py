@@ -229,6 +229,27 @@ class TestRedisZset(object):
         eq_([],
             self.redis.zrangebyscore(key, 1.0, 3.5, start=3, num=4))
 
+    def test_zrangebyscore_inclusive(self):
+        key = "zset"
+        eq_([], self.redis.zrangebyscore(key, "-inf", "inf"))
+        self.redis.zadd(key, "one", 1.5)
+        self.redis.zadd(key, "two", 2.5)
+        self.redis.zadd(key, "three", 3.5)
+        self.redis.zadd(key, "four", 4.5)
+
+        eq_(["one"],
+            self.redis.zrangebyscore(key, 1.0, '(2.5'))
+        eq_(["two", "three"],
+            self.redis.zrangebyscore(key, '(1.5', 3.5))
+        eq_(["one"],
+            self.redis.zrangebyscore(key, 1.0, '(3.5', start=0, num=1))
+        eq_(["three"],
+            self.redis.zrangebyscore(key, '(1.5', 3.5, start=1, num=1))
+        eq_(["two", "three"],
+            self.redis.zrangebyscore(key, 1.0, '(4.5', start=1, num=4))
+        eq_([],
+            self.redis.zrangebyscore(key, 1.0, '(4.5', start=3, num=4))
+
     def test_zrevrank(self):
         key = "zset"
         eq_(None, self.redis.zrevrank(key, "two"))
