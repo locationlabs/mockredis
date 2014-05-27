@@ -1,3 +1,4 @@
+from datetime import timedelta
 from time import time
 import sys
 
@@ -92,6 +93,15 @@ class TestRedis(object):
     def test_ttl(self):
         self.redis.set('key', 'key')
         self.redis.expire('key', 30)
+
+        result = self.redis.ttl('key')
+        ok_(isinstance(result, long))
+        # should be less than the timeout originally set
+        ok_(result <= 30)
+
+    def test_ttl_timedelta(self):
+        self.redis.set('key', 'key')
+        self.redis.expire('key', timedelta(seconds=30))
 
         result = self.redis.ttl('key')
         ok_(isinstance(result, long))

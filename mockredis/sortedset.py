@@ -42,6 +42,12 @@ class SortedSet(object):
     def __repr__(self):
         return "SortedSet({})".format(self._scores)
 
+    def __eq__(self, other):
+        return self._scores == other._scores and self._members == other._members
+
+    def __ne__(self, other):
+        return not self == other
+
     def __setitem__(self, member, score):
         """
         Insert member with score. If member is already present in the
