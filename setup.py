@@ -3,7 +3,7 @@
 from setuptools import setup, find_packages
 
 # Match releases to redis-py versions
-__version__ = '2.9.0.7'
+__version__ = '2.9.0.8'
 
 # Jenkins will replace __build__ with a unique value.
 __build__ = ''
