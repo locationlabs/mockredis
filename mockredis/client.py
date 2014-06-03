@@ -1028,8 +1028,9 @@ class MockRedis(object):
             return []
 
         func = self._range_func(withscores, score_cast_func)
-
-        scorerange = zset.scorerange(float(min_), float(max_))
+        include_start, min_ = self._score_inclusive(min_)
+        include_end, max_ = self._score_inclusive(max_)
+        scorerange = zset.scorerange(min_, max_, start_inclusive=include_start, end_inclusive=include_end)
         if start is not None and num is not None:
             start, num = self._translate_limit(len(scorerange), int(start), int(num))
             scorerange = scorerange[start:start + num]
@@ -1072,8 +1073,13 @@ class MockRedis(object):
             return 0
 
         count_removals = lambda score, member: 1 if zset.remove(member) else 0
+        include_start, min_ = self._score_inclusive(min_)
+        include_end, max_ = self._score_inclusive(max_)
+
         removal_count = sum((count_removals(score, member)
-                             for score, member in zset.scorerange(float(min_), float(max_))))
+                             for score, member in zset.scorerange(min_, max_,
+                                                                  start_inclusive=include_start,
+                                                                  end_inclusive=include_end)))
         if removal_count > 0 and len(zset) == 0:
             del self.redis[name]
         return removal_count
@@ -1094,8 +1100,11 @@ class MockRedis(object):
             return []
 
         func = self._range_func(withscores, score_cast_func)
+        include_start, min_ = self._score_inclusive(min_)
+        include_end, max_ = self._score_inclusive(max_)
 
-        scorerange = [x for x in reversed(zset.scorerange(float(min_), float(max_)))]
+        scorerange = [x for x in reversed(zset.scorerange(float(min_), float(max_),
+                                                          start_inclusive=include_start, end_inclusive=include_end))]
         if start is not None and num is not None:
             start, num = self._translate_limit(len(scorerange), int(start), int(num))
             scorerange = scorerange[start:start + num]
@@ -1354,6 +1363,10 @@ class MockRedis(object):
             keys.extend(args)
         return keys
 
+    def _score_inclusive(self, score):
+        if isinstance(score, basestring) and score[0] == '(':
+            return False, float(score[1:])
+        return True, float(score)
 
 def get_total_seconds(td):
     """

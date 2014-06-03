@@ -88,3 +88,21 @@ class TestSortedSet(object):
         eq_([(1.0, "one"), (1.0, "uno")], self.zset.scorerange(1.0, 1.1))
         eq_([(1.0, "one"), (1.0, "uno"), (2.0, "two")],
             self.zset.scorerange(1.0, 2.0))
+
+    def test_scoremap_inclusive(self):
+        self.zset["one"] = 1.0
+        self.zset["uno"] = 1.0
+        self.zset["uno_dot_one"] = 1.1
+        self.zset["two"] = 2.0
+        self.zset["three"] = 3.0
+        eq_([], self.zset.scorerange(1.0, 1.1, start_inclusive=False, end_inclusive=False))
+        eq_([(1.0, "one"), (1.0, "uno")], self.zset.scorerange(1.0, 1.1, start_inclusive=True, end_inclusive=False))
+        eq_([(1.1, "uno_dot_one")], self.zset.scorerange(1.0, 1.1, start_inclusive=False, end_inclusive=True))
+        eq_([(1.1, "uno_dot_one")], self.zset.scorerange(1.0, 2.0, start_inclusive=False, end_inclusive=False))
+        eq_([(1.1, "uno_dot_one"), (2.0, "two")],
+            self.zset.scorerange(1.0, 3.0, start_inclusive=False, end_inclusive=False))
+
+        eq_([(1.0, "one"), (1.0, "uno"), (1.1, "uno_dot_one")],
+            self.zset.scorerange(1.0, 1.1, start_inclusive=True, end_inclusive=True))
+        eq_([(1.0, "one"), (1.0, "uno"), (1.1, "uno_dot_one"), (2.0, "two")],
+            self.zset.scorerange(1.0, 2.0, start_inclusive=True, end_inclusive=True))
