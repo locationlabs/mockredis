@@ -1,5 +1,15 @@
 language: python
 python:
 - '2.7'
+- '3.2'
+- pypy
 install: pip install . --use-mirrors
 script: python setup.py nosetests
+deploy:
+  provider: pypi
+  user: jessemyers
+  password:
+    secure: f7wqGCuSP6dJZ7GwdpQwMc9J0GU8oCK8tydUnvgLNass0U57Eg+PaQURPWxg0T1f5nYACzfche3YHTFeXtk1x7HV6WYWYddin/gv94m7u9+ZQpsrygGizv7eO3lU/vR3K86GrLdTR3z7ii50XDlM0W8XyqHDX1+GGHPWFGLxOHo=
+  on:
+    tags: true
+    repo: locationlabs/mockredis
