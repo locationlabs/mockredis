@@ -870,9 +870,7 @@ class MockRedis(object):
             return 0
 
         result = str(value) in redis_set
-	if not result:
-	    return 0
-        return 1
+	return 1 if result else 0
 
     def smembers(self, name):
         """Emulate smembers."""
