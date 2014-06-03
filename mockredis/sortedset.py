@@ -128,7 +128,7 @@ class SortedSet(object):
         else:
             return self._scores[start:end + 1]
 
-    def scorerange(self, start, end):
+    def scorerange(self, start, end, start_inclusive=True, end_inclusive=True):
         """
         Return (score, member) pairs between min and max scores.
         """
@@ -138,10 +138,14 @@ class SortedSet(object):
         left = bisect_left(self._scores, (start,))
         right = bisect_right(self._scores, (end,))
 
-        # end is inclusive
-        while right < len(self) and self._scores[right][0] == end:
-            right += 1
+        if end_inclusive:
+            # end is inclusive
+            while right < len(self) and self._scores[right][0] == end:
+                right += 1
 
+        if not start_inclusive:
+            while left < right and self._scores[left][0] == start:
+                left += 1
         return self._scores[left:right]
 
     def min_score(self):
