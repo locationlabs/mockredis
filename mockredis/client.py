@@ -867,8 +867,12 @@ class MockRedis(object):
         """Emulate sismember."""
         redis_set = self._get_set(name, 'SISMEMBER')
         if not redis_set:
-            return False
-        return str(value) in redis_set
+            return 0
+
+        result = str(value) in redis_set
+	if not result:
+	    return 0
+        return 1
 
     def smembers(self, name):
         """Emulate smembers."""
