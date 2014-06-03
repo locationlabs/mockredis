@@ -111,7 +111,7 @@ class TestRedisSet(object):
         eq_(1, self.redis.sadd(key, "one"))
         ok_(self.redis.sismember(key, "one"))
         ok_(not self.redis.sismember(key, "two"))
-	eq_(0, self.redis.sismember(key, "two"))
+        eq_(0, self.redis.sismember(key, "two"))
 
     def test_ismember_numeric(self):
         """
