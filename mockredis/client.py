@@ -830,6 +830,8 @@ class MockRedis(object):
 
     def sadd(self, key, *values):
         """Emulate sadd."""
+        if len(values) == 0:
+            raise ResponseError("wrong number of arguments for 'sadd' command")
         redis_set = self._get_set(key, 'SADD', create=True)
         before_count = len(redis_set)
         redis_set.update(map(str, values))
