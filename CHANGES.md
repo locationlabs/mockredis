@@ -1,3 +1,7 @@
+Version 2.9.0.9
+
+ - Support: RENAME and RENAMENX
+
 Version 2.9.0.8
 
  - Add inclusive syntax (parenthesis) support for zero sets ZRANGEBYSCORE, ZREVRANGEBYSCORE  & ZREMRANGEBYSCORE
