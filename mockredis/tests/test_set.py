@@ -1,5 +1,6 @@
 from nose.tools import assert_raises, eq_, ok_
 
+from mockredis.exceptions import ResponseError
 from mockredis.tests.fixtures import setup
 
 
@@ -8,6 +9,12 @@ class TestRedisSet(object):
 
     def setup(self):
         setup(self)
+
+    def test_sadd_empty(self):
+        key = "set"
+        values = []
+        with assert_raises(ResponseError):
+            self.redis.sadd(key, *values)
 
     def test_sadd(self):
         key = "set"
