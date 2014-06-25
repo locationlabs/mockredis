@@ -230,6 +230,16 @@ class MockRedis(object):
         self.pubsub.clear()
         self.timeouts.clear()
 
+    def rename(self, old_key, new_key):
+        self._rename(old_key, new_key)
+
+    def renamenx(self, old_key, new_key):
+        self._rename(old_key, new_key, True)
+
+    def _rename(self, old_key, new_key, nx=False):
+        if old_key in self.redis and (not nx or new_key not in self.redis):
+            self.redis[new_key] = self.redis.pop(old_key)
+
     #### String Functions ####
 
     def get(self, key):
