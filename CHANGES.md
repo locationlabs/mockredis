@@ -1,3 +1,5 @@
+ - SADD will raise an exception if an empty list is passed to it
+
 Version 2.9.0.8
 
  - Add inclusive syntax (parenthesis) support for zero sets ZRANGEBYSCORE, ZREVRANGEBYSCORE  & ZREMRANGEBYSCORE
