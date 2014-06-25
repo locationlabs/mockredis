@@ -30,6 +30,14 @@ Many unit tests exist to verify correctness of mock functionality. In addition, 
 unit tests support testing against an actual redis-server instance to verify the tests
 against ground truth. See `mockredis.tests.fixtures` for more details and disclaimers.
 
+## Supported python versions
+
+- Python 2.7
+- Python 3.2
+- Python 3.3
+- Python 3.4
+- PyPy
+
 ## Attribution
 
 This code is shamelessly derived from work by [John DeRosa][john].
