@@ -208,3 +208,16 @@ class TestRedis(object):
         eq_(None, self.redis.get("foo"))
         # redispy does not correctly raise KeyError here, so we don't either
         del self.redis["foo"]
+
+    def test_rename(self):
+        self.redis["foo"] = "bar"
+        ok_(self.redis.rename("foo", "new_foo"))
+        eq_("bar", self.redis.get("new_foo"))
+
+    def test_renamenx(self):
+        self.redis["foo"] = "bar"
+        self.redis["foo2"] = "bar2"
+        eq_(self.redis.renamenx("foo", "foo2"), 0)
+        eq_("bar2", self.redis.get("foo2"))
+        eq_(self.redis.renamenx("foo", "foo3"), 1)
+        eq_("bar", self.redis.get("foo3"))

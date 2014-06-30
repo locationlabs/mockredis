@@ -230,6 +230,18 @@ class MockRedis(object):
         self.pubsub.clear()
         self.timeouts.clear()
 
+    def rename(self, old_key, new_key):
+        return self._rename(old_key, new_key)
+
+    def renamenx(self, old_key, new_key):
+        return 1 if self._rename(old_key, new_key, True) else 0
+
+    def _rename(self, old_key, new_key, nx=False):
+        if old_key in self.redis and (not nx or new_key not in self.redis):
+            self.redis[new_key] = self.redis.pop(old_key)
+            return True
+        return False
+
     #### String Functions ####
 
     def get(self, key):
@@ -830,6 +842,8 @@ class MockRedis(object):
 
     def sadd(self, key, *values):
         """Emulate sadd."""
+        if len(values) == 0:
+            raise ResponseError("wrong number of arguments for 'sadd' command")
         redis_set = self._get_set(key, 'SADD', create=True)
         before_count = len(redis_set)
         redis_set.update(map(str, values))
@@ -1367,6 +1381,7 @@ class MockRedis(object):
         if isinstance(score, basestring) and score[0] == '(':
             return False, float(score[1:])
         return True, float(score)
+
 
 def get_total_seconds(td):
     """
