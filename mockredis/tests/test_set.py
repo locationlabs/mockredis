@@ -49,11 +49,11 @@ class TestRedisSet(object):
             self.redis.sdiff([])
 
         eq_(set(), self.redis.sdiff("w"))
-        eq_(set(["one", "two", "three"]), self.redis.sdiff("x"))
-        eq_(set(["two", "three"]), self.redis.sdiff("x", "y"))
-        eq_(set(["two", "three"]), self.redis.sdiff(["x", "y"]))
-        eq_(set(["three"]), self.redis.sdiff("x", "y", "z"))
-        eq_(set(["three"]), self.redis.sdiff(["x", "y"], "z"))
+        eq_(set([b"one", b"two", b"three"]), self.redis.sdiff("x"))
+        eq_(set([b"two", b"three"]), self.redis.sdiff("x", "y"))
+        eq_(set([b"two", b"three"]), self.redis.sdiff(["x", "y"]))
+        eq_(set([b"three"]), self.redis.sdiff("x", "y", "z"))
+        eq_(set([b"three"]), self.redis.sdiff(["x", "y"], "z"))
 
     def test_sdiffstore(self):
         self.redis.sadd("x", "one", "two", "three")
@@ -64,16 +64,16 @@ class TestRedisSet(object):
             self.redis.sdiffstore("w", [])
 
         eq_(3, self.redis.sdiffstore("w", "x"))
-        eq_(set(["one", "two", "three"]), self.redis.smembers("w"))
+        eq_(set([b"one", b"two", b"three"]), self.redis.smembers("w"))
 
         eq_(2, self.redis.sdiffstore("w", "x", "y"))
-        eq_(set(["two", "three"]), self.redis.smembers("w"))
+        eq_(set([b"two", b"three"]), self.redis.smembers("w"))
         eq_(2, self.redis.sdiffstore("w", ["x", "y"]))
-        eq_(set(["two", "three"]), self.redis.smembers("w"))
+        eq_(set([b"two", b"three"]), self.redis.smembers("w"))
         eq_(1, self.redis.sdiffstore("w", "x", "y", "z"))
-        eq_(set(["three"]), self.redis.smembers("w"))
+        eq_(set([b"three"]), self.redis.smembers("w"))
         eq_(1, self.redis.sdiffstore("w", ["x", "y"], "z"))
-        eq_(set(["three"]), self.redis.smembers("w"))
+        eq_(set([b"three"]), self.redis.smembers("w"))
 
     def test_sinter(self):
         self.redis.sadd("x", "one", "two", "three")
@@ -84,9 +84,9 @@ class TestRedisSet(object):
             self.redis.sinter([])
 
         eq_(set(), self.redis.sinter("w"))
-        eq_(set(["one", "two", "three"]), self.redis.sinter("x"))
-        eq_(set(["one"]), self.redis.sinter("x", "y"))
-        eq_(set(["two"]), self.redis.sinter(["x", "z"]))
+        eq_(set([b"one", b"two", b"three"]), self.redis.sinter("x"))
+        eq_(set([b"one"]), self.redis.sinter("x", "y"))
+        eq_(set([b"two"]), self.redis.sinter(["x", "z"]))
         eq_(set(), self.redis.sinter("x", "y", "z"))
         eq_(set(), self.redis.sinter(["x", "y"], "z"))
 
@@ -99,12 +99,12 @@ class TestRedisSet(object):
             self.redis.sinterstore("w", [])
 
         eq_(3, self.redis.sinterstore("w", "x"))
-        eq_(set(["one", "two", "three"]), self.redis.smembers("w"))
+        eq_(set([b"one", b"two", b"three"]), self.redis.smembers("w"))
 
         eq_(1, self.redis.sinterstore("w", "x", "y"))
-        eq_(set(["one"]), self.redis.smembers("w"))
+        eq_(set([b"one"]), self.redis.smembers("w"))
         eq_(1, self.redis.sinterstore("w", ["x", "z"]))
-        eq_(set(["two"]), self.redis.smembers("w"))
+        eq_(set([b"two"]), self.redis.smembers("w"))
         eq_(0, self.redis.sinterstore("w", "x", "y", "z"))
         eq_(set(), self.redis.smembers("w"))
         eq_(0, self.redis.sinterstore("w", ["x", "y"], "z"))
@@ -126,7 +126,7 @@ class TestRedisSet(object):
         """
         key = "set"
         eq_(1, self.redis.sadd(key,  1))
-        eq_(set(["1"]), self.redis.smembers(key))
+        eq_(set([b"1"]), self.redis.smembers(key))
         ok_(self.redis.sismember(key, "1"))
         ok_(self.redis.sismember(key, 1))
 
@@ -135,15 +135,15 @@ class TestRedisSet(object):
         eq_(set(), self.redis.smembers(key))
         ok_(key not in self.redis)
         eq_(1, self.redis.sadd(key, "one"))
-        eq_(set(["one"]), self.redis.smembers(key))
+        eq_(set([b"one"]), self.redis.smembers(key))
         eq_(1, self.redis.sadd(key, "two"))
-        eq_(set(["one", "two"]), self.redis.smembers(key))
+        eq_(set([b"one", b"two"]), self.redis.smembers(key))
 
     def test_smembers_copy(self):
         key = "set"
         self.redis.sadd(key, "one", "two", "three")
         members = self.redis.smembers(key)
-        eq_({"one", "two", "three"}, members)
+        eq_({b"one", b"two", b"three"}, members)
         for member in members:
             # Checking that SMEMBERS returns the copy of internal data structure instead of
             # direct references. Otherwise SREM operation may give following error.
@@ -155,30 +155,30 @@ class TestRedisSet(object):
         eq_(0, self.redis.smove("x", "y", "one"))
 
         eq_(2, self.redis.sadd("x", "one", "two"))
-        eq_(set(["one", "two"]), self.redis.smembers("x"))
+        eq_(set([b"one", b"two"]), self.redis.smembers("x"))
         eq_(set(), self.redis.smembers("y"))
 
         eq_(0, self.redis.smove("x", "y", "three"))
-        eq_(set(["one", "two"]), self.redis.smembers("x"))
+        eq_(set([b"one", b"two"]), self.redis.smembers("x"))
         eq_(set(), self.redis.smembers("y"))
 
         eq_(1, self.redis.smove("x", "y", "one"))
-        eq_(set(["two"]), self.redis.smembers("x"))
-        eq_(set(["one"]), self.redis.smembers("y"))
+        eq_(set([b"two"]), self.redis.smembers("x"))
+        eq_(set([b"one"]), self.redis.smembers("y"))
 
     def test_spop(self):
         key = "set"
         eq_(None, self.redis.spop(key))
         eq_(1, self.redis.sadd(key, "one"))
-        eq_("one", self.redis.spop(key))
+        eq_(b"one", self.redis.spop(key))
         eq_(0, self.redis.scard(key))
         eq_(1, self.redis.sadd(key, "one"))
         eq_(1, self.redis.sadd(key, "two"))
         first = self.redis.spop(key)
-        ok_(first in ["one", "two"])
+        ok_(first in [b"one", b"two"])
         eq_(1, self.redis.scard(key))
         second = self.redis.spop(key)
-        eq_("one" if first == "two" else "two", second)
+        eq_(b"one" if first == b"two" else b"two", second)
         eq_(0, self.redis.scard(key))
         eq_([], self.redis.keys("*"))
 
@@ -187,22 +187,22 @@ class TestRedisSet(object):
         # count is None
         eq_(None, self.redis.srandmember(key))
         eq_(1, self.redis.sadd(key, "one"))
-        eq_("one", self.redis.srandmember(key))
+        eq_(b"one", self.redis.srandmember(key))
         eq_(1, self.redis.scard(key))
         eq_(1, self.redis.sadd(key, "two"))
-        ok_(self.redis.srandmember(key) in ["one", "two"])
+        ok_(self.redis.srandmember(key) in [b"one", b"two"])
         eq_(2, self.redis.scard(key))
         # count > 0
         eq_([], self.redis.srandmember("empty", 1))
-        ok_(self.redis.srandmember(key, 1)[0] in ["one", "two"])
-        eq_(set(["one", "two"]), set(self.redis.srandmember(key, 2)))
+        ok_(self.redis.srandmember(key, 1)[0] in [b"one", b"two"])
+        eq_(set([b"one", b"two"]), set(self.redis.srandmember(key, 2)))
         # count < 0
         eq_([], self.redis.srandmember("empty", -1))
-        ok_(self.redis.srandmember(key, -1)[0] in ["one", "two"])
+        ok_(self.redis.srandmember(key, -1)[0] in [b"one", b"two"])
         members = self.redis.srandmember(key, -2)
         eq_(2, len(members))
         for member in members:
-            ok_(member in ["one", "two"])
+            ok_(member in [b"one", b"two"])
 
     def test_srem(self):
         key = "set"
@@ -222,11 +222,11 @@ class TestRedisSet(object):
             self.redis.sunion([])
 
         eq_(set(), self.redis.sunion("v"))
-        eq_(set(["one", "two", "three"]), self.redis.sunion("x"))
-        eq_(set(["one"]), self.redis.sunion("v", "y"))
-        eq_(set(["one", "two"]), self.redis.sunion(["y", "z"]))
-        eq_(set(["one", "two", "three"]), self.redis.sunion("x", "y", "z"))
-        eq_(set(["one", "two", "three"]), self.redis.sunion(["x", "y"], "z"))
+        eq_(set([b"one", b"two", b"three"]), self.redis.sunion("x"))
+        eq_(set([b"one"]), self.redis.sunion("v", "y"))
+        eq_(set([b"one", b"two"]), self.redis.sunion(["y", "z"]))
+        eq_(set([b"one", b"two", b"three"]), self.redis.sunion("x", "y", "z"))
+        eq_(set([b"one", b"two", b"three"]), self.redis.sunion(["x", "y"], "z"))
 
     def test_sunionstore(self):
         self.redis.sadd("x", "one", "two", "three")
@@ -240,16 +240,16 @@ class TestRedisSet(object):
         eq_(set(), self.redis.smembers("w"))
 
         eq_(3, self.redis.sunionstore("w", "x"))
-        eq_(set(["one", "two", "three"]), self.redis.smembers("w"))
+        eq_(set([b"one", b"two", b"three"]), self.redis.smembers("w"))
 
         eq_(1, self.redis.sunionstore("w", "v", "y"))
-        eq_(set(["one"]), self.redis.smembers("w"))
+        eq_(set([b"one"]), self.redis.smembers("w"))
 
         eq_(2, self.redis.sunionstore("w", ["y", "z"]))
-        eq_(set(["one", "two"]), self.redis.smembers("w"))
+        eq_(set([b"one", b"two"]), self.redis.smembers("w"))
 
         eq_(3, self.redis.sunionstore("w", "x", "y", "z"))
-        eq_(set(["one", "two", "three"]), self.redis.smembers("w"))
+        eq_(set([b"one", b"two", b"three"]), self.redis.smembers("w"))
 
         eq_(3, self.redis.sunionstore("w", ["x", "y"], "z"))
-        eq_(set(["one", "two", "three"]), self.redis.smembers("w"))
+        eq_(set([b"one", b"two", b"three"]), self.redis.smembers("w"))

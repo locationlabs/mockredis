@@ -1,3 +1,6 @@
+Version 2.9.0.10
+ - Return & store byte strings everywhere (unicode turns into utf-8 by default)
+
 Version 2.9.0.9
 
  - Support: RENAME and RENAMENX

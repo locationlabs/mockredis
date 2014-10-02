@@ -70,6 +70,7 @@ class Script(object):
             - debug lib.
             - cmsgpack lib.
         """
+        # TODO: Make this not disable the scripting tests on osx.
         import ctypes
         ctypes.CDLL('liblua5.2.so', mode=ctypes.RTLD_GLOBAL)
 
