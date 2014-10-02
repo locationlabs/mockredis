@@ -39,7 +39,7 @@ class MockRedisPipeline(object):
             raise RedisError("Cannot issue a WATCH after a MULTI")
         self.watching = True
         for key in keys:
-            self._watched_keys[key] = deepcopy(self.mock_redis.redis.get(key))
+            self._watched_keys[key] = deepcopy(self.mock_redis.redis.get(self.mock_redis._encode(key)))
 
     def multi(self):
         """
@@ -58,7 +58,7 @@ class MockRedisPipeline(object):
         """
         try:
             for key, value in self._watched_keys.items():
-                if self.mock_redis.redis.get(key) != value:
+                if self.mock_redis.redis.get(self.mock_redis._encode(key)) != value:
                     raise WatchError("Watched variable changed.")
             return [command() for command in self.commands]
         finally:

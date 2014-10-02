@@ -21,6 +21,9 @@ if sys.version_info >= (3, 0):
     xrange = range
     basestring = str
     from functools import reduce
+    b = lambda x: x.encode('latin-1') if not isinstance(x, bytes) else x
+else:
+    b = lambda x: x
 
 
 class MockRedis(object):
@@ -60,7 +63,7 @@ class MockRedis(object):
     #### Connection Functions ####
 
     def echo(self, msg):
-        return msg
+        return self._encode(msg)
 
     def ping(self):
         return "PONG"
@@ -104,35 +107,36 @@ class MockRedis(object):
     #### Keys Functions ####
 
     def type(self, key):
+        key = self._encode(key)
         if key not in self.redis:
-            return 'none'
+            return b('none')
         type_ = type(self.redis[key])
         if type_ is dict:
-            return 'hash'
+            return b('hash')
         elif type_ is str:
-            return 'string'
+            return b('string')
         elif type_ is set:
-            return 'set'
+            return b('set')
         elif type_ is list:
-            return 'list'
+            return b('list')
         elif type_ is SortedSet:
-            return 'zset'
+            return b('zset')
         raise TypeError("unhandled type {}".format(type_))
 
     def keys(self, pattern='*'):
         """Emulate keys."""
         # Make a regex out of pattern. The only special matching character we look for is '*'
-        regex = '^' + pattern.replace('*', '.*') + '$'
+        regex = re.compile('^' + re.escape(pattern).replace('\\*', '.*') + '$')
 
         # Find every key that matches the pattern
-        result = [key for key in self.redis.keys() if re.match(regex, key)]
+        result = [key for key in self.redis.keys() if regex.match(key.decode('utf-8'))]
 
         return result
 
     def delete(self, *keys):
         """Emulate delete."""
         key_counter = 0
-        for key in map(str, keys):
+        for key in map(self._encode, keys):
             if key in self.redis:
                 del self.redis[key]
                 key_counter += 1
@@ -147,7 +151,7 @@ class MockRedis(object):
 
     def exists(self, key):
         """Emulate exists."""
-        return key in self.redis
+        return self._encode(key) in self.redis
     __contains__ = exists
 
     def _expire(self, key, delta):
@@ -160,15 +164,16 @@ class MockRedis(object):
     def expire(self, key, delta):
         """Emulate expire"""
         delta = delta if isinstance(delta, timedelta) else timedelta(seconds=delta)
-        return self._expire(key, delta)
+        return self._expire(self._encode(key), delta)
 
     def pexpire(self, key, milliseconds):
         """Emulate pexpire"""
-        return self._expire(key, timedelta(milliseconds=milliseconds))
+        return self._expire(self._encode(key), timedelta(milliseconds=milliseconds))
 
     def expireat(self, key, when):
         """Emulate expireat"""
         expire_time = datetime.fromtimestamp(when)
+        key = self._encode(key)
         if key in self.redis:
             self.timeouts[key] = expire_time
             return True
@@ -178,6 +183,7 @@ class MockRedis(object):
         """
         Returns time to live in milliseconds if output_ms is True, else returns seconds.
         """
+        key = self._encode(key)
         if key not in self.redis:
             # as of redis 2.8, -2 returned if key does not exist
             return long(-2)
@@ -219,7 +225,7 @@ class MockRedis(object):
         Expire objects assuming now == time
         """
         for key, value in self.timeouts.items():
-            if value - self.clock.now() < timedelta(0):
+            if value < self.clock.now():
                 del self.timeouts[key]
                 # removing the expired key
                 if key in self.redis:
@@ -237,6 +243,8 @@ class MockRedis(object):
         return 1 if self._rename(old_key, new_key, True) else 0
 
     def _rename(self, old_key, new_key, nx=False):
+        old_key = self._encode(old_key)
+        new_key = self._encode(new_key)
         if old_key in self.redis and (not nx or new_key not in self.redis):
             self.redis[new_key] = self.redis.pop(old_key)
             return True
@@ -245,10 +253,8 @@ class MockRedis(object):
     #### String Functions ####
 
     def get(self, key):
-
-        # Override the default dict
-        result = None if key not in self.redis else self.redis[key]
-        return result
+        key = self._encode(key)
+        return self.redis.get(key)
 
     def __getitem__(self, name):
         """
@@ -273,6 +279,9 @@ class MockRedis(object):
         If px and ex are both set, the preference is given to px.
         If the key is not set for some reason, the lib function returns None.
         """
+        key = self._encode(key)
+        value = self._encode(value)
+
         if nx and xx:
             return None
         mode = "nx" if nx else "xx" if xx else None
@@ -299,7 +308,7 @@ class MockRedis(object):
         return old_value
 
     def _set(self, key, value):
-        self.redis[key] = str(value)
+        self.redis[key] = self._encode(value)
 
         # removing the timeout
         if key in self.timeouts:
@@ -382,8 +391,8 @@ class MockRedis(object):
         else:
             mapping = kwargs
 
-        for key, value in mapping.items():
-            if key in self.redis:
+        for key in mapping.keys():
+            if self._encode(key) in self.redis:
                 return False
         for key, value in mapping.items():
             self.set(key, value)
@@ -391,22 +400,21 @@ class MockRedis(object):
         return True
 
     def decr(self, key, amount=1):
-        """Emulate decr."""
+        key = self._encode(key)
         previous_value = long(self.redis.get(key, '0'))
-        self.redis[key] = str(previous_value - amount)
+        self.redis[key] = b(str(previous_value - amount))
         return long(self.redis[key])
 
-    def decrby(self, key, amount=1):
-        return self.decr(key, amount)
+    decrby = decr
 
     def incr(self, key, amount=1):
         """Emulate incr."""
+        key = self._encode(key)
         previous_value = long(self.redis.get(key, '0'))
-        self.redis[key] = str(previous_value + amount)
+        self.redis[key] = b(str(previous_value + amount))
         return long(self.redis[key])
 
-    def incrby(self, key, amount=1):
-        return self.incr(key, amount)
+    incrby = incr
 
     #### Hash Functions ####
 
@@ -414,13 +422,13 @@ class MockRedis(object):
         """Emulate hexists."""
 
         redis_hash = self._get_hash(hashkey, 'HEXISTS')
-        return str(attribute) in redis_hash
+        return self._encode(attribute) in redis_hash
 
     def hget(self, hashkey, attribute):
         """Emulate hget."""
 
         redis_hash = self._get_hash(hashkey, 'HGET')
-        return redis_hash.get(str(attribute))
+        return redis_hash.get(self._encode(attribute))
 
     def hgetall(self, hashkey):
         """Emulate hgetall."""
@@ -434,12 +442,12 @@ class MockRedis(object):
         redis_hash = self._get_hash(hashkey, 'HDEL')
         count = 0
         for key in keys:
-            attribute = str(key)
+            attribute = self._encode(key)
             if attribute in redis_hash:
                 count += 1
                 del redis_hash[attribute]
                 if not redis_hash:
-                    del self.redis[hashkey]
+                    self.delete(hashkey)
         return count
 
     def hlen(self, hashkey):
@@ -452,32 +460,32 @@ class MockRedis(object):
 
         redis_hash = self._get_hash(hashkey, 'HMSET', create=True)
         for key, value in value.items():
-            attribute = str(key)
-            redis_hash[attribute] = str(value)
+            attribute = self._encode(key)
+            redis_hash[attribute] = self._encode(value)
 
     def hmget(self, hashkey, keys, *args):
         """Emulate hmget."""
 
         redis_hash = self._get_hash(hashkey, 'HMGET')
         attributes = self._list_or_args(keys, args)
-        return [redis_hash.get(str(attribute)) for attribute in attributes]
+        return [redis_hash.get(self._encode(attribute)) for attribute in attributes]
 
     def hset(self, hashkey, attribute, value):
         """Emulate hset."""
 
         redis_hash = self._get_hash(hashkey, 'HSET', create=True)
-        attribute = str(attribute)
-        redis_hash[attribute] = str(value)
+        attribute = self._encode(attribute)
+        redis_hash[attribute] = self._encode(value)
 
     def hsetnx(self, hashkey, attribute, value):
         """Emulate hsetnx."""
 
         redis_hash = self._get_hash(hashkey, 'HSETNX', create=True)
-        attribute = str(attribute)
+        attribute = self._encode(attribute)
         if attribute in redis_hash:
             return 0
         else:
-            redis_hash[attribute] = str(value)
+            redis_hash[attribute] = self._encode(value)
             return 1
 
     def hincrby(self, hashkey, attribute, increment=1):
@@ -493,9 +501,9 @@ class MockRedis(object):
     def _hincrby(self, hashkey, attribute, command, type_, increment):
         """Shared hincrby and hincrbyfloat routine"""
         redis_hash = self._get_hash(hashkey, command, create=True)
-        attribute = str(attribute)
+        attribute = self._encode(attribute)
         previous_value = type_(redis_hash.get(attribute, '0'))
-        redis_hash[attribute] = str(previous_value + increment)
+        redis_hash[attribute] = self._encode(previous_value + increment)
         return type_(redis_hash[attribute])
 
     def hkeys(self, hashkey):
@@ -523,7 +531,7 @@ class MockRedis(object):
 
         redis_list = self._get_list(key, 'LINDEX')
 
-        if key not in self.redis:
+        if self._encode(key) not in self.redis:
             return None
 
         try:
@@ -567,7 +575,7 @@ class MockRedis(object):
         for key in keys:
             val = pop_func(key)
             if val:
-                return key, val
+                return self._encode(key), val
         return None, None
 
     def blpop(self, keys, timeout=0):
@@ -582,13 +590,13 @@ class MockRedis(object):
         """Emulate lpop."""
         redis_list = self._get_list(key, 'LPOP')
 
-        if key not in self.redis:
+        if self._encode(key) not in self.redis:
             return None
 
         try:
-            value = str(redis_list.pop(0))
+            value = redis_list.pop(0)
             if len(redis_list) == 0:
-                del self.redis[key]
+                self.delete(key)
             return value
         except (IndexError):
             # Redis returns nil if popping from an empty list
@@ -599,21 +607,21 @@ class MockRedis(object):
         redis_list = self._get_list(key, 'LPUSH', create=True)
 
         # Creates the list at this key if it doesn't exist, and appends args to its beginning
-        args_reversed = [str(arg) for arg in args]
+        args_reversed = [self._encode(arg) for arg in args]
         args_reversed.reverse()
-        self.redis[key] = args_reversed + redis_list
+        self.redis[self._encode(key)] = args_reversed + redis_list
 
     def rpop(self, key):
         """Emulate lpop."""
         redis_list = self._get_list(key, 'RPOP')
 
-        if key not in self.redis:
+        if self._encode(key) not in self.redis:
             return None
 
         try:
-            value = str(redis_list.pop())
+            value = redis_list.pop()
             if len(redis_list) == 0:
-                del self.redis[key]
+                self.delete(key)
             return value
         except (IndexError):
             # Redis returns nil if popping from an empty list
@@ -624,14 +632,14 @@ class MockRedis(object):
         redis_list = self._get_list(key, 'RPUSH', create=True)
 
         # Creates the list at this key if it doesn't exist, and appends args to it
-        redis_list.extend(map(str, args))
+        redis_list.extend(map(self._encode, args))
 
     def lrem(self, key, value, count=0):
         """Emulate lrem."""
-        key, value = str(key), str(value)
+        value = self._encode(value)
         redis_list = self._get_list(key, 'LREM')
         removed_count = 0
-        if key in self.redis:
+        if self._encode(key) in self.redis:
             if count == 0:
                 # Remove all ocurrences
                 while redis_list.count(value):
@@ -656,9 +664,9 @@ class MockRedis(object):
                         removed_count += 1
                     else:
                         new_list.append(v)
-                self.redis[key] = list(reversed(new_list))
+                redis_list[:] = list(reversed(new_list))
         if removed_count > 0 and len(redis_list) == 0:
-            del self.redis[key]
+            self.delete(key)
         return removed_count
 
     def ltrim(self, key, start, stop):
@@ -666,7 +674,7 @@ class MockRedis(object):
         redis_list = self._get_list(key, 'LTRIM')
         if redis_list:
             start, stop = self._translate_range(len(redis_list), start, stop)
-            self.redis[key] = redis_list[start:stop + 1]
+            self.redis[self._encode(key)] = redis_list[start:stop + 1]
         return True
 
     def rpoplpush(self, source, destination):
@@ -692,7 +700,7 @@ class MockRedis(object):
         if redis_list is None:
             raise ResponseError("no such key")
         try:
-            redis_list[index] = value
+            redis_list[index] = self._encode(value)
         except IndexError:
             raise ResponseError("index out of range")
 
@@ -717,15 +725,16 @@ class MockRedis(object):
             else:
                 return []
 
+        by = b(str(by)) if by is not None else by
         # always organize the items as tuples of the value from the list itself and the value to sort by
-        if by and '*' in by:
-            items = [(i, self.get(by.replace('*', str(i)))) for i in items]
-        elif by in [None, 'nosort']:
+        if by and b('*') in by:
+            items = [(i, self.get(by.replace(b('*'), b(i)))) for i in items]
+        elif by in [None, b('nosort')]:
             items = [(i, i) for i in items]
         else:
             raise ValueError('invalid value for "by": %s' % by)
 
-        if by != 'nosort':
+        if by != b('nosort'):
             # if sorting, do alpha sort or float (default) and take desc flag into account
             sort_type = alpha and str or float
             items.sort(key=lambda x: sort_type(x[1]), reverse=bool(desc))
@@ -737,10 +746,11 @@ class MockRedis(object):
                 # always deal with get specifiers as a list
                 get = [get]
             for g in get:
-                if g == '#':
+                g = b(g)
+                if g == b('#'):
                     results.append([self.get(i) for i in items])
                 else:
-                    results.append([self.get(g.replace('*', str(i[0]))) for i in items])
+                    results.append([self.get(g.replace(b('*'), b(i[0]))) for i in items])
         else:
             # if not using GET then returning just the item itself
             results.append([i[0] for i in items])
@@ -768,7 +778,7 @@ class MockRedis(object):
 
         # either store value and return length of results or just return results
         if store:
-            self.redis[store] = results
+            self.redis[self._encode(store)] = results
             return len(results)
         else:
             return results
@@ -798,10 +808,10 @@ class MockRedis(object):
         values = values[cursor:cursor+count]
 
         if match is not None:
-            regex = '^' + match.replace('*', '.*') + '$'
+            regex = re.compile('^' + re.escape(match).replace('\\*', '.*') + '$')
             if not key:
                 key = lambda v: v
-            values = filter(lambda v: re.match(regex, key(v)), values)
+            values = [v for v in values if regex.match(key(v).decode('utf-8'))]
 
         return [result_cursor, values]
 
@@ -846,7 +856,7 @@ class MockRedis(object):
             raise ResponseError("wrong number of arguments for 'sadd' command")
         redis_set = self._get_set(key, 'SADD', create=True)
         before_count = len(redis_set)
-        redis_set.update(map(str, values))
+        redis_set.update(map(self._encode, values))
         after_count = len(redis_set)
         return after_count - before_count
 
@@ -863,7 +873,7 @@ class MockRedis(object):
     def sdiffstore(self, dest, keys, *args):
         """Emulate sdiffstore."""
         result = self.sdiff(keys, *args)
-        self.redis[dest] = result
+        self.redis[self._encode(dest)] = result
         return len(result)
 
     def sinter(self, keys, *args):
@@ -874,7 +884,7 @@ class MockRedis(object):
     def sinterstore(self, dest, keys, *args):
         """Emulate sinterstore."""
         result = self.sinter(keys, *args)
-        self.redis[dest] = result
+        self.redis[self._encode(dest)] = result
         return len(result)
 
     def sismember(self, name, value):
@@ -883,7 +893,7 @@ class MockRedis(object):
         if not redis_set:
             return 0
 
-        result = str(value) in redis_set
+        result = self._encode(value) in redis_set
         return 1 if result else 0
 
     def smembers(self, name):
@@ -894,13 +904,14 @@ class MockRedis(object):
         """Emulate smove."""
         src_set = self._get_set(src, 'SMOVE')
         dst_set = self._get_set(dst, 'SMOVE')
+        value = self._encode(value)
 
         if value not in src_set:
             return False
 
         src_set.discard(value)
         dst_set.add(value)
-        self.redis[src], self.redis[dst] = src_set, dst_set
+        self.redis[self._encode(src)], self.redis[self._encode(dst)] = src_set, dst_set
         return True
 
     def spop(self, name):
@@ -911,7 +922,7 @@ class MockRedis(object):
         member = choice(list(redis_set))
         redis_set.remove(member)
         if len(redis_set) == 0:
-            del self.redis[name]
+            self.delete(name)
         return member
 
     def srandmember(self, name, number=None):
@@ -933,10 +944,10 @@ class MockRedis(object):
             return 0
         before_count = len(redis_set)
         for value in values:
-            redis_set.discard(str(value))
+            redis_set.discard(self._encode(value))
         after_count = len(redis_set)
         if before_count > 0 and len(redis_set) == 0:
-            del self.redis[key]
+            self.delete(key)
         return before_count - after_count
 
     def sunion(self, keys, *args):
@@ -947,7 +958,7 @@ class MockRedis(object):
     def sunionstore(self, dest, keys, *args):
         """Emulate sunionstore."""
         result = self.sunion(keys, *args)
-        self.redis[dest] = result
+        self.redis[self._encode(dest)] = result
         return len(result)
 
     #### SORTED SET COMMANDS ####
@@ -971,7 +982,7 @@ class MockRedis(object):
         # kwargs
         pieces.extend(kwargs.items())
 
-        insert_count = lambda member, score: 1 if zset.insert(str(member), float(score)) else 0
+        insert_count = lambda member, score: 1 if zset.insert(self._encode(member), float(score)) else 0
         return sum((insert_count(member, score) for member, score in pieces))
 
     def zcard(self, name):
@@ -990,7 +1001,7 @@ class MockRedis(object):
     def zincrby(self, name, value, amount=1):
         zset = self._get_zset(name, "ZINCRBY", create=True)
 
-        value = str(value)
+        value = self._encode(value)
         score = zset.score(value) or 0.0
         score += float(amount)
         zset[value] = score
@@ -1016,7 +1027,7 @@ class MockRedis(object):
             intersection[member] = reduce(aggregate_func, scores)
 
         # always override existing keys
-        self.redis[dest] = intersection
+        self.redis[self._encode(dest)] = intersection
         return len(intersection)
 
     def zrange(self, name, start, end, desc=False, withscores=False,
@@ -1053,7 +1064,7 @@ class MockRedis(object):
     def zrank(self, name, value):
         zset = self._get_zset(name, "ZRANK")
 
-        return zset.rank(value) if zset else None
+        return zset.rank(self._encode(value)) if zset else None
 
     def zrem(self, name, *values):
         zset = self._get_zset(name, "ZREM")
@@ -1061,10 +1072,10 @@ class MockRedis(object):
         if not zset:
             return 0
 
-        count_removals = lambda value: 1 if zset.remove(value) else 0
+        count_removals = lambda value: 1 if zset.remove(self._encode(value)) else 0
         removal_count = sum((count_removals(value) for value in values))
         if removal_count > 0 and len(zset) == 0:
-            del self.redis[name]
+            self.delete(name)
         return removal_count
 
     def zremrangebyrank(self, name, start, end):
@@ -1077,7 +1088,7 @@ class MockRedis(object):
         count_removals = lambda score, member: 1 if zset.remove(member) else 0
         removal_count = sum((count_removals(score, member) for score, member in zset.range(start, end)))
         if removal_count > 0 and len(zset) == 0:
-            del self.redis[name]
+            self.delete(name)
         return removal_count
 
     def zremrangebyscore(self, name, min_, max_):
@@ -1095,7 +1106,7 @@ class MockRedis(object):
                                                                   start_inclusive=include_start,
                                                                   end_inclusive=include_end)))
         if removal_count > 0 and len(zset) == 0:
-            del self.redis[name]
+            self.delete(name)
         return removal_count
 
     def zrevrange(self, name, start, end, withscores=False,
@@ -1130,12 +1141,16 @@ class MockRedis(object):
         if zset is None:
             return None
 
-        return len(zset) - zset.rank(value) - 1
+        rank = zset.rank(self._encode(value))
+        if rank is None:
+            return None
+
+        return len(zset) - rank - 1
 
     def zscore(self, name, value):
         zset = self._get_zset(name, "ZSCORE")
 
-        return zset.score(value) if zset is not None else None
+        return zset.score(self._encode(value)) if zset is not None else None
 
     def zunionstore(self, dest, keys, aggregate=None):
         union = SortedSet()
@@ -1153,7 +1168,7 @@ class MockRedis(object):
                     union[member] = score
 
         # always override existing keys
-        self.redis[dest] = union
+        self.redis[self._encode(dest)] = union
         return len(union)
 
     #### Script Commands ####
@@ -1276,32 +1291,32 @@ class MockRedis(object):
         """
         Get (and maybe create) a list by name.
         """
-        return self._get_by_type(key, operation, create, 'list', [])
+        return self._get_by_type(key, operation, create, b('list'), [])
 
     def _get_set(self, key, operation, create=False):
         """
         Get (and maybe create) a set by name.
         """
-        return self._get_by_type(key, operation, create, 'set', set())
+        return self._get_by_type(key, operation, create, b('set'), set())
 
     def _get_hash(self, name, operation, create=False):
         """
         Get (and maybe create) a hash by name.
         """
-        return self._get_by_type(name, operation, create, 'hash', {})
+        return self._get_by_type(name, operation, create, b('hash'), {})
 
     def _get_zset(self, name, operation, create=False):
         """
         Get (and maybe create) a sorted set by name.
         """
-        return self._get_by_type(name, operation, create, 'zset', SortedSet(), return_default=False)
+        return self._get_by_type(name, operation, create, b('zset'), SortedSet(), return_default=False)
 
     def _get_by_type(self, key, operation, create, type_, default, return_default=True):
         """
         Get (and maybe create) a redis data structure by name and type.
         """
-        key = str(key)
-        if self.type(key) in [type_, 'none']:
+        key = self._encode(key)
+        if self.type(key) in [type_, b('none')]:
             if create:
                 return self.redis.setdefault(key, default)
             else:
@@ -1381,6 +1396,20 @@ class MockRedis(object):
         if isinstance(score, basestring) and score[0] == '(':
             return False, float(score[1:])
         return True, float(score)
+
+    def _encode(self, value):
+        "Return a bytestring representation of the value. Taken from redis-py connection.py"
+        if isinstance(value, bytes):
+            return value
+        elif isinstance(value, (int, long)):
+            value = b(str(value))
+        elif isinstance(value, float):
+            value = b(repr(value))
+        elif not isinstance(value, basestring):
+            value = b(str(value))
+        else:
+            value = value.encode('utf-8', 'strict')
+        return value
 
 
 def get_total_seconds(td):

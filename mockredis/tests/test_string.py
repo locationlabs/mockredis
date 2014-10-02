@@ -1,9 +1,16 @@
 from datetime import timedelta
+import sys
 
 from nose.tools import eq_, ok_
 
 from mockredis.client import get_total_milliseconds
 from mockredis.tests.fixtures import raises_response_error, setup
+
+
+if sys.version_info >= (3, 0):
+    b = lambda x: x.encode('latin-1') if not isinstance(x, bytes) else x
+else:
+    b = lambda x: x
 
 
 class TestRedisString(object):
@@ -15,7 +22,7 @@ class TestRedisString(object):
     def test_get(self):
         eq_(None, self.redis.get('key'))
         self.redis.set('key', 'value')
-        eq_('value', self.redis.get('key'))
+        eq_(b'value', self.redis.get('key'))
 
     def test_mget(self):
         eq_(None, self.redis.get('mget1'))
@@ -25,12 +32,12 @@ class TestRedisString(object):
 
         self.redis.set('mget1', 'value1')
         self.redis.set('mget2', 'value2')
-        eq_(['value1', 'value2'], self.redis.mget('mget1', 'mget2'))
-        eq_(['value1', 'value2'], self.redis.mget(['mget1', 'mget2']))
+        eq_([b'value1', b'value2'], self.redis.mget('mget1', 'mget2'))
+        eq_([b'value1', b'value2'], self.redis.mget(['mget1', 'mget2']))
 
     def test_set_no_options(self):
         self.redis.set('key', 'value')
-        eq_('value', self.redis.get('key'))
+        eq_(b'value', self.redis.get('key'))
 
     def _assert_set_with_options(self, test_cases):
         """
@@ -60,6 +67,7 @@ class TestRedisString(object):
         """Check that the key and its timeout were not set"""
 
         # check that the value wasn't updated
+        value = b(value) if value is not None else value
         ok_(value != self.redis.get(key), msg)
         if self.redis.exists(key):
             # check that the expiration was not set
@@ -71,11 +79,13 @@ class TestRedisString(object):
     def _assert_was_set(self, key, value, config, msg, delta=1):
         """Assert that the key was set along with timeout if applicable"""
 
+        value = b(value) if value is not None else value
         eq_(value, self.redis.get(key))
         if "px" not in config and "ex" not in config:
             return
         # px should have been preferred over ex if it was specified
         ttl = self.redis.ttl(key)
+        ok_(ttl > 0, msg)
         expected_ttl = int(config['px'] / 1000) if "px" in config else config["ex"]
         ok_(expected_ttl - ttl <= delta, msg)
 
@@ -163,8 +173,8 @@ class TestRedisString(object):
 
         ok_(self.redis_strict.setex('key', seconds, 'value'))
         ok_(self.redis.setex('key', 'value', seconds))
-        eq_('value', self.redis_strict.get('key'))
-        eq_('value', self.redis.get('key'))
+        eq_(b'value', self.redis_strict.get('key'))
+        eq_(b'value', self.redis.get('key'))
 
         ok_(self.redis_strict.ttl('key'), "expiration was not set correctly")
         ok_(self.redis.ttl('key'), "expiration was not set correctly")
@@ -197,12 +207,12 @@ class TestRedisString(object):
     def test_mset(self):
         ok_(self.redis.mset({"key1": "hello", "key2": ""}))
         ok_(self.redis.mset(**{"key3": "world", "key2": "there"}))
-        eq_(["hello", "there", "world"], self.redis.mget("key1", "key2", "key3"))
+        eq_([b"hello", b"there", b"world"], self.redis.mget("key1", "key2", "key3"))
 
     def test_msetnx(self):
         ok_(self.redis.msetnx({"key1": "hello", "key2": "there"}))
         ok_(not self.redis.msetnx(**{"key3": "world", "key2": "there"}))
-        eq_(["hello", "there", None], self.redis.mget("key1", "key2", "key3"))
+        eq_([b"hello", b"there", None], self.redis.mget("key1", "key2", "key3"))
 
     def test_psetex(self):
         test_cases = [200, timedelta(milliseconds=250)]
@@ -223,7 +233,7 @@ class TestRedisString(object):
         eq_(None, self.redis.get('key'))
 
         ok_(self.redis.psetex('key', milliseconds, 'value'))
-        eq_('value', self.redis.get('key'))
+        eq_(b'value', self.redis.get('key'))
 
         ok_(self.redis.pttl('key'), "expiration was not set correctly")
         if isinstance(milliseconds, timedelta):
@@ -236,7 +246,7 @@ class TestRedisString(object):
 
         ok_(self.redis.setnx('key', 'value'))
         ok_(not self.redis.setnx('key', 'different_value'))
-        eq_('value', self.redis.get('key'))
+        eq_(b'value', self.redis.get('key'))
 
     def test_delete(self):
         """Test if delete works"""
@@ -276,5 +286,5 @@ class TestRedisString(object):
     def test_getset(self):
         eq_(None, self.redis.get('getset_key'))
         eq_(None, self.redis.getset('getset_key', '1'))
-        eq_('1', self.redis.getset('getset_key', '2'))
-        eq_('2', self.redis.get('getset_key'))
+        eq_(b'1', self.redis.getset('getset_key', '2'))
+        eq_(b'2', self.redis.get('getset_key'))
