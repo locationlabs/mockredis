@@ -5,9 +5,9 @@ from datetime import datetime, timedelta
 from hashlib import sha1
 from operator import add
 from random import choice, sample
+import sys
 import time
 import re
-import sys
 
 from mockredis.clock import SystemClock
 from mockredis.lock import MockRedisLock
@@ -21,9 +21,6 @@ if sys.version_info >= (3, 0):
     xrange = range
     basestring = str
     from functools import reduce
-    b = lambda x: x.encode('latin-1') if not isinstance(x, bytes) else x
-else:
-    b = lambda x: x
 
 
 class MockRedis(object):
@@ -66,7 +63,7 @@ class MockRedis(object):
         return self._encode(msg)
 
     def ping(self):
-        return "PONG"
+        return b'PONG'
 
     #### Transactions Functions ####
 
@@ -109,18 +106,18 @@ class MockRedis(object):
     def type(self, key):
         key = self._encode(key)
         if key not in self.redis:
-            return b('none')
+            return b'none'
         type_ = type(self.redis[key])
         if type_ is dict:
-            return b('hash')
+            return b'hash'
         elif type_ is str:
-            return b('string')
+            return b'string'
         elif type_ is set:
-            return b('set')
+            return b'set'
         elif type_ is list:
-            return b('list')
+            return b'list'
         elif type_ is SortedSet:
-            return b('zset')
+            return b'zset'
         raise TypeError("unhandled type {}".format(type_))
 
     def keys(self, pattern='*'):
@@ -402,7 +399,7 @@ class MockRedis(object):
     def decr(self, key, amount=1):
         key = self._encode(key)
         previous_value = long(self.redis.get(key, '0'))
-        self.redis[key] = b(str(previous_value - amount))
+        self.redis[key] = self._encode(previous_value - amount)
         return long(self.redis[key])
 
     decrby = decr
@@ -411,7 +408,7 @@ class MockRedis(object):
         """Emulate incr."""
         key = self._encode(key)
         previous_value = long(self.redis.get(key, '0'))
-        self.redis[key] = b(str(previous_value + amount))
+        self.redis[key] = self._encode(previous_value + amount)
         return long(self.redis[key])
 
     incrby = incr
@@ -725,16 +722,16 @@ class MockRedis(object):
             else:
                 return []
 
-        by = b(str(by)) if by is not None else by
+        by = self._encode(by) if by is not None else by
         # always organize the items as tuples of the value from the list itself and the value to sort by
-        if by and b('*') in by:
-            items = [(i, self.get(by.replace(b('*'), b(i)))) for i in items]
-        elif by in [None, b('nosort')]:
+        if by and b'*' in by:
+            items = [(i, self.get(by.replace(b'*', self._encode(i)))) for i in items]
+        elif by in [None, b'nosort']:
             items = [(i, i) for i in items]
         else:
             raise ValueError('invalid value for "by": %s' % by)
 
-        if by != b('nosort'):
+        if by != b'nosort':
             # if sorting, do alpha sort or float (default) and take desc flag into account
             sort_type = alpha and str or float
             items.sort(key=lambda x: sort_type(x[1]), reverse=bool(desc))
@@ -745,12 +742,11 @@ class MockRedis(object):
             if isinstance(get, basestring):
                 # always deal with get specifiers as a list
                 get = [get]
-            for g in get:
-                g = b(g)
-                if g == b('#'):
+            for g in map(self._encode, get):
+                if g == b'#':
                     results.append([self.get(i) for i in items])
                 else:
-                    results.append([self.get(g.replace(b('*'), b(i[0]))) for i in items])
+                    results.append([self.get(g.replace(b'*', self._encode(i[0]))) for i in items])
         else:
             # if not using GET then returning just the item itself
             results.append([i[0] for i in items])
@@ -1291,32 +1287,32 @@ class MockRedis(object):
         """
         Get (and maybe create) a list by name.
         """
-        return self._get_by_type(key, operation, create, b('list'), [])
+        return self._get_by_type(key, operation, create, b'list', [])
 
     def _get_set(self, key, operation, create=False):
         """
         Get (and maybe create) a set by name.
         """
-        return self._get_by_type(key, operation, create, b('set'), set())
+        return self._get_by_type(key, operation, create, b'set', set())
 
     def _get_hash(self, name, operation, create=False):
         """
         Get (and maybe create) a hash by name.
         """
-        return self._get_by_type(name, operation, create, b('hash'), {})
+        return self._get_by_type(name, operation, create, b'hash', {})
 
     def _get_zset(self, name, operation, create=False):
         """
         Get (and maybe create) a sorted set by name.
         """
-        return self._get_by_type(name, operation, create, b('zset'), SortedSet(), return_default=False)
+        return self._get_by_type(name, operation, create, b'zset', SortedSet(), return_default=False)
 
     def _get_by_type(self, key, operation, create, type_, default, return_default=True):
         """
         Get (and maybe create) a redis data structure by name and type.
         """
         key = self._encode(key)
-        if self.type(key) in [type_, b('none')]:
+        if self.type(key) in [type_, b'none']:
             if create:
                 return self.redis.setdefault(key, default)
             else:
@@ -1402,11 +1398,11 @@ class MockRedis(object):
         if isinstance(value, bytes):
             return value
         elif isinstance(value, (int, long)):
-            value = b(str(value))
+            value = str(value).encode('utf-8')
         elif isinstance(value, float):
-            value = b(repr(value))
+            value = repr(value).encode('utf-8')
         elif not isinstance(value, basestring):
-            value = b(str(value))
+            value = str(value).encode('utf-8')
         else:
             value = value.encode('utf-8', 'strict')
         return value

@@ -1,19 +1,12 @@
-import sys
 import time
 
 from nose.tools import assert_raises, eq_
 
 from mockredis.tests.fixtures import setup
 from mockredis.tests.test_constants import (
-    LIST1, LIST2, VAL1, VAL2, VAL3, VAL4
+    LIST1, LIST2, VAL1, VAL2, VAL3, VAL4,
+    bLIST1, bLIST2, bVAL1, bVAL2, bVAL3, bVAL4,
 )
-
-
-if sys.version_info >= (3, 0):
-    b = lambda x: x.encode('latin-1') if not isinstance(x, bytes) else x
-else:
-    b = lambda x: x
-
 
 class TestRedisList(object):
     """list tests"""
@@ -40,30 +33,30 @@ class TestRedisList(object):
         eq_(None, self.redis.lindex(LIST1, 0))
         eq_(False, self.redis.exists(LIST1))
         self.redis.rpush(LIST1, VAL1, VAL2)
-        eq_(b(VAL1), self.redis.lindex(LIST1, 0))
-        eq_(b(VAL2), self.redis.lindex(LIST1, 1))
+        eq_(bVAL1, self.redis.lindex(LIST1, 0))
+        eq_(bVAL2, self.redis.lindex(LIST1, 1))
         eq_(None, self.redis.lindex(LIST1, 2))
-        eq_(b(VAL2), self.redis.lindex(LIST1, -1))
-        eq_(b(VAL1), self.redis.lindex(LIST1, -2))
+        eq_(bVAL2, self.redis.lindex(LIST1, -1))
+        eq_(bVAL1, self.redis.lindex(LIST1, -2))
         eq_(None, self.redis.lindex(LIST1, -3))
         self.redis.lpop(LIST1)
-        eq_(b(VAL2), self.redis.lindex(LIST1, 0))
+        eq_(bVAL2, self.redis.lindex(LIST1, 0))
         eq_(None, self.redis.lindex(LIST1, 1))
 
     def test_lpop(self):
         self.redis.rpush(LIST1, VAL1, VAL2)
-        eq_(b(VAL1), self.redis.lpop(LIST1))
+        eq_(bVAL1, self.redis.lpop(LIST1))
         eq_(1, len(self.redis.lrange(LIST1, 0, -1)))
-        eq_(b(VAL2), self.redis.lpop(LIST1))
+        eq_(bVAL2, self.redis.lpop(LIST1))
         eq_(0, len(self.redis.lrange(LIST1, 0, -1)))
         eq_(None, self.redis.lpop(LIST1))
         eq_([], self.redis.keys("*"))
 
     def test_blpop(self):
         self.redis.rpush(LIST1, VAL1, VAL2)
-        eq_((b(LIST1), b(VAL1)), self.redis.blpop((LIST1, LIST2)))
+        eq_((bLIST1, bVAL1), self.redis.blpop((LIST1, LIST2)))
         eq_(1, len(self.redis.lrange(LIST1, 0, -1)))
-        eq_((b(LIST1), b(VAL2)), self.redis.blpop(LIST1))
+        eq_((bLIST1, bVAL2), self.redis.blpop(LIST1))
         eq_(0, len(self.redis.lrange(LIST1, 0, -1)))
         timeout = 1
         start = time.time()
@@ -81,30 +74,30 @@ class TestRedisList(object):
 
         # validate insertion
         eq_(b"list", self.redis.type(LIST1))
-        eq_([b(VAL2), b(VAL1)], self.redis.lrange(LIST1, 0, -1))
+        eq_([bVAL2, bVAL1], self.redis.lrange(LIST1, 0, -1))
 
         # insert two more values with one repeated
         self.redis.lpush(LIST1, VAL1, VAL3)
 
         # validate the update
         eq_(b"list", self.redis.type(LIST1))
-        eq_([b(VAL3), b(VAL1), b(VAL2), b(VAL1)],
+        eq_([bVAL3, bVAL1, bVAL2, bVAL1],
             self.redis.lrange(LIST1, 0, -1))
 
     def test_rpop(self):
         self.redis.rpush(LIST1, VAL1, VAL2)
-        eq_(b(VAL2), self.redis.rpop(LIST1))
+        eq_(bVAL2, self.redis.rpop(LIST1))
         eq_(1, len(self.redis.lrange(LIST1, 0, -1)))
-        eq_(b(VAL1), self.redis.rpop(LIST1))
+        eq_(bVAL1, self.redis.rpop(LIST1))
         eq_(0, len(self.redis.lrange(LIST1, 0, -1)))
         eq_(None, self.redis.rpop(LIST1))
         eq_([], self.redis.keys("*"))
 
     def test_brpop(self):
         self.redis.rpush(LIST1, VAL1, VAL2)
-        eq_((b(LIST1), b(VAL2)), self.redis.brpop((LIST2, LIST1)))
+        eq_((bLIST1, bVAL2), self.redis.brpop((LIST2, LIST1)))
         eq_(1, len(self.redis.lrange(LIST1, 0, -1)))
-        eq_((b(LIST1), b(VAL1)), self.redis.brpop(LIST1))
+        eq_((bLIST1, bVAL1), self.redis.brpop(LIST1))
         eq_(0, len(self.redis.lrange(LIST1, 0, -1)))
         timeout = 1
         start = time.time()
@@ -122,50 +115,50 @@ class TestRedisList(object):
 
         # validate insertion
         eq_(b"list", self.redis.type(LIST1))
-        eq_([b(VAL1), b(VAL2)], self.redis.lrange(LIST1, 0, -1))
+        eq_([bVAL1, bVAL2], self.redis.lrange(LIST1, 0, -1))
 
         # insert two more values with one repeated
         self.redis.rpush(LIST1, VAL1, VAL3)
 
         # validate the update
         eq_(b"list", self.redis.type(LIST1))
-        eq_([b(VAL1), b(VAL2), b(VAL1), b(VAL3)],
+        eq_([bVAL1, bVAL2, bVAL1, bVAL3],
             self.redis.lrange(LIST1, 0, -1))
 
     def test_lrem(self):
         self.redis.rpush(LIST1, VAL1, VAL2, VAL1, VAL3, VAL4, VAL2)
         eq_(2, self.redis.lrem(LIST1, VAL1, 0))
-        eq_([b(VAL2), b(VAL3), b(VAL4), b(VAL2)],
+        eq_([bVAL2, bVAL3, bVAL4, bVAL2],
             self.redis.lrange(LIST1, 0, -1))
 
         del self.redis[LIST1]
         self.redis.rpush(LIST1, VAL1, VAL2, VAL1, VAL3, VAL4, VAL2)
         eq_(1, self.redis.lrem(LIST1, VAL2, 1))
-        eq_([b(VAL1), b(VAL1), b(VAL3), b(VAL4), b(VAL2)],
+        eq_([bVAL1, bVAL1, bVAL3, bVAL4, bVAL2],
             self.redis.lrange(LIST1, 0, -1))
 
         del self.redis[LIST1]
         self.redis.rpush(LIST1, VAL1, VAL2, VAL1, VAL3, VAL4, VAL2)
         eq_(2, self.redis.lrem(LIST1, VAL1, 100))
-        eq_([b(VAL2), b(VAL3), b(VAL4), b(VAL2)],
+        eq_([bVAL2, bVAL3, bVAL4, bVAL2],
             self.redis.lrange(LIST1, 0, -1))
 
         del self.redis[LIST1]
         self.redis.rpush(LIST1, VAL1, VAL2, VAL1, VAL3, VAL4, VAL2)
         eq_(1, self.redis.lrem(LIST1, VAL3, -1))
-        eq_([b(VAL1), b(VAL2), b(VAL1), b(VAL4), b(VAL2)],
+        eq_([bVAL1, bVAL2, bVAL1, bVAL4, bVAL2],
             self.redis.lrange(LIST1, 0, -1))
 
         del self.redis[LIST1]
         self.redis.rpush(LIST1, VAL1, VAL2, VAL1, VAL3, VAL4, VAL2)
         eq_(1, self.redis.lrem(LIST1, VAL2, -1))
-        eq_([b(VAL1), b(VAL2), b(VAL1), b(VAL3), b(VAL4)],
+        eq_([bVAL1, bVAL2, bVAL1, bVAL3, bVAL4],
             self.redis.lrange(LIST1, 0, -1))
 
         del self.redis[LIST1]
         self.redis.rpush(LIST1, VAL1, VAL2, VAL1, VAL3, VAL4, VAL2)
         eq_(2, self.redis.lrem(LIST1, VAL2, -2))
-        eq_([b(VAL1), b(VAL1), b(VAL3), b(VAL4)],
+        eq_([bVAL1, bVAL1, bVAL3, bVAL4],
             self.redis.lrange(LIST1, 0, -1))
 
         # string conversion
@@ -187,14 +180,14 @@ class TestRedisList(object):
         self.redis.rpush(LIST1, VAL1, VAL2)
         self.redis.rpush(LIST2, VAL3, VAL4)
         transfer_item = self.redis.brpoplpush(LIST1, LIST2)
-        eq_(b(VAL2), transfer_item)
-        eq_([b(VAL1)], self.redis.lrange(LIST1, 0, -1))
-        eq_([b(VAL2), b(VAL3), b(VAL4)],
+        eq_(bVAL2, transfer_item)
+        eq_([bVAL1], self.redis.lrange(LIST1, 0, -1))
+        eq_([bVAL2, bVAL3, bVAL4],
             self.redis.lrange(LIST2, 0, -1))
         transfer_item = self.redis.brpoplpush(LIST1, LIST2)
-        eq_(b(VAL1), transfer_item)
+        eq_(bVAL1, transfer_item)
         eq_([], self.redis.lrange(LIST1, 0, -1))
-        eq_([b(VAL1), b(VAL2), b(VAL3), b(VAL4)],
+        eq_([bVAL1, bVAL2, bVAL3, bVAL4],
             self.redis.lrange(LIST2, 0, -1))
         timeout = 1
         start = time.time()
@@ -205,9 +198,9 @@ class TestRedisList(object):
         self.redis.rpush(LIST1, VAL1, VAL2)
         self.redis.rpush(LIST2, VAL3, VAL4)
         transfer_item = self.redis.rpoplpush(LIST1, LIST2)
-        eq_(b(VAL2), transfer_item)
-        eq_([b(VAL1)], self.redis.lrange(LIST1, 0, -1))
-        eq_([b(VAL2), b(VAL3), b(VAL4)], self.redis.lrange(LIST2, 0, -1))
+        eq_(bVAL2, transfer_item)
+        eq_([bVAL1], self.redis.lrange(LIST1, 0, -1))
+        eq_([bVAL2, bVAL3, bVAL4], self.redis.lrange(LIST2, 0, -1))
 
     def test_rpoplpush_with_empty_source(self):
         # source list is empty
@@ -217,7 +210,7 @@ class TestRedisList(object):
         eq_(None, transfer_item)
         eq_([], self.redis.lrange(LIST1, 0, -1))
         # nothing has been added to the destination queue
-        eq_([b(VAL3), b(VAL4)], self.redis.lrange(LIST2, 0, -1))
+        eq_([bVAL3, bVAL4], self.redis.lrange(LIST2, 0, -1))
 
     def test_rpoplpush_source_with_empty_string(self):
         # source list contains empty string
@@ -232,11 +225,11 @@ class TestRedisList(object):
         eq_(3, self.redis.llen(LIST2))
         eq_([], self.redis.lrange(LIST1, 0, -1))
         # empty string is added to the destination queue
-        eq_([b'', b(VAL3), b(VAL4)], self.redis.lrange(LIST2, 0, -1))
+        eq_([b'', bVAL3, bVAL4], self.redis.lrange(LIST2, 0, -1))
 
     def test_lrange_get_all(self):
         """Cases for returning entire list"""
-        values = [b(VAL4), b(VAL3), b(VAL2), b(VAL1)]
+        values = [bVAL4, bVAL3, bVAL2, bVAL1]
 
         eq_([], self.redis.lrange(LIST1, 0, 6))
         eq_([], self.redis.lrange(LIST1, 0, -1))
@@ -251,7 +244,7 @@ class TestRedisList(object):
 
     def test_lrange_get_sublist(self):
         """Cases for returning partial list"""
-        values = [b(VAL4), b(VAL3), b(VAL2), b(VAL1)]
+        values = [bVAL4, bVAL3, bVAL2, bVAL1]
 
         eq_([], self.redis.lrange(LIST1, 0, 6))
         eq_([], self.redis.lrange(LIST1, 0, -1))
@@ -267,7 +260,7 @@ class TestRedisList(object):
         eq_(values[1:3], self.redis.lrange(LIST1, 1, 2))
 
     def test_ltrim_retain_all(self):
-        values = [b(VAL4), b(VAL3), b(VAL2), b(VAL1)]
+        values = [bVAL4, bVAL3, bVAL2, bVAL1]
         self._reinitialize_list(LIST1, *values)
 
         self.redis.ltrim(LIST1, 0, -1)
@@ -286,7 +279,7 @@ class TestRedisList(object):
         eq_(values, self.redis.lrange(LIST1, 0, -1))
 
     def test_ltrim_remove_all(self):
-        values = [b(VAL4), b(VAL3), b(VAL2), b(VAL1)]
+        values = [bVAL4, bVAL3, bVAL2, bVAL1]
         self._reinitialize_list(LIST1, *values)
 
         self.redis.ltrim(LIST1, 2, 1)
@@ -305,7 +298,7 @@ class TestRedisList(object):
         eq_([], self.redis.lrange(LIST1, 0, -1))
 
     def test_ltrim(self):
-        values = [b(VAL4), b(VAL3), b(VAL2), b(VAL1)]
+        values = [bVAL4, bVAL3, bVAL2, bVAL1]
         self._reinitialize_list(LIST1, *values)
 
         self.redis.ltrim(LIST1, 1, 2)
@@ -383,20 +376,20 @@ class TestRedisList(object):
             self.redis.lset(LIST1, 1, VAL1)
 
         self.redis.lpush(LIST1, VAL2)
-        eq_([b(VAL2)], self.redis.lrange(LIST1, 0, -1))
+        eq_([bVAL2], self.redis.lrange(LIST1, 0, -1))
 
         with assert_raises(Exception):
             self.redis.lset(LIST1, 1, VAL1)
 
         self.redis.lset(LIST1, 0, VAL1)
-        eq_([b(VAL1)], self.redis.lrange(LIST1, 0, -1))
+        eq_([bVAL1], self.redis.lrange(LIST1, 0, -1))
 
     def test_push_pop_returns_str(self):
         key = 'l'
         values = ['5', 5, [], {}]
         for v in values:
             self.redis.rpush(key, v)
-            eq_(self.redis.lpop(key), b(str(v)))
+            eq_(self.redis.lpop(key), str(v).encode('utf8'))
 
     def _reinitialize_list(self, key, *values):
         """
