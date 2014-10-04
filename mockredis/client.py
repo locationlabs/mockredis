@@ -222,7 +222,7 @@ class MockRedis(object):
         Expire objects assuming now == time
         """
         for key, value in self.timeouts.items():
-            if value < self.clock.now():
+            if value - self.clock.now() < timedelta(0):
                 del self.timeouts[key]
                 # removing the expired key
                 if key in self.redis:
