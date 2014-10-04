@@ -458,6 +458,7 @@ class MockRedis(object):
         for key, value in value.items():
             attribute = self._encode(key)
             redis_hash[attribute] = self._encode(value)
+        return True
 
     def hmget(self, hashkey, keys, *args):
         """Emulate hmget."""
@@ -471,7 +472,9 @@ class MockRedis(object):
 
         redis_hash = self._get_hash(hashkey, 'HSET', create=True)
         attribute = self._encode(attribute)
+        was_present = attribute in redis_hash
         redis_hash[attribute] = self._encode(value)
+        return 0 if was_present else 1
 
     def hsetnx(self, hashkey, attribute, value):
         """Emulate hsetnx."""
