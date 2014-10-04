@@ -798,7 +798,7 @@ class MockRedis(object):
             # we reached the end, back to zero
             result_cursor = 0
         else:
-            result_cursor = str(cursor + count)
+            result_cursor = cursor + count
 
         values = values[cursor:cursor+count]
 
@@ -1252,14 +1252,14 @@ class MockRedis(object):
 
             for i, arg in enumerate(args[3:], 3):
                 # keywords are case-insensitive
-                lower_arg = str(arg).lower()
+                lower_arg = self._encode(arg).lower()
 
                 # handle "limit"
-                if lower_arg == "limit" and i + 2 < len(args):
+                if lower_arg == b"limit" and i + 2 < len(args):
                     start, num = args[i + 1], args[i + 2]
 
                 # handle "withscores"
-                if lower_arg == "withscores":
+                if lower_arg == b"withscores":
                     withscores = True
 
             # do not expect to set score_cast_func
@@ -1344,7 +1344,7 @@ class MockRedis(object):
         Return a suitable function from (score, member)
         """
         if withscores:
-            return lambda score_member: (score_member[1], score_cast_func(str(score_member[0])))
+            return lambda score_member: (score_member[1], score_cast_func(self._encode(score_member[0])))
         else:
             return lambda score_member: score_member[1]
 
