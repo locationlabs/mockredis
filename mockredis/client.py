@@ -5,9 +5,9 @@ from datetime import datetime, timedelta
 from hashlib import sha1
 from operator import add
 from random import choice, sample
+import re
 import sys
 import time
-import re
 
 from mockredis.clock import SystemClock
 from mockredis.lock import MockRedisLock
@@ -176,22 +176,6 @@ class MockRedis(object):
             return True
         return False
 
-    def _time_to_live(self, key, output_ms):
-        """
-        Returns time to live in milliseconds if output_ms is True, else returns seconds.
-        """
-        key = self._encode(key)
-        if key not in self.redis:
-            # as of redis 2.8, -2 returned if key does not exist
-            return long(-2)
-        if key not in self.timeouts:
-            # redis-py returns None; command docs say -1
-            return None
-
-        get_result = get_total_milliseconds if output_ms else get_total_seconds
-        time_to_live = get_result(self.timeouts[key] - self.clock.now())
-        return long(max(-1, time_to_live))
-
     def ttl(self, key):
         """
         Emulate ttl
@@ -205,7 +189,10 @@ class MockRedis(object):
         :returns: the number of seconds till timeout, None if the key does not exist or if the
                   key has no timeout(as per the redis-py lib behavior).
         """
-        return self._time_to_live(key, output_ms=False)
+        value = self.pttl(key)
+        if value is None or value < 0:
+            return value
+        return value // 1000
 
     def pttl(self, key):
         """
@@ -215,7 +202,19 @@ class MockRedis(object):
         :returns: the number of milliseconds till timeout, None if the key does not exist or if the
                   key has no timeout(as per the redis-py lib behavior).
         """
-        return self._time_to_live(key, output_ms=True)
+        """
+        Returns time to live in milliseconds if output_ms is True, else returns seconds.
+        """
+        key = self._encode(key)
+        if key not in self.redis:
+            # as of redis 2.8, -2 is returned if the key does not exist
+            return long(-2) if self.strict else None
+        if key not in self.timeouts:
+            # as of redis 2.8, -1 is returned if the key is persistent
+            return long(-1) if self.strict else None
+
+        time_to_live = get_total_milliseconds(self.timeouts[key] - self.clock.now())
+        return long(max(-1, time_to_live))
 
     def do_expire(self):
         """
@@ -797,7 +796,7 @@ class MockRedis(object):
         values = values_function()
         if cursor + count >= len(values):
             # we reached the end, back to zero
-            result_cursor = '0'
+            result_cursor = 0
         else:
             result_cursor = str(cursor + count)
 
@@ -1406,13 +1405,6 @@ class MockRedis(object):
         else:
             value = value.encode('utf-8', 'strict')
         return value
-
-
-def get_total_seconds(td):
-    """
-    For python 2.6 support
-    """
-    return int((td.microseconds + (td.seconds + td.days * 24 * 3600) * 1e6) // 1e6)
 
 
 def get_total_milliseconds(td):

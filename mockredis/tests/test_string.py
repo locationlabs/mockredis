@@ -63,12 +63,7 @@ class TestRedisString(object):
         # check that the value wasn't updated
         value = value.encode('utf8') if value is not None else value
         ok_(value != self.redis.get(key), msg)
-        if self.redis.exists(key):
-            # check that the expiration was not set
-            eq_(self.redis.ttl(key), None)
-        else:
-            # check that the expiration was not set
-            eq_(self.redis.ttl(key), -2)
+        eq_(self.redis.ttl(key), None)
 
     def _assert_was_set(self, key, value, config, msg, delta=1):
         """Assert that the key was set along with timeout if applicable"""
@@ -270,7 +265,7 @@ class TestRedisString(object):
         # verify if the keys that were to be deleted, were deleted along with the timeouts.
         for key in set(to_create) & set(to_delete):
             ok_(key not in self.redis)
-            eq_(self.redis.ttl(key), -2)
+            eq_(self.redis.ttl(key), None)
 
         # verify if the keys not to be deleted, were not deleted and their timeouts not removed.
         for key in set(to_create) - (set(to_create) & set(to_delete)):
