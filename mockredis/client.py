@@ -123,10 +123,10 @@ class MockRedis(object):
     def keys(self, pattern='*'):
         """Emulate keys."""
         # Make a regex out of pattern. The only special matching character we look for is '*'
-        regex = re.compile('^' + re.escape(pattern).replace('\\*', '.*') + '$')
+        regex = re.compile(b'^' + re.escape(self._encode(pattern)).replace(b'\\*', b'.*') + b'$')
 
         # Find every key that matches the pattern
-        result = [key for key in self.redis.keys() if regex.match(key.decode('utf-8'))]
+        result = [key for key in self.redis.keys() if regex.match(key)]
 
         return result
 
@@ -814,10 +814,10 @@ class MockRedis(object):
         values = values[cursor:cursor+count]
 
         if match is not None:
-            regex = re.compile('^' + re.escape(match).replace('\\*', '.*') + '$')
+            regex = re.compile(b'^' + re.escape(self._encode(match)).replace(b'\\*', b'.*') + b'$')
             if not key:
                 key = lambda v: v
-            values = [v for v in values if regex.match(key(v).decode('utf-8'))]
+            values = [v for v in values if regex.match(key(v))]
 
         return [result_cursor, values]
 
