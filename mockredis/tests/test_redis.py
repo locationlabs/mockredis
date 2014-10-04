@@ -112,12 +112,15 @@ class TestRedis(object):
         """
         Test absent ttl handling.
         """
-        # redis >= 2.8.0 return -2 if key does exist
-        eq_(self.redis.ttl("invalid_key"), -2)
-
-        # redis-py return None if there is no pttl
+        eq_(self.redis.ttl("invalid_key"), None)
         self.redis.set("key", "value")
         eq_(self.redis.ttl("key"), None)
+
+        # redis >= 2.8.0 returns -2 if the key does exist
+        eq_(self.redis_strict.ttl("invalid_key"), -2)
+        # redis >= 2.8.0 returns -1 if there is no ttl
+        self.redis_strict.set("key", "value")
+        eq_(self.redis_strict.ttl("key"), -1)
 
     def test_ttl_no_timeout(self):
         """
@@ -140,12 +143,15 @@ class TestRedis(object):
         """
         Test absent pttl handling.
         """
-        # redis >= 2.8.0 return -2 if key does exist
-        eq_(self.redis.pttl("invalid_key"), -2)
+        # redis >= 2.8.0 returns -2 if the key does exist
+        eq_(self.redis.pttl("invalid_key"), None)
+        eq_(self.redis_strict.pttl("invalid_key"), -2)
 
-        # redis-py return None if there is no pttl
+        # redis >= 2.8.0 returns -1 if there is no ttl
         self.redis.set("key", "value")
         eq_(self.redis.pttl("key"), None)
+        self.redis_strict.set("key", "value")
+        eq_(self.redis_strict.pttl("key"), -1)
 
     def test_pttl_no_timeout(self):
         """
