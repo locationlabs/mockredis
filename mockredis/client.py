@@ -807,7 +807,7 @@ class MockRedis(object):
         values = values_function()
         if cursor + count >= len(values):
             # we reached the end, back to zero
-            result_cursor = '0'
+            result_cursor = 0
         else:
             result_cursor = str(cursor + count)
 
