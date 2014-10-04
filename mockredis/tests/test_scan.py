@@ -20,10 +20,10 @@ class TestRedisEmptyScans(object):
             eq_(results[0], cursor)
             eq_(results[1], elements)
 
-        eq_scan(self.redis.scan(), '0', [])
-        eq_scan(self.redis.sscan("foo"), '0', [])
-        eq_scan(self.redis.zscan("foo"), '0', [])
-        eq_scan(self.redis.hscan("foo"), '0', {})
+        eq_scan(self.redis.scan(), 0, [])
+        eq_scan(self.redis.sscan("foo"), 0, [])
+        eq_scan(self.redis.zscan("foo"), 0, [])
+        eq_scan(self.redis.hscan("foo"), 0, {})
 
 
 class TestRedisScan(object):
@@ -49,7 +49,7 @@ class TestRedisScan(object):
             keys = set()  # technically redis SCAN can return duplicate keys
             cursor = '0'
             result_cursor = None
-            while result_cursor != '0':
+            while result_cursor != 0:
                 results = self.redis.scan(cursor=cursor, match=match, count=count)
                 keys.update(results[1])
                 cursor = results[0]
@@ -100,7 +100,7 @@ class TestRedisSScan(object):
             keys = set()  # technically redis SCAN can return duplicate keys
             cursor = '0'
             result_cursor = None
-            while result_cursor != '0':
+            while result_cursor != 0:
                 results = self.redis.sscan(name, cursor=cursor, match=match, count=count)
                 keys.update(results[1])
                 cursor = results[0]
@@ -151,7 +151,7 @@ class TestRedisZScan(object):
             keys = set()  # technically redis SCAN can return duplicate keys
             cursor = '0'
             result_cursor = None
-            while result_cursor != '0':
+            while result_cursor != 0:
                 results = self.redis.zscan(name, cursor=cursor, match=match, count=count)
                 keys.update(results[1])
                 cursor = results[0]
@@ -202,7 +202,7 @@ class TestRedisHScan(object):
             keys = {}
             cursor = '0'
             result_cursor = None
-            while result_cursor != '0':
+            while result_cursor != 0:
                 results = self.redis.hscan(name, cursor=cursor, match=match, count=count)
                 keys.update(results[1])
                 cursor = results[0]
