@@ -184,14 +184,18 @@ class TestRedis(object):
     def test_keys_unicode(self):
         eq_([], self.redis.keys("*"))
 
-        key = u"eat \U0001F370 now"
-        key_as_utf8 = key.encode('utf-8')
+        # This is a little backwards, but python3.2 has trouble with unicode in strings.
+        key_as_utf8 = b'eat \xf0\x9f\x8d\xb0 now'
+        key = key_as_utf8.decode('utf-8')
         self.redis.set(key, "bar")
         eq_([key_as_utf8], self.redis.keys("*"))
         eq_([key_as_utf8], self.redis.keys("eat*"))
-        eq_([key_as_utf8], self.redis.keys(u"eat \U0001F370*"))
-        eq_([key_as_utf8], self.redis.keys(u"eat \U0001F370*".encode('utf-8')))
-        eq_([], self.redis.keys(u"eat \U0001F371*"))
+
+        unicode_prefix = b'eat \xf0\x9f\x8d\xb0*'.decode('utf-8')
+        eq_([key_as_utf8], self.redis.keys(unicode_prefix))
+        eq_([key_as_utf8], self.redis.keys(unicode_prefix.encode('utf-8')))
+        unicode_prefix = b'eat \xf0\x9f\x8d\xb1*'.decode('utf-8')
+        eq_([], self.redis.keys(unicode_prefix))
 
     def test_contains(self):
         ok_("foo" not in self.redis)
