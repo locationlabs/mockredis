@@ -7,12 +7,6 @@ from mockredis.client import get_total_milliseconds
 from mockredis.tests.fixtures import raises_response_error, setup
 
 
-if sys.version_info >= (3, 0):
-    b = lambda x: x.encode('latin-1') if not isinstance(x, bytes) else x
-else:
-    b = lambda x: x
-
-
 class TestRedisString(object):
     """string tests"""
 
@@ -67,7 +61,7 @@ class TestRedisString(object):
         """Check that the key and its timeout were not set"""
 
         # check that the value wasn't updated
-        value = b(value) if value is not None else value
+        value = value.encode('utf8') if value is not None else value
         ok_(value != self.redis.get(key), msg)
         if self.redis.exists(key):
             # check that the expiration was not set
@@ -79,7 +73,7 @@ class TestRedisString(object):
     def _assert_was_set(self, key, value, config, msg, delta=1):
         """Assert that the key was set along with timeout if applicable"""
 
-        value = b(value) if value is not None else value
+        value = value.encode('utf8') if value is not None else value
         eq_(value, self.redis.get(key))
         if "px" not in config and "ex" not in config:
             return
