@@ -181,6 +181,18 @@ class TestRedis(object):
         eq_([b"food"], self.redis.keys("food"))
         eq_([], self.redis.keys("bar"))
 
+    def test_keys_unicode(self):
+        eq_([], self.redis.keys("*"))
+
+        key = u"eat \U0001F370 now"
+        key_as_utf8 = key.encode('utf-8')
+        self.redis.set(key, "bar")
+        eq_([key_as_utf8], self.redis.keys("*"))
+        eq_([key_as_utf8], self.redis.keys("eat*"))
+        eq_([key_as_utf8], self.redis.keys(u"eat \U0001F370*"))
+        eq_([key_as_utf8], self.redis.keys(u"eat \U0001F370*".encode('utf-8')))
+        eq_([], self.redis.keys(u"eat \U0001F371*"))
+
     def test_contains(self):
         ok_("foo" not in self.redis)
         self.redis.set("foo", "bar")
