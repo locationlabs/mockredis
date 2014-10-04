@@ -1,5 +1,7 @@
 Version 2.9.0.10
  - Return & store byte strings everywhere (unicode turns into utf-8 by default)
+ - Fix *SCAN returning non-long values.
+ - Fix *TTL returning -1/-2/None - this varies depending on whether StrictRedis is in use.
 
 Version 2.9.0.9
 
