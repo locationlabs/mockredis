@@ -454,6 +454,7 @@ class MockRedis(object):
         for key, value in value.items():
             attribute = str(key)
             redis_hash[attribute] = str(value)
+        return True
 
     def hmget(self, hashkey, keys, *args):
         """Emulate hmget."""
@@ -467,7 +468,11 @@ class MockRedis(object):
 
         redis_hash = self._get_hash(hashkey, 'HSET', create=True)
         attribute = str(attribute)
-        redis_hash[attribute] = str(value)
+        if attribute in redis_hash and redis_hash[attribute] == value:
+            return long(0)
+        else:
+            redis_hash[attribute] = str(value)
+            return long(1)
 
     def hsetnx(self, hashkey, attribute, value):
         """Emulate hsetnx."""
@@ -475,10 +480,10 @@ class MockRedis(object):
         redis_hash = self._get_hash(hashkey, 'HSETNX', create=True)
         attribute = str(attribute)
         if attribute in redis_hash:
-            return 0
+            return long(0)
         else:
             redis_hash[attribute] = str(value)
-            return 1
+            return long(1)
 
     def hincrby(self, hashkey, attribute, increment=1):
         """Emulate hincrby."""

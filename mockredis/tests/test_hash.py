@@ -42,7 +42,8 @@ class TestRedisHash(object):
 
     def test_hset(self):
         hashkey = "hash"
-        self.redis.hset(hashkey, "key", "value")
+        eq_(1, self.redis.hset(hashkey, "key", "value"))
+        eq_(0, self.redis.hset(hashkey, "key", "value"))
         eq_("value", self.redis.hget(hashkey, "key"))
 
     def test_hget(self):
@@ -51,7 +52,7 @@ class TestRedisHash(object):
 
     def test_hset_integral(self):
         hashkey = "hash"
-        self.redis.hset(hashkey, 1, 2)
+        eq_(1, self.redis.hset(hashkey, 1, 2))
         eq_("2", self.redis.hget(hashkey, 1))
         eq_("2", self.redis.hget(hashkey, "1"))
 
@@ -64,7 +65,7 @@ class TestRedisHash(object):
 
     def test_hmset(self):
         hashkey = "hash"
-        self.redis.hmset(hashkey, {"key1": "value1", "key2": "value2"})
+        eq_(True, self.redis.hmset(hashkey, {"key1": "value1", "key2": "value2"}))
         eq_("value1", self.redis.hget(hashkey, "key1"))
         eq_("value2", self.redis.hget(hashkey, "key2"))
 
