@@ -52,7 +52,7 @@ class TestRedisHash(object):
 
     def test_hset_integral(self):
         hashkey = "hash"
-        self.redis.hset(hashkey, 1, 2)
+        eq_(1, self.redis.hset(hashkey, 1, 2))
         eq_(b"2", self.redis.hget(hashkey, 1))
         eq_(b"2", self.redis.hget(hashkey, "1"))
 

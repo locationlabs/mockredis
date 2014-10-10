@@ -211,6 +211,7 @@ class MockRedis(object):
             return long(-2) if self.strict else None
         if key not in self.timeouts:
             # as of redis 2.8, -1 is returned if the key is persistent
+            # redis-py returns None; command docs say -1
             return long(-1) if self.strict else None
 
         time_to_live = get_total_milliseconds(self.timeouts[key] - self.clock.now())
@@ -472,9 +473,9 @@ class MockRedis(object):
 
         redis_hash = self._get_hash(hashkey, 'HSET', create=True)
         attribute = self._encode(attribute)
-        was_present = attribute in redis_hash
+        attribute_present = attribute in redis_hash
         redis_hash[attribute] = self._encode(value)
-        return 0 if was_present else 1
+        return long(0) if attribute_present else long(1)
 
     def hsetnx(self, hashkey, attribute, value):
         """Emulate hsetnx."""
@@ -482,10 +483,10 @@ class MockRedis(object):
         redis_hash = self._get_hash(hashkey, 'HSETNX', create=True)
         attribute = self._encode(attribute)
         if attribute in redis_hash:
-            return 0
+            return long(0)
         else:
             redis_hash[attribute] = self._encode(value)
-            return 1
+            return long(1)
 
     def hincrby(self, hashkey, attribute, increment=1):
         """Emulate hincrby."""
