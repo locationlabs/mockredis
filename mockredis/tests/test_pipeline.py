@@ -20,7 +20,7 @@ class TestPipeline(object):
             pipeline.echo("foo")
             pipeline.echo("bar")
 
-            eq_(["foo", "bar"], pipeline.execute())
+            eq_([b"foo", b"bar"], pipeline.execute())
 
     def test_pipeline_args(self):
         """
@@ -37,7 +37,7 @@ class TestPipeline(object):
             eq_(pipeline, pipeline.set("foo", "bar"))
             eq_(pipeline, pipeline.get("foo"))
 
-            eq_([True, "bar"], pipeline.execute())
+            eq_([True, b"bar"], pipeline.execute())
 
     def test_scripts(self):
         """
@@ -66,7 +66,7 @@ class TestPipeline(object):
             eq_(None, pipeline.get("key1"))
             eq_(None, pipeline.get("key2"))
             eq_(True, pipeline.set("foo", "bar"))
-            eq_("bar", pipeline.get("foo"))
+            eq_(b"bar", pipeline.get("foo"))
 
     def test_multi(self):
         """
@@ -77,7 +77,7 @@ class TestPipeline(object):
             eq_(pipeline, pipeline.set("foo", "bar"))
             eq_(pipeline, pipeline.get("foo"))
 
-            eq_([True, "bar"], pipeline.execute())
+            eq_([True, b"bar"], pipeline.execute())
 
     def test_multi_with_watch(self):
         """
@@ -87,13 +87,13 @@ class TestPipeline(object):
 
         with self.redis.pipeline() as pipeline:
             pipeline.watch("foo")
-            eq_("bar", pipeline.get("foo"))
+            eq_(b"bar", pipeline.get("foo"))
 
             pipeline.multi()
             eq_(pipeline, pipeline.set("foo", "baz"))
             eq_(pipeline, pipeline.get("foo"))
 
-            eq_([True, "baz"], pipeline.execute())
+            eq_([True, b"baz"], pipeline.execute())
 
     def test_multi_with_watch_zset(self):
         """
@@ -115,14 +115,14 @@ class TestPipeline(object):
         with self.redis.pipeline() as pipeline:
             pipeline.watch("foo")
             eq_(True, pipeline.set("foo", "bar"))
-            eq_("bar", pipeline.get("foo"))
+            eq_(b"bar", pipeline.get("foo"))
 
             pipeline.multi()
             eq_(pipeline, pipeline.set("foo", "baz"))
             eq_(pipeline, pipeline.get("foo"))
 
             with assert_raises_watch_error():
-                eq_([True, "baz"], pipeline.execute())
+                eq_([True, b"baz"], pipeline.execute())
 
     def test_watch_after_multi(self):
         """

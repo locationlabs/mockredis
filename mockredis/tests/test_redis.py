@@ -37,16 +37,15 @@ class TestRedis(object):
 
         for value in values:
             self.redis.set('key', value)
-            eq_(str(value),
-                self.redis.get('key'),
-                "redis.get")
+            eq_(str(value).encode('utf8'),
+                self.redis.get('key'))
 
             self.redis.hset('hkey', 'item', value)
-            eq_(str(value),
+            eq_(str(value).encode('utf8'),
                 self.redis.hget('hkey', 'item'))
 
             self.redis.sadd('skey', value)
-            eq_(set([str(value)]),
+            eq_(set([str(value).encode('utf8')]),
                 self.redis.smembers('skey'))
 
             self.redis.flushdb()
@@ -57,8 +56,8 @@ class TestRedis(object):
         '''
 
         values = list([
-            (1, '2'),
-            ('1', '2'),
+            (1, b'2'),
+            ('1', b'2'),
         ])
 
         for value in values:
@@ -82,13 +81,13 @@ class TestRedis(object):
         '''
 
         self.redis.incr('key')
-        eq_('1', self.redis.get('key'))
+        eq_(b'1', self.redis.get('key'))
 
         self.redis.hincrby('hkey', 'attr')
-        eq_('1', self.redis.hget('hkey', 'attr'))
+        eq_(b'1', self.redis.hget('hkey', 'attr'))
 
         self.redis.decr('dkey')
-        eq_('-1', self.redis.get('dkey'))
+        eq_(b'-1', self.redis.get('dkey'))
 
     def test_ttl(self):
         self.redis.set('key', 'key')
@@ -176,17 +175,33 @@ class TestRedis(object):
         eq_([], self.redis.keys("*"))
 
         self.redis.set("foo", "bar")
-        eq_(["foo"], self.redis.keys("*"))
-        eq_(["foo"], self.redis.keys("foo*"))
-        eq_(["foo"], self.redis.keys("foo"))
+        eq_([b"foo"], self.redis.keys("*"))
+        eq_([b"foo"], self.redis.keys("foo*"))
+        eq_([b"foo"], self.redis.keys("foo"))
         eq_([], self.redis.keys("bar"))
 
         self.redis.set("food", "bbq")
-        eq_({"foo", "food"}, set(self.redis.keys("*")))
-        eq_({"foo", "food"}, set(self.redis.keys("foo*")))
-        eq_(["foo"], self.redis.keys("foo"))
-        eq_(["food"], self.redis.keys("food"))
+        eq_({b"foo", b"food"}, set(self.redis.keys("*")))
+        eq_({b"foo", b"food"}, set(self.redis.keys("foo*")))
+        eq_([b"foo"], self.redis.keys("foo"))
+        eq_([b"food"], self.redis.keys("food"))
         eq_([], self.redis.keys("bar"))
+
+    def test_keys_unicode(self):
+        eq_([], self.redis.keys("*"))
+
+        # This is a little backwards, but python3.2 has trouble with unicode in strings.
+        key_as_utf8 = b'eat \xf0\x9f\x8d\xb0 now'
+        key = key_as_utf8.decode('utf-8')
+        self.redis.set(key, "bar")
+        eq_([key_as_utf8], self.redis.keys("*"))
+        eq_([key_as_utf8], self.redis.keys("eat*"))
+
+        unicode_prefix = b'eat \xf0\x9f\x8d\xb0*'.decode('utf-8')
+        eq_([key_as_utf8], self.redis.keys(unicode_prefix))
+        eq_([key_as_utf8], self.redis.keys(unicode_prefix.encode('utf-8')))
+        unicode_prefix = b'eat \xf0\x9f\x8d\xb1*'.decode('utf-8')
+        eq_([], self.redis.keys(unicode_prefix))
 
     def test_contains(self):
         ok_("foo" not in self.redis)
@@ -197,7 +212,7 @@ class TestRedis(object):
         with assert_raises(KeyError):
             self.redis["foo"]
         self.redis.set("foo", "bar")
-        eq_("bar", self.redis["foo"])
+        eq_(b"bar", self.redis["foo"])
         self.redis.delete("foo")
         with assert_raises(KeyError):
             self.redis["foo"]
@@ -205,11 +220,11 @@ class TestRedis(object):
     def test_setitem(self):
         eq_(None, self.redis.get("foo"))
         self.redis["foo"] = "bar"
-        eq_("bar", self.redis.get("foo"))
+        eq_(b"bar", self.redis.get("foo"))
 
     def test_delitem(self):
         self.redis["foo"] = "bar"
-        eq_("bar", self.redis["foo"])
+        eq_(b"bar", self.redis["foo"])
         del self.redis["foo"]
         eq_(None, self.redis.get("foo"))
         # redispy does not correctly raise KeyError here, so we don't either
@@ -218,12 +233,12 @@ class TestRedis(object):
     def test_rename(self):
         self.redis["foo"] = "bar"
         ok_(self.redis.rename("foo", "new_foo"))
-        eq_("bar", self.redis.get("new_foo"))
+        eq_(b"bar", self.redis.get("new_foo"))
 
     def test_renamenx(self):
         self.redis["foo"] = "bar"
         self.redis["foo2"] = "bar2"
         eq_(self.redis.renamenx("foo", "foo2"), 0)
-        eq_("bar2", self.redis.get("foo2"))
+        eq_(b"bar2", self.redis.get("foo2"))
         eq_(self.redis.renamenx("foo", "foo3"), 1)
-        eq_("bar", self.redis.get("foo3"))
+        eq_(b"bar", self.redis.get("foo3"))

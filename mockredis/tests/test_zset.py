@@ -78,10 +78,10 @@ class TestRedisZset(object):
         self.redis.zadd(key, "three", 3.5)
 
         # full range
-        eq_(["one", "two", "three"],
+        eq_([b"one", b"two", b"three"],
             self.redis.zrange(key, 0, -1))
         # withscores
-        eq_([("one", 1.5), ("two", 2.5), ("three", 3.5)],
+        eq_([(b"one", 1.5), (b"two", 2.5), (b"three", 3.5)],
             self.redis.zrange(key, 0, -1, withscores=True))
 
         with assert_raises(ValueError):
@@ -92,34 +92,34 @@ class TestRedisZset(object):
         def cast_to_int(score):
             return int(float(score))
 
-        eq_([("one", 1), ("two", 2), ("three", 3)],
+        eq_([(b"one", 1), (b"two", 2), (b"three", 3)],
             self.redis.zrange(key, 0, -1, withscores=True, score_cast_func=cast_to_int))
 
         # positive ranges
-        eq_(["one"], self.redis.zrange(key, 0, 0))
-        eq_(["one", "two"], self.redis.zrange(key, 0, 1))
-        eq_(["one", "two", "three"], self.redis.zrange(key, 0, 2))
-        eq_(["one", "two", "three"], self.redis.zrange(key, 0, 3))
-        eq_(["two", "three"], self.redis.zrange(key, 1, 2))
-        eq_(["three"], self.redis.zrange(key, 2, 3))
+        eq_([b"one"], self.redis.zrange(key, 0, 0))
+        eq_([b"one", b"two"], self.redis.zrange(key, 0, 1))
+        eq_([b"one", b"two", b"three"], self.redis.zrange(key, 0, 2))
+        eq_([b"one", b"two", b"three"], self.redis.zrange(key, 0, 3))
+        eq_([b"two", b"three"], self.redis.zrange(key, 1, 2))
+        eq_([b"three"], self.redis.zrange(key, 2, 3))
 
         # negative ends
-        eq_(["one", "two", "three"], self.redis.zrange(key, 0, -1))
-        eq_(["one", "two"], self.redis.zrange(key, 0, -2))
-        eq_(["one"], self.redis.zrange(key, 0, -3))
+        eq_([b"one", b"two", b"three"], self.redis.zrange(key, 0, -1))
+        eq_([b"one", b"two"], self.redis.zrange(key, 0, -2))
+        eq_([b"one"], self.redis.zrange(key, 0, -3))
         eq_([], self.redis.zrange(key, 0, -4))
 
         # negative starts
         eq_([], self.redis.zrange(key, -1, 0))
-        eq_(["three"], self.redis.zrange(key, -1, -1))
-        eq_(["two", "three"], self.redis.zrange(key, -2, -1))
-        eq_(["one", "two", "three"], self.redis.zrange(key, -3, -1))
-        eq_(["one", "two", "three"], self.redis.zrange(key, -4, -1))
+        eq_([b"three"], self.redis.zrange(key, -1, -1))
+        eq_([b"two", b"three"], self.redis.zrange(key, -2, -1))
+        eq_([b"one", b"two", b"three"], self.redis.zrange(key, -3, -1))
+        eq_([b"one", b"two", b"three"], self.redis.zrange(key, -4, -1))
 
         # desc
-        eq_(["three", "two", "one"], self.redis.zrange(key, 0, 2, desc=True))
-        eq_(["two", "one"], self.redis.zrange(key, 1, 2, desc=True))
-        eq_(["three", "two"], self.redis.zrange(key, 0, 1, desc=True))
+        eq_([b"three", b"two", b"one"], self.redis.zrange(key, 0, 2, desc=True))
+        eq_([b"two", b"one"], self.redis.zrange(key, 1, 2, desc=True))
+        eq_([b"three", b"two"], self.redis.zrange(key, 0, 1, desc=True))
 
     def test_zrem(self):
         key = "zset"
@@ -127,7 +127,7 @@ class TestRedisZset(object):
 
         self.redis.zadd(key, "one", 1.0)
         eq_(1, self.redis.zcard(key))
-        eq_(["zset"], self.redis.keys("*"))
+        eq_([b"zset"], self.redis.keys("*"))
 
         ok_(self.redis.zrem(key, "one"))
         eq_(0, self.redis.zcard(key))
@@ -193,9 +193,9 @@ class TestRedisZset(object):
         self.redis.zadd(key, "two", 2.5)
         self.redis.zadd(key, "three", 3.5)
 
-        eq_(["one", "two", "three"],
+        eq_([b"one", b"two", b"three"],
             self.redis.zrangebyscore(key, "-inf", "inf"))
-        eq_([("one", 1.5), ("two", 2.5), ("three", 3.5)],
+        eq_([(b"one", 1.5), (b"two", 2.5), (b"three", 3.5)],
             self.redis.zrangebyscore(key, "-inf", "inf", withscores=True))
 
         with assert_raises(ValueError):
@@ -209,22 +209,22 @@ class TestRedisZset(object):
         def cast_score(score):
             return int(float(score))
 
-        eq_([("one", 1), ("two", 2), ("three", 3)],
+        eq_([(b"one", 1), (b"two", 2), (b"three", 3)],
             self.redis.zrangebyscore(key,
                                      "-inf",
                                      "inf",
                                      withscores=True,
                                      score_cast_func=cast_score))
 
-        eq_(["one"],
+        eq_([b"one"],
             self.redis.zrangebyscore(key, 1.0, 2.0))
-        eq_(["one", "two"],
+        eq_([b"one", b"two"],
             self.redis.zrangebyscore(key, 1.0, 3.0))
-        eq_(["one"],
+        eq_([b"one"],
             self.redis.zrangebyscore(key, 1.0, 3.0, start=0, num=1))
-        eq_(["two"],
+        eq_([b"two"],
             self.redis.zrangebyscore(key, 1.0, 3.0, start=1, num=1))
-        eq_(["two", "three"],
+        eq_([b"two", b"three"],
             self.redis.zrangebyscore(key, 1.0, 3.5, start=1, num=4))
         eq_([],
             self.redis.zrangebyscore(key, 1.0, 3.5, start=3, num=4))
@@ -237,15 +237,15 @@ class TestRedisZset(object):
         self.redis.zadd(key, "three", 3.5)
         self.redis.zadd(key, "four", 4.5)
 
-        eq_(["one"],
+        eq_([b"one"],
             self.redis.zrangebyscore(key, 1.0, '(2.5'))
-        eq_(["two", "three"],
+        eq_([b"two", b"three"],
             self.redis.zrangebyscore(key, '(1.5', 3.5))
-        eq_(["one"],
+        eq_([b"one"],
             self.redis.zrangebyscore(key, 1.0, '(3.5', start=0, num=1))
-        eq_(["three"],
+        eq_([b"three"],
             self.redis.zrangebyscore(key, '(1.5', 3.5, start=1, num=1))
-        eq_(["two", "three"],
+        eq_([b"two", b"three"],
             self.redis.zrangebyscore(key, 1.0, '(4.5', start=1, num=4))
         eq_([],
             self.redis.zrangebyscore(key, 1.0, '(4.5', start=3, num=4))
@@ -266,9 +266,9 @@ class TestRedisZset(object):
         self.redis.zadd(key, "two", 2.5)
         self.redis.zadd(key, "three", 3.5)
 
-        eq_(["three", "two", "one"],
+        eq_([b"three", b"two", b"one"],
             self.redis.zrevrangebyscore(key, "inf", "-inf"))
-        eq_([("three", 3.5), ("two", 2.5), ("one", 1.5)],
+        eq_([(b"three", 3.5), (b"two", 2.5), (b"one", 1.5)],
             self.redis.zrevrangebyscore(key, "inf", "-inf", withscores=True))
 
         with assert_raises(ValueError):
@@ -282,22 +282,22 @@ class TestRedisZset(object):
         def cast_score(score):
             return int(float(score))
 
-        eq_([("three", 3), ("two", 2), ("one", 1)],
+        eq_([(b"three", 3), (b"two", 2), (b"one", 1)],
             self.redis.zrevrangebyscore(key,
                                         "inf",
                                         "-inf",
                                         withscores=True,
                                         score_cast_func=cast_score))
 
-        eq_(["one"],
+        eq_([b"one"],
             self.redis.zrevrangebyscore(key, 2.0, 1.0))
-        eq_(["two", "one"],
+        eq_([b"two", b"one"],
             self.redis.zrevrangebyscore(key, 3.0, 1.0))
-        eq_(["two"],
+        eq_([b"two"],
             self.redis.zrevrangebyscore(key, 3.0, 1.0, start=0, num=1))
-        eq_(["one"],
+        eq_([b"one"],
             self.redis.zrevrangebyscore(key, 3.0, 1.0, start=1, num=1))
-        eq_(["two", "one"],
+        eq_([b"two", b"one"],
             self.redis.zrevrangebyscore(key, 3.5, 1.0, start=1, num=4))
         eq_([],
             self.redis.zrevrangebyscore(key, 3.5, 1.0, start=3, num=4))
@@ -310,15 +310,15 @@ class TestRedisZset(object):
         self.redis.zadd(key, "three", 3.5)
         self.redis.zadd(key, "four", 4.5)
 
-        eq_(["one"],
+        eq_([b"one"],
             self.redis.zrevrangebyscore(key, '(2.5', '1.0'))
-        eq_(["two", "one"],
+        eq_([b"two", b"one"],
             self.redis.zrevrangebyscore(key, '(3.5', 1.0))
-        eq_(["two"],
+        eq_([b"two"],
             self.redis.zrevrangebyscore(key, 3.0, '(1.5', start=0, num=1))
-        eq_(["one"],
+        eq_([b"one"],
             self.redis.zrevrangebyscore(key, '(3.5', 1.0, start=1, num=1))
-        eq_(["two", "one"],
+        eq_([b"two", b"one"],
             self.redis.zrevrangebyscore(key, '(4.5', 1.0, start=1, num=4))
         eq_([],
             self.redis.zrevrangebyscore(key, '(4.5', 1.0, start=3, num=4))
@@ -333,7 +333,7 @@ class TestRedisZset(object):
 
         eq_(2, self.redis.zremrangebyrank(key, 0, 1))
 
-        eq_(["three"], self.redis.zrange(key, 0, -1))
+        eq_([b"three"], self.redis.zrange(key, 0, -1))
         eq_(1, self.redis.zremrangebyrank(key, 0, -1))
 
         eq_([], self.redis.zrange(key, 0, -1))
@@ -349,7 +349,7 @@ class TestRedisZset(object):
 
         eq_(1, self.redis.zremrangebyscore(key, 0, 1))
 
-        eq_(["two", "three"], self.redis.zrange(key, 0, -1))
+        eq_([b"two", b"three"], self.redis.zrange(key, 0, -1))
         eq_(2, self.redis.zremrangebyscore(key, 2.0, "inf"))
 
         eq_([], self.redis.zrange(key, 0, -1))
@@ -368,14 +368,14 @@ class TestRedisZset(object):
         eq_(0, self.redis.zremrangebyscore(key, 0, '(1'))
         eq_(1, self.redis.zremrangebyscore(key, 0, '(2'))  # remove "one"
 
-        eq_(["two", "three", "four", "five"], self.redis.zrange(key, 0, -1))
+        eq_([b"two", b"three", b"four", b"five"], self.redis.zrange(key, 0, -1))
 
         eq_(2, self.redis.zremrangebyscore(key, '(2', 4))  #remove "three" & "four"
-        eq_(["two", "five"], self.redis.zrange(key, 0, -1))
+        eq_([b"two", b"five"], self.redis.zrange(key, 0, -1))
 
         eq_(1, self.redis.zremrangebyscore(key, "(2.0", "inf"))
 
-        eq_(["two"], self.redis.zrange(key, 0, -1))
+        eq_([b"two"], self.redis.zrange(key, 0, -1))
         eq_(1, self.redis.zremrangebyscore(key, "-inf", "(3"))
         eq_([], self.redis.keys("*"))
 
@@ -393,7 +393,7 @@ class TestRedisZset(object):
         self.redis.zadd("zset2", "three", 3.0)
 
         eq_(3, self.redis.zunionstore(key, ["zset1", "zset2"]))
-        eq_([("one", 1.0), ("three", 3.0), ("two", 4.5)],
+        eq_([(b"one", 1.0), (b"three", 3.0), (b"two", 4.5)],
             self.redis.zrange(key, 0, -1, withscores=True))
 
     def test_zunionstore_sum(self):
@@ -404,7 +404,7 @@ class TestRedisZset(object):
         self.redis.zadd("zset2", "three", 3.0)
 
         eq_(3, self.redis.zunionstore(key, ["zset1", "zset2"], aggregate="sum"))
-        eq_([("one", 1.0), ("three", 3.0), ("two", 4.5)],
+        eq_([(b"one", 1.0), (b"three", 3.0), (b"two", 4.5)],
             self.redis.zrange(key, 0, -1, withscores=True))
 
     def test_zunionstore_SUM(self):
@@ -415,7 +415,7 @@ class TestRedisZset(object):
         self.redis.zadd("zset2", "three", 3.0)
 
         eq_(3, self.redis.zunionstore(key, ["zset1", "zset2"], aggregate="SUM"))
-        eq_([("one", 1.0), ("three", 3.0), ("two", 4.5)],
+        eq_([(b"one", 1.0), (b"three", 3.0), (b"two", 4.5)],
             self.redis.zrange(key, 0, -1, withscores=True))
 
     def test_zunionstore_min(self):
@@ -426,7 +426,7 @@ class TestRedisZset(object):
         self.redis.zadd("zset2", "three", 3.0)
 
         eq_(3, self.redis.zunionstore(key, ["zset1", "zset2"], aggregate="min"))
-        eq_([("one", 1.0), ("two", 2.0), ("three", 3.0)],
+        eq_([(b"one", 1.0), (b"two", 2.0), (b"three", 3.0)],
             self.redis.zrange(key, 0, -1, withscores=True))
 
     def test_zunionstore_MIN(self):
@@ -437,7 +437,7 @@ class TestRedisZset(object):
         self.redis.zadd("zset2", "three", 3.0)
 
         eq_(3, self.redis.zunionstore(key, ["zset1", "zset2"], aggregate="MIN"))
-        eq_([("one", 1.0), ("two", 2.0), ("three", 3.0)],
+        eq_([(b"one", 1.0), (b"two", 2.0), (b"three", 3.0)],
             self.redis.zrange(key, 0, -1, withscores=True))
 
     def test_zunionstore_max(self):
@@ -449,7 +449,7 @@ class TestRedisZset(object):
 
         key = "zset"
         eq_(3, self.redis.zunionstore(key, ["zset1", "zset2"], aggregate="max"))
-        eq_([("one", 1.0), ("two", 2.5), ("three", 3.0)],
+        eq_([(b"one", 1.0), (b"two", 2.5), (b"three", 3.0)],
             self.redis.zrange(key, 0, -1, withscores=True))
 
     def test_zunionstore_MAX(self):
@@ -461,7 +461,7 @@ class TestRedisZset(object):
 
         key = "zset"
         eq_(3, self.redis.zunionstore(key, ["zset1", "zset2"], aggregate="MAX"))
-        eq_([("one", 1.0), ("two", 2.5), ("three", 3.0)],
+        eq_([(b"one", 1.0), (b"two", 2.5), (b"three", 3.0)],
             self.redis.zrange(key, 0, -1, withscores=True))
 
     def test_zinterstore_no_keys(self):
@@ -479,7 +479,7 @@ class TestRedisZset(object):
         self.redis.zadd("zset2", "three", 3.0)
 
         eq_(1, self.redis.zinterstore(key, ["zset1", "zset2"]))
-        eq_([("two", 4.5)],
+        eq_([(b"two", 4.5)],
             self.redis.zrange(key, 0, -1, withscores=True))
 
     def test_zinterstore_sum(self):
@@ -490,7 +490,7 @@ class TestRedisZset(object):
         self.redis.zadd("zset2", "three", 3.0)
 
         eq_(1, self.redis.zinterstore(key, ["zset1", "zset2"], aggregate="sum"))
-        eq_([("two", 4.5)],
+        eq_([(b"two", 4.5)],
             self.redis.zrange(key, 0, -1, withscores=True))
 
     def test_zinterstore_SUM(self):
@@ -501,7 +501,7 @@ class TestRedisZset(object):
         self.redis.zadd("zset2", "three", 3.0)
 
         eq_(1, self.redis.zinterstore(key, ["zset1", "zset2"], aggregate="SUM"))
-        eq_([("two", 4.5)],
+        eq_([(b"two", 4.5)],
             self.redis.zrange(key, 0, -1, withscores=True))
 
     def test_zinterstore_min(self):
@@ -512,7 +512,7 @@ class TestRedisZset(object):
         self.redis.zadd("zset2", "three", 3.0)
 
         eq_(1, self.redis.zinterstore(key, ["zset1", "zset2"], aggregate="min"))
-        eq_([("two", 2.0)],
+        eq_([(b"two", 2.0)],
             self.redis.zrange(key, 0, -1, withscores=True))
 
     def test_zinterstore_MIN(self):
@@ -523,7 +523,7 @@ class TestRedisZset(object):
         self.redis.zadd("zset2", "three", 3.0)
 
         eq_(1, self.redis.zinterstore(key, ["zset1", "zset2"], aggregate="MIN"))
-        eq_([("two", 2.0)],
+        eq_([(b"two", 2.0)],
             self.redis.zrange(key, 0, -1, withscores=True))
 
     def test_zinterstore_max(self):
@@ -534,7 +534,7 @@ class TestRedisZset(object):
         self.redis.zadd("zset2", "three", 3.0)
 
         eq_(1, self.redis.zinterstore(key, ["zset1", "zset2"], aggregate="max"))
-        eq_([("two", 2.5)],
+        eq_([(b"two", 2.5)],
             self.redis.zrange(key, 0, -1, withscores=True))
 
     def test_zinterstore_MAX(self):
@@ -545,5 +545,5 @@ class TestRedisZset(object):
         self.redis.zadd("zset2", "three", 3.0)
 
         eq_(1, self.redis.zinterstore(key, ["zset1", "zset2"], aggregate="MAX"))
-        eq_([("two", 2.5)],
+        eq_([(b"two", 2.5)],
             self.redis.zrange(key, 0, -1, withscores=True))
