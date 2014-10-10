@@ -45,7 +45,7 @@ class TestRedisHash(object):
         eq_(1, self.redis.hset(hashkey, "key", "value"))
         eq_(0, self.redis.hset(hashkey, "key", "value"))
         eq_(b"value", self.redis.hget(hashkey, "key"))
-        eq_(1, self.redis.hset(hashkey, "key", "value2"))
+        eq_(0, self.redis.hset(hashkey, "key", "value2"))
 
     def test_hget(self):
         hashkey = "hash"

@@ -205,6 +205,7 @@ class MockRedis(object):
         """
         Returns time to live in milliseconds if output_ms is True, else returns seconds.
         """
+        key = self._encode(key)
         if key not in self.redis:
             # as of redis 2.8, -2 is returned if the key does not exist
             return long(-2) if self.strict else None
@@ -472,11 +473,9 @@ class MockRedis(object):
 
         redis_hash = self._get_hash(hashkey, 'HSET', create=True)
         attribute = self._encode(attribute)
-        if attribute in redis_hash and redis_hash[attribute] == value:
-            return long(0)
-        else:
-            redis_hash[attribute] = self._encode(value)
-            return long(1)
+        attribute_present = attribute in redis_hash
+        redis_hash[attribute] = self._encode(value)
+        return long(0) if attribute_present else long(1)
 
     def hsetnx(self, hashkey, attribute, value):
         """Emulate hsetnx."""
