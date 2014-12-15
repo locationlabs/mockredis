@@ -1,3 +1,5 @@
+import sys
+
 class Script(object):
     """
     An executable Lua script object returned by ``MockRedis.register_script``.
@@ -70,8 +72,9 @@ class Script(object):
             - debug lib.
             - cmsgpack lib.
         """
-        import ctypes
-        ctypes.CDLL('liblua5.2.so', mode=ctypes.RTLD_GLOBAL)
+        if sys.platform not in ('darwin', 'windows'):
+            import ctypes
+            ctypes.CDLL('liblua5.2.so', mode=ctypes.RTLD_GLOBAL)
 
         try:
             lua_globals.cjson = lua.eval('require "cjson"')
