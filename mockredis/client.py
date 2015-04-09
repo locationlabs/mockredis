@@ -413,6 +413,40 @@ class MockRedis(object):
 
     incrby = incr
 
+    def setbit(self, key, offset, value):
+        key = self._encode(key)
+        index, bits, mask = self._get_bits_and_offset(key, offset)
+
+        if index >= len(bits):
+            bits.extend(b"\x00" * (index + 1 - len(bits)))
+
+        prev_val = 1 if (bits[index] & mask) else 0
+
+        if value:
+            bits[index] |= mask
+        else:
+            bits[index] &= ~mask
+
+        self.redis[key] = bytes(bits)
+
+        return prev_val
+
+    def getbit(self, key, offset):
+        key = self._encode(key)
+        index, bits, mask = self._get_bits_and_offset(key, offset)
+
+        if index >= len(bits):
+            return 0
+
+        return 1 if (bits[index] & mask) else 0
+
+    def _get_bits_and_offset(self, key, offset):
+        bits = bytearray(self.redis.get(key, b""))
+        index, position = divmod(offset, 8)
+        mask = 128 >> position
+        return index, bits, mask
+
+
     #### Hash Functions ####
 
     def hexists(self, hashkey, attribute):
