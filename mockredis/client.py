@@ -417,7 +417,6 @@ class MockRedis(object):
         """
         Set the bit at ``offset`` in ``key`` to ``value``.
         """
-
         key = self._encode(key)
         index, bits, mask = self._get_bits_and_offset(key, offset)
 
@@ -439,7 +438,6 @@ class MockRedis(object):
         """
         Returns the bit value at ``offset`` in ``key``.
         """
-
         key = self._encode(key)
         index, bits, mask = self._get_bits_and_offset(key, offset)
 
