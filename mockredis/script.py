@@ -1,4 +1,5 @@
 import sys
+from mockredis.exceptions import ResponseError
 
 class Script(object):
     """
@@ -30,11 +31,19 @@ class Script(object):
         lua_globals.ARGV = self._python_to_lua(args)
 
         def _call(*call_args):
-            response = client.call(*call_args)
+            # redis-py and native redis commands are mostly compatible argument
+            # wise, but some exceptions need to be handled here:
+            if str(call_args[0]).lower() == 'lrem':
+                response = client.call(
+                    call_args[0], call_args[1],
+                    call_args[3], # "count", default is 0
+                    call_args[2])
+            else:
+                response = client.call(*call_args)
             return self._python_to_lua(response)
 
         lua_globals.redis = {"call": _call}
-        return self._lua_to_python(lua.execute(self.script))
+        return self._lua_to_python(lua.execute(self.script), return_status=True)
 
     @staticmethod
     def _import_lua(load_dependencies=True):
@@ -82,7 +91,7 @@ class Script(object):
             raise RuntimeError("cjson not installed")
 
     @staticmethod
-    def _lua_to_python(lval):
+    def _lua_to_python(lval, return_status=False):
         """
         Convert Lua object(s) into Python object(s), as at times Lua object(s)
         are not compatible with Python functions
@@ -96,6 +105,11 @@ class Script(object):
             # Lua table --> Python list
             pval = []
             for i in lval:
+                if return_status:
+                    if i == 'ok':
+                        return lval[i]
+                    if i == 'err':
+                        raise ResponseError(lval[i])
                 pval.append(Script._lua_to_python(lval[i]))
             return pval
         elif isinstance(lval, long):
