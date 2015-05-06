@@ -860,6 +860,14 @@ class MockRedis(object):
             return sorted(self.redis.keys())  # sorted list for consistent order
         return self._common_scan(value_function, cursor=cursor, match=match, count=count)
 
+    def scan_iter(self, match=None, count=10):
+        """Emulate scan_iter."""
+        cursor = '0'
+        while cursor != 0:
+            cursor, data = self.scan(cursor=cursor, match=match, count=count)
+            for item in data:
+                yield item
+
     def sscan(self, name, cursor='0', match=None, count=10):
         """Emulate sscan."""
         def value_function():
@@ -868,6 +876,15 @@ class MockRedis(object):
             return members
         return self._common_scan(value_function, cursor=cursor, match=match, count=count)
 
+    def sscan_iter(self, name, match=None, count=10):
+        """Emulate sscan_iter."""
+        cursor = '0'
+        while cursor != 0:
+            cursor, data = self.sscan(name, cursor=cursor,
+                                      match=match, count=count)
+            for item in data:
+                yield item
+
     def zscan(self, name, cursor='0', match=None, count=10):
         """Emulate zscan."""
         def value_function():
@@ -875,6 +892,15 @@ class MockRedis(object):
             values.sort(key=lambda x: x[1])  # sort for consistent order
             return values
         return self._common_scan(value_function, cursor=cursor, match=match, count=count, key=lambda v: v[0])
+
+    def zscan_iter(self, name, match=None, count=10):
+        """Emulate zscan_iter."""
+        cursor = '0'
+        while cursor != 0:
+            cursor, data = self.zscan(name, cursor=cursor, match=match,
+                                      count=count)
+            for item in data:
+                yield item
 
     def hscan(self, name, cursor='0', match=None, count=10):
         """Emulate hscan."""
@@ -886,6 +912,15 @@ class MockRedis(object):
         scanned = self._common_scan(value_function, cursor=cursor, match=match, count=count, key=lambda v: v[0])
         scanned[1] = dict(scanned[1])  # from list of tuples back to dict
         return scanned
+
+    def hscan_iter(self, name, match=None, count=10):
+        """Emulate hscan_iter."""
+        cursor = '0'
+        while cursor != 0:
+            cursor, data = self.hscan(name, cursor=cursor,
+                                      match=match, count=count)
+            for item in data.items():
+                yield item
 
     #### SET COMMANDS ####
 
