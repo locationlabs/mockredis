@@ -1,5 +1,8 @@
 import sys
+import threading
 from mockredis.exceptions import ResponseError
+
+LuaLock = threading.Lock()
 
 class Script(object):
     """
@@ -14,12 +17,13 @@ class Script(object):
 
     def __call__(self, keys=[], args=[], client=None):
         """Execute the script, passing any required ``args``"""
-        client = client or self.registered_client
+        with LuaLock:
+            client = client or self.registered_client
 
-        if not client.script_exists(self.sha)[0]:
-            self.sha = client.script_load(self.script)
+            if not client.script_exists(self.sha)[0]:
+                self.sha = client.script_load(self.script)
 
-        return self._execute_lua(keys, args, client)
+            return self._execute_lua(keys, args, client)
 
     def _execute_lua(self, keys, args, client):
         """

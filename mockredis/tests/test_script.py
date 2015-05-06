@@ -4,6 +4,7 @@ Tests for scripts don't yet support verification against redis-server.
 from hashlib import sha1
 from unittest.case import SkipTest
 import sys
+import threading
 
 from nose.tools import assert_raises, eq_, ok_
 
@@ -388,3 +389,26 @@ class TestScript(object):
         script = self.redis.register_script(script_content)
         script()
 
+    def test_concurrent_lua(self):
+        script_content = """
+local entry = redis.call('HGETALL', ARGV[1])
+redis.call('HSET', ARGV[1], 'kk', 'vv')
+return entry
+"""
+        script = self.redis.register_script(script_content)
+
+        for i in range(500):
+            self.redis.hmset(i, {'k1': 'v1', 'k2': 'v2', 'k3': 'v3'})
+
+        def lua_thread():
+            for i in range(500):
+                result = script(args=[i])
+
+        active_threads = []
+        for i in range(10):
+            thread = threading.Thread(target=lua_thread)
+            active_threads.append(thread)
+            thread.start()
+
+        for thread in active_threads:
+            thread.join()
