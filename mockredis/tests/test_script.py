@@ -16,6 +16,7 @@ from mockredis.tests.test_constants import (
     VAL1, VAL2, VAL3, VAL4,
     LPOP_SCRIPT
 )
+from mockredis.tests.fixtures import raises_response_error
 
 
 if sys.version_info >= (3, 0):
@@ -187,6 +188,16 @@ class TestScript(object):
         # validate lpop
         eq_(VAL1, list_item)
         eq_([VAL2], self.redis.lrange(LIST1, 0, -1))
+
+    def test_eval_lrem(self):
+        self.redis.delete(LIST1)
+        self.redis.lpush(LIST1, VAL1)
+
+        # lrem one value
+        script_content = "return redis.call('LREM', KEYS[1], 0, ARGV[1])"
+        value = self.redis.eval(script_content, 1, LIST1, VAL1)
+
+        eq_(value, 1)
 
     def test_eval_zadd(self):
         # The score and member are reversed when the client is not strict.
@@ -365,3 +376,15 @@ class TestScript(object):
         lval = MockRedisScript._python_to_lua(pval)
         eq_("boolean", self.lua_globals.type(lval))
         ok_(MockRedisScript._lua_to_python(lval))
+
+    def test_lua_ok_return(self):
+        script_content = "return {ok='OK'}"
+        script = self.redis.register_script(script_content)
+        eq_('OK', script())
+
+    @raises_response_error
+    def test_lua_err_return(self):
+        script_content = "return {err='ERROR Some message'}"
+        script = self.redis.register_script(script_content)
+        script()
+
