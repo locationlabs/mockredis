@@ -32,11 +32,12 @@ against ground truth. See `mockredis.tests.fixtures` for more details and discla
 
 ## Supported python versions
 
-- Python 2.7
-- Python 3.2
-- Python 3.3
-- Python 3.4
-- PyPy
+ - Python 2.7
+ - Python 3.2
+ - Python 3.3
+ - Python 3.4
+ - PyPy
+ - PyPy3
 
 ## Attribution
 
