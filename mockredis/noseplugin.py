@@ -42,6 +42,10 @@ class WithRedis(Plugin):
                           action="store_true",
                           default=False,
                           help="Use a local redis instance to validate tests.")
+        parser.add_option("--redis-host",
+                          dest="redis_host",
+                          default="localhost",
+                          help="Run tests against redis database on another host")
         parser.add_option("--redis-database",
                           dest="redis_database",
                           default=15,
@@ -51,8 +55,12 @@ class WithRedis(Plugin):
         if options.use_redis:
             from redis import Redis, RedisError, ResponseError, StrictRedis, WatchError
 
-            WithRedis.Redis = partial(Redis, db=options.redis_database)
-            WithRedis.StrictRedis = partial(StrictRedis, db=options.redis_database)
+            WithRedis.Redis = partial(Redis,
+                                      db=options.redis_database,
+                                      host=options.redis_host)
+            WithRedis.StrictRedis = partial(StrictRedis,
+                                            db=options.redis_database,
+                                            host=options.redis_host)
             WithRedis.ResponseError = ResponseError
             WithRedis.RedisError = RedisError
             WithRedis.WatchError = WatchError

@@ -2,17 +2,21 @@ import time
 
 from nose.tools import assert_raises, eq_
 
-from mockredis.tests.fixtures import setup
+from mockredis.tests.fixtures import setup, teardown
 from mockredis.tests.test_constants import (
     LIST1, LIST2, VAL1, VAL2, VAL3, VAL4,
     bLIST1, bLIST2, bVAL1, bVAL2, bVAL3, bVAL4,
 )
+
 
 class TestRedisList(object):
     """list tests"""
 
     def setup(self):
         setup(self)
+
+    def teardown(self):
+        teardown(self)
 
     def test_initially_empty(self):
         """

@@ -1,6 +1,6 @@
 from nose.tools import eq_
 
-from mockredis.tests.fixtures import setup
+from mockredis.tests.fixtures import setup, teardown
 
 
 class TestRedisEmptyScans(object):
@@ -8,6 +8,9 @@ class TestRedisEmptyScans(object):
 
     def setup(self):
         setup(self)
+
+    def teardown(self):
+        teardown(self)
 
     def test_scans(self):
         def eq_scan(results, cursor, elements):
@@ -63,6 +66,9 @@ class TestRedisScan(object):
         self.redis.set('key_xyz_3', '3')
         self.redis.set('key_xyz_4', '4')
         self.redis.set('key_xyz_5', '5')
+
+    def teardown(self):
+        teardown(self)
 
     def test_scan(self):
         def do_full_scan(match, count):
@@ -131,6 +137,9 @@ class TestRedisSScan(object):
         self.redis.sadd('key', 'xyz_4')
         self.redis.sadd('key', 'xyz_5')
 
+    def teardown(self):
+        teardown(self)
+
     def test_scan(self):
         def do_full_scan(name, match, count):
             keys = set()  # technically redis SCAN can return duplicate keys
@@ -198,6 +207,9 @@ class TestRedisZScan(object):
         self.redis.zadd('key', 'xyz_4', 4)
         self.redis.zadd('key', 'xyz_5', 5)
 
+    def teardown(self):
+        teardown(self)
+
     def test_scan(self):
         def do_full_scan(name, match, count):
             keys = set()  # technically redis SCAN can return duplicate keys
@@ -264,6 +276,9 @@ class TestRedisHScan(object):
         self.redis.hset('key', 'xyz_3', 3)
         self.redis.hset('key', 'xyz_4', 4)
         self.redis.hset('key', 'xyz_5', 5)
+
+    def teardown(self):
+        teardown(self)
 
     def test_scan(self):
         def do_full_scan(name, match, count):

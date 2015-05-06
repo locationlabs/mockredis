@@ -1,7 +1,7 @@
 from nose.tools import assert_raises, eq_, ok_
 
 from mockredis.exceptions import ResponseError
-from mockredis.tests.fixtures import setup
+from mockredis.tests.fixtures import setup, teardown
 
 
 class TestRedisSet(object):
@@ -9,6 +9,9 @@ class TestRedisSet(object):
 
     def setup(self):
         setup(self)
+
+    def teardown(self):
+        teardown(self)
 
     def test_sadd_empty(self):
         key = "set"

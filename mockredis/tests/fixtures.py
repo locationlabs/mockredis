@@ -18,6 +18,16 @@ def setup(self):
     self.redis_strict.flushdb()
 
 
+def teardown(self):
+    """
+    Test teardown fixtures.
+    """
+    if self.redis:
+        del self.redis
+    if self.redis_strict:
+        del self.redis_strict
+
+
 def raises_response_error(func):
     """
     Test decorator that handles ResponseError or its mock equivalent

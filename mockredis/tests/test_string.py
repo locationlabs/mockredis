@@ -1,10 +1,9 @@
 from datetime import timedelta
-import sys
 
 from nose.tools import eq_, ok_
 
 from mockredis.client import get_total_milliseconds
-from mockredis.tests.fixtures import raises_response_error, setup
+from mockredis.tests.fixtures import raises_response_error, setup, teardown
 
 
 class TestRedisString(object):
@@ -12,6 +11,9 @@ class TestRedisString(object):
 
     def setup(self):
         setup(self)
+
+    def teardown(self):
+        teardown(self)
 
     def test_get(self):
         eq_(None, self.redis.get('key'))

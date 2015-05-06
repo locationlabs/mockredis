@@ -1,6 +1,6 @@
 from nose.tools import assert_raises, eq_, ok_
 
-from mockredis.tests.fixtures import setup
+from mockredis.tests.fixtures import setup, teardown
 
 
 class TestRedisZset(object):
@@ -8,6 +8,9 @@ class TestRedisZset(object):
 
     def setup(self):
         setup(self)
+
+    def teardown(self):
+        teardown(self)
 
     def test_zadd(self):
         key = "zset"

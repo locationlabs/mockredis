@@ -4,13 +4,17 @@ from nose.tools import eq_
 
 from mockredis.tests.fixtures import (assert_raises_redis_error,
                                       assert_raises_watch_error,
-                                      setup)
+                                      setup,
+                                      teardown)
 
 
 class TestPipeline(object):
 
     def setup(self):
         setup(self)
+
+    def teardown(self):
+        teardown(self)
 
     def test_pipeline(self):
         """
