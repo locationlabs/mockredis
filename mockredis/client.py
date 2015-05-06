@@ -57,7 +57,7 @@ class MockRedis(object):
         # Dictionary from script to sha ''Script''
         self.shas = dict()
 
-    #### Connection Functions ####
+    # Connection Functions #
 
     def echo(self, msg):
         return self._encode(msg)
@@ -65,7 +65,7 @@ class MockRedis(object):
     def ping(self):
         return b'PONG'
 
-    #### Transactions Functions ####
+    # Transactions Functions #
 
     def lock(self, key, timeout=0, sleep=0):
         """Emulate lock."""
@@ -101,7 +101,7 @@ class MockRedis(object):
         in this mock, so this is a no-op."""
         pass
 
-    #### Keys Functions ####
+    # Keys Functions #
 
     def type(self, key):
         key = self._encode(key)
@@ -247,7 +247,7 @@ class MockRedis(object):
             return True
         return False
 
-    #### String Functions ####
+    # String Functions #
 
     def get(self, key):
         key = self._encode(key)
@@ -452,8 +452,7 @@ class MockRedis(object):
         mask = 128 >> position
         return index, bits, mask
 
-
-    #### Hash Functions ####
+    # Hash Functions #
 
     def hexists(self, hashkey, attribute):
         """Emulate hexists."""
@@ -558,7 +557,7 @@ class MockRedis(object):
         redis_hash = self._get_hash(hashkey, 'HVALS')
         return redis_hash.values()
 
-    #### List Functions ####
+    # List Functions #
 
     def lrange(self, key, start, stop):
         """Emulate lrange."""
@@ -766,7 +765,7 @@ class MockRedis(object):
                 return []
 
         by = self._encode(by) if by is not None else by
-        # always organize the items as tuples of the value from the list itself and the value to sort by
+        # always organize the items as tuples of the value from the list and the sort key
         if by and b'*' in by:
             items = [(i, self.get(by.replace(b'*', self._encode(i)))) for i in items]
         elif by in [None, b'nosort']:
@@ -822,7 +821,7 @@ class MockRedis(object):
         else:
             return results
 
-    #### SCAN COMMANDS ####
+    # SCAN COMMANDS #
 
     def _common_scan(self, values_function, cursor='0', match=None, count=10, key=None):
         """
@@ -891,7 +890,7 @@ class MockRedis(object):
             values = self.zrange(name, 0, -1, withscores=True)
             values.sort(key=lambda x: x[1])  # sort for consistent order
             return values
-        return self._common_scan(value_function, cursor=cursor, match=match, count=count, key=lambda v: v[0])
+        return self._common_scan(value_function, cursor=cursor, match=match, count=count, key=lambda v: v[0])  # noqa
 
     def zscan_iter(self, name, match=None, count=10):
         """Emulate zscan_iter."""
@@ -909,7 +908,7 @@ class MockRedis(object):
             values = list(values.items())  # list of tuples for sorting and matching
             values.sort(key=lambda x: x[0])  # sort for consistent order
             return values
-        scanned = self._common_scan(value_function, cursor=cursor, match=match, count=count, key=lambda v: v[0])
+        scanned = self._common_scan(value_function, cursor=cursor, match=match, count=count, key=lambda v: v[0])  # noqa
         scanned[1] = dict(scanned[1])  # from list of tuples back to dict
         return scanned
 
@@ -922,7 +921,7 @@ class MockRedis(object):
             for item in data.items():
                 yield item
 
-    #### SET COMMANDS ####
+    # SET COMMANDS #
 
     def sadd(self, key, *values):
         """Emulate sadd."""
@@ -1035,7 +1034,7 @@ class MockRedis(object):
         self.redis[self._encode(dest)] = result
         return len(result)
 
-    #### SORTED SET COMMANDS ####
+    # SORTED SET COMMANDS #
 
     def zadd(self, name, *args, **kwargs):
         zset = self._get_zset(name, "ZADD", create=True)
@@ -1056,7 +1055,7 @@ class MockRedis(object):
         # kwargs
         pieces.extend(kwargs.items())
 
-        insert_count = lambda member, score: 1 if zset.insert(self._encode(member), float(score)) else 0
+        insert_count = lambda member, score: 1 if zset.insert(self._encode(member), float(score)) else 0  # noqa
         return sum((insert_count(member, score) for member, score in pieces))
 
     def zcard(self, name):
@@ -1129,7 +1128,7 @@ class MockRedis(object):
         func = self._range_func(withscores, score_cast_func)
         include_start, min = self._score_inclusive(min)
         include_end, max = self._score_inclusive(max)
-        scorerange = zset.scorerange(min, max, start_inclusive=include_start, end_inclusive=include_end)
+        scorerange = zset.scorerange(min, max, start_inclusive=include_start, end_inclusive=include_end)  # noqa
         if start is not None and num is not None:
             start, num = self._translate_limit(len(scorerange), int(start), int(num))
             scorerange = scorerange[start:start + num]
@@ -1160,7 +1159,7 @@ class MockRedis(object):
 
         start, end = self._translate_range(len(zset), start, end)
         count_removals = lambda score, member: 1 if zset.remove(member) else 0
-        removal_count = sum((count_removals(score, member) for score, member in zset.range(start, end)))
+        removal_count = sum((count_removals(score, member) for score, member in zset.range(start, end)))  # noqa
         if removal_count > 0 and len(zset) == 0:
             self.delete(name)
         return removal_count
@@ -1203,7 +1202,8 @@ class MockRedis(object):
         include_end, max = self._score_inclusive(max)
 
         scorerange = [x for x in reversed(zset.scorerange(float(min), float(max),
-                                                          start_inclusive=include_start, end_inclusive=include_end))]
+                                                          start_inclusive=include_start,
+                                                          end_inclusive=include_end))]
         if start is not None and num is not None:
             start, num = self._translate_limit(len(scorerange), int(start), int(num))
             scorerange = scorerange[start:start + num]
@@ -1245,7 +1245,7 @@ class MockRedis(object):
         self.redis[self._encode(dest)] = union
         return len(union)
 
-    #### Script Commands ####
+    # Script Commands #
 
     def eval(self, script, numkeys, *keys_and_args):
         """Emulate eval"""
@@ -1354,12 +1354,12 @@ class MockRedis(object):
 
         return response
 
-    #### PubSub commands ####
+    # PubSub commands #
 
     def publish(self, channel, message):
         self.pubsub[channel].append(message)
 
-    #### Internal ####
+    # Internal #
 
     def _get_list(self, key, operation, create=False):
         """
@@ -1383,7 +1383,7 @@ class MockRedis(object):
         """
         Get (and maybe create) a sorted set by name.
         """
-        return self._get_by_type(name, operation, create, b'zset', SortedSet(), return_default=False)
+        return self._get_by_type(name, operation, create, b'zset', SortedSet(), return_default=False)  # noqa
 
     def _get_by_type(self, key, operation, create, type_, default, return_default=True):
         """
@@ -1423,7 +1423,7 @@ class MockRedis(object):
         Return a suitable function from (score, member)
         """
         if withscores:
-            return lambda score_member: (score_member[1], score_cast_func(self._encode(score_member[0])))
+            return lambda score_member: (score_member[1], score_cast_func(self._encode(score_member[0])))  # noqa
         else:
             return lambda score_member: score_member[1]
 

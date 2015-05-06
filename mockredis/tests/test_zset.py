@@ -373,7 +373,7 @@ class TestRedisZset(object):
 
         eq_([b"two", b"three", b"four", b"five"], self.redis.zrange(key, 0, -1))
 
-        eq_(2, self.redis.zremrangebyscore(key, '(2', 4))  #remove "three" & "four"
+        eq_(2, self.redis.zremrangebyscore(key, '(2', 4))  # remove "three" & "four"
         eq_([b"two", b"five"], self.redis.zrange(key, 0, -1))
 
         eq_(1, self.redis.zremrangebyscore(key, "(2.0", "inf"))

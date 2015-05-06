@@ -82,7 +82,7 @@ class TestRedisScan(object):
                 result_cursor = cursor
             return keys
 
-        abc_keys = set([b'key_abc_1', b'key_abc_2', b'key_abc_3', b'key_abc_4', b'key_abc_5', b'key_abc_6'])
+        abc_keys = set([b'key_abc_1', b'key_abc_2', b'key_abc_3', b'key_abc_4', b'key_abc_5', b'key_abc_6'])  # noqa
         eq_(do_full_scan('*abc*', 1), abc_keys)
         eq_(do_full_scan('*abc*', 2), abc_keys)
         eq_(do_full_scan('*abc*', 10), abc_keys)
@@ -222,7 +222,7 @@ class TestRedisZScan(object):
                 result_cursor = cursor
             return keys
 
-        abc_members = set([(b'abc_1', 1), (b'abc_2', 2), (b'abc_3', 3), (b'abc_4', 4), (b'abc_5', 5), (b'abc_6', 6)])
+        abc_members = set([(b'abc_1', 1), (b'abc_2', 2), (b'abc_3', 3), (b'abc_4', 4), (b'abc_5', 5), (b'abc_6', 6)])  # noqa
         eq_(do_full_scan('key', '*abc*', 1), abc_members)
         eq_(do_full_scan('key', '*abc*', 2), abc_members)
         eq_(do_full_scan('key', '*abc*', 10), abc_members)
@@ -231,7 +231,7 @@ class TestRedisZScan(object):
             members.add(m)
         eq_(members, abc_members)
 
-        xyz_members = set([(b'xyz_1', 1), (b'xyz_2', 2), (b'xyz_3', 3), (b'xyz_4', 4), (b'xyz_5', 5)])
+        xyz_members = set([(b'xyz_1', 1), (b'xyz_2', 2), (b'xyz_3', 3), (b'xyz_4', 4), (b'xyz_5', 5)])  # noqa
         eq_(do_full_scan('key', '*xyz*', 1), xyz_members)
         eq_(do_full_scan('key', '*xyz*', 2), xyz_members)
         eq_(do_full_scan('key', '*xyz*', 10), xyz_members)
@@ -292,7 +292,7 @@ class TestRedisHScan(object):
                 result_cursor = cursor
             return keys
 
-        abc = {b'abc_1': b'1', b'abc_2': b'2', b'abc_3': b'3', b'abc_4': b'4', b'abc_5': b'5', b'abc_6': b'6'}
+        abc = {b'abc_1': b'1', b'abc_2': b'2', b'abc_3': b'3', b'abc_4': b'4', b'abc_5': b'5', b'abc_6': b'6'}  # noqa
         eq_(do_full_scan('key', '*abc*', 1), abc)
         eq_(do_full_scan('key', '*abc*', 2), abc)
         eq_(do_full_scan('key', '*abc*', 10), abc)

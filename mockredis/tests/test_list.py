@@ -383,11 +383,11 @@ class TestRedisList(object):
         eq_(self.redis.sort(LIST1, get=['get1_*', 'get2_*'], start=1, num=1), [b'c', b'z'])
 
         # test multiple gets with grouping
-        eq_(self.redis.sort(LIST1, get=['get1_*', 'get2_*'], groups=True), [(b'a', b'x'), (b'c', b'z'), (b'b', b'y')])
+        eq_(self.redis.sort(LIST1, get=['get1_*', 'get2_*'], groups=True), [(b'a', b'x'), (b'c', b'z'), (b'b', b'y')])  # noqa
 
         # test start and num
-        eq_(self.redis.sort(LIST1, get=['get1_*', 'get2_*'], groups=True, start=1, num=1), [(b'c', b'z')])
-        eq_(self.redis.sort(LIST1, get=['get1_*', 'get2_*'], groups=True, start=1, num=2), [(b'c', b'z'), (b'b', b'y')])
+        eq_(self.redis.sort(LIST1, get=['get1_*', 'get2_*'], groups=True, start=1, num=1), [(b'c', b'z')])  # noqa
+        eq_(self.redis.sort(LIST1, get=['get1_*', 'get2_*'], groups=True, start=1, num=2), [(b'c', b'z'), (b'b', b'y')])  # noqa
 
     def test_lset(self):
         with assert_raises(Exception):

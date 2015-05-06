@@ -131,7 +131,7 @@ class TestScript(object):
         script = self.redis.register_script(script_content)
         script(keys=[LIST1, LIST2])
 
-        #validate rpoplpush
+        # validate rpoplpush
         eq_([VAL1], self.redis.lrange(LIST1, 0, -1))
         eq_([VAL2, VAL3, VAL4], self.redis.lrange(LIST2, 0, -1))
 
@@ -147,7 +147,7 @@ class TestScript(object):
         script = self.redis.register_script(script_content)
         script(keys=[LIST1, LIST2])
 
-        #validate rpop and then lpush
+        # validate rpop and then lpush
         eq_([VAL1], self.redis.lrange(LIST1, 0, -1))
         eq_([VAL2, VAL3, VAL4], self.redis.lrange(LIST2, 0, -1))
 
@@ -402,7 +402,7 @@ return entry
 
         def lua_thread():
             for i in range(500):
-                result = script(args=[i])
+                script(args=[i])
 
         active_threads = []
         for i in range(10):

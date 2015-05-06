@@ -4,6 +4,7 @@ from mockredis.exceptions import ResponseError
 
 LuaLock = threading.Lock()
 
+
 class Script(object):
     """
     An executable Lua script object returned by ``MockRedis.register_script``.
@@ -40,7 +41,7 @@ class Script(object):
             if str(call_args[0]).lower() == 'lrem':
                 response = client.call(
                     call_args[0], call_args[1],
-                    call_args[3], # "count", default is 0
+                    call_args[3],  # "count", default is 0
                     call_args[2])
             else:
                 response = client.call(*call_args)

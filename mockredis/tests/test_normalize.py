@@ -70,4 +70,3 @@ def test_normalize_command_response():
 
     for command, response, expected in cases:
         yield _test, command, response, expected
-

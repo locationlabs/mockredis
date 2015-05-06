@@ -11,10 +11,8 @@ except ImportError:
     class RedisError(Exception):
         pass
 
-
     class ResponseError(RedisError):
         pass
-
 
     class WatchError(RedisError):
         pass

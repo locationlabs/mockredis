@@ -29,8 +29,8 @@ class TestSortedSet(object):
         eq_(2, len(self.zset))
         ok_("one" in self.zset)
         ok_("two" in self.zset)
-        ok_(not 1.0 in self.zset)
-        ok_(not 2.0 in self.zset)
+        ok_(1.0 not in self.zset)
+        ok_(2.0 not in self.zset)
         eq_(1.0, self.zset["one"])
         eq_(2.0, self.zset["two"])
         with assert_raises(KeyError):
@@ -96,9 +96,9 @@ class TestSortedSet(object):
         self.zset["two"] = 2.0
         self.zset["three"] = 3.0
         eq_([], self.zset.scorerange(1.0, 1.1, start_inclusive=False, end_inclusive=False))
-        eq_([(1.0, "one"), (1.0, "uno")], self.zset.scorerange(1.0, 1.1, start_inclusive=True, end_inclusive=False))
-        eq_([(1.1, "uno_dot_one")], self.zset.scorerange(1.0, 1.1, start_inclusive=False, end_inclusive=True))
-        eq_([(1.1, "uno_dot_one")], self.zset.scorerange(1.0, 2.0, start_inclusive=False, end_inclusive=False))
+        eq_([(1.0, "one"), (1.0, "uno")], self.zset.scorerange(1.0, 1.1, start_inclusive=True, end_inclusive=False))  # noqa
+        eq_([(1.1, "uno_dot_one")], self.zset.scorerange(1.0, 1.1, start_inclusive=False, end_inclusive=True))  # noqa
+        eq_([(1.1, "uno_dot_one")], self.zset.scorerange(1.0, 2.0, start_inclusive=False, end_inclusive=False))  # noqa
         eq_([(1.1, "uno_dot_one"), (2.0, "two")],
             self.zset.scorerange(1.0, 3.0, start_inclusive=False, end_inclusive=False))
 
