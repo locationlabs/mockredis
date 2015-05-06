@@ -1064,13 +1064,13 @@ class MockRedis(object):
 
         return len(zset) if zset is not None else 0
 
-    def zcount(self, name, min_, max_):
+    def zcount(self, name, min, max):
         zset = self._get_zset(name, "ZCOUNT")
 
         if not zset:
             return 0
 
-        return len(zset.scorerange(float(min_), float(max_)))
+        return len(zset.scorerange(float(min), float(max)))
 
     def zincrby(self, name, value, amount=1):
         zset = self._get_zset(name, "ZINCRBY", create=True)
@@ -1116,7 +1116,7 @@ class MockRedis(object):
         func = self._range_func(withscores, score_cast_func)
         return [func(item) for item in zset.range(start, end, desc)]
 
-    def zrangebyscore(self, name, min_, max_, start=None, num=None,
+    def zrangebyscore(self, name, min, max, start=None, num=None,
                       withscores=False, score_cast_func=float):
         if (start is None) ^ (num is None):
             raise RedisError('`start` and `num` must both be specified')
@@ -1127,9 +1127,9 @@ class MockRedis(object):
             return []
 
         func = self._range_func(withscores, score_cast_func)
-        include_start, min_ = self._score_inclusive(min_)
-        include_end, max_ = self._score_inclusive(max_)
-        scorerange = zset.scorerange(min_, max_, start_inclusive=include_start, end_inclusive=include_end)
+        include_start, min = self._score_inclusive(min)
+        include_end, max = self._score_inclusive(max)
+        scorerange = zset.scorerange(min, max, start_inclusive=include_start, end_inclusive=include_end)
         if start is not None and num is not None:
             start, num = self._translate_limit(len(scorerange), int(start), int(num))
             scorerange = scorerange[start:start + num]
@@ -1165,18 +1165,18 @@ class MockRedis(object):
             self.delete(name)
         return removal_count
 
-    def zremrangebyscore(self, name, min_, max_):
+    def zremrangebyscore(self, name, min, max):
         zset = self._get_zset(name, "ZREMRANGEBYSCORE")
 
         if not zset:
             return 0
 
         count_removals = lambda score, member: 1 if zset.remove(member) else 0
-        include_start, min_ = self._score_inclusive(min_)
-        include_end, max_ = self._score_inclusive(max_)
+        include_start, min = self._score_inclusive(min)
+        include_end, max = self._score_inclusive(max)
 
         removal_count = sum((count_removals(score, member)
-                             for score, member in zset.scorerange(min_, max_,
+                             for score, member in zset.scorerange(min, max,
                                                                   start_inclusive=include_start,
                                                                   end_inclusive=include_end)))
         if removal_count > 0 and len(zset) == 0:
@@ -1188,7 +1188,7 @@ class MockRedis(object):
         return self.zrange(name, start, end,
                            desc=True, withscores=withscores, score_cast_func=score_cast_func)
 
-    def zrevrangebyscore(self, name, max_, min_, start=None, num=None,
+    def zrevrangebyscore(self, name, max, min, start=None, num=None,
                          withscores=False, score_cast_func=float):
 
         if (start is None) ^ (num is None):
@@ -1199,10 +1199,10 @@ class MockRedis(object):
             return []
 
         func = self._range_func(withscores, score_cast_func)
-        include_start, min_ = self._score_inclusive(min_)
-        include_end, max_ = self._score_inclusive(max_)
+        include_start, min = self._score_inclusive(min)
+        include_end, max = self._score_inclusive(max)
 
-        scorerange = [x for x in reversed(zset.scorerange(float(min_), float(max_),
+        scorerange = [x for x in reversed(zset.scorerange(float(min), float(max),
                                                           start_inclusive=include_start, end_inclusive=include_end))]
         if start is not None and num is not None:
             start, num = self._translate_limit(len(scorerange), int(start), int(num))
