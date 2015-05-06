@@ -277,3 +277,29 @@ class TestRedisString(object):
         eq_(None, self.redis.getset('getset_key', '1'))
         eq_(b'1', self.redis.getset('getset_key', '2'))
         eq_(b'2', self.redis.get('getset_key'))
+
+
+    def test_setbit(self):
+
+        # test behavior on empty keys
+        eq_(0, self.redis.getbit("setbit_key", 0))
+        eq_(0, self.redis.getbit("setbit_key", 1024))
+        eq_(None, self.redis.get("setbit_key"))
+
+        # test setting bits and getting bits
+        for x in range(64):
+            eq_(0, self.redis.setbit("setbit_key", x, 1))
+            eq_(1, self.redis.getbit("setbit_key", x))
+            eq_(1, self.redis.setbit("setbit_key", x, 0))
+            eq_(0, self.redis.getbit("setbit_key", x))
+
+        # test setting string and getting bits
+        eq_(True, self.redis.set("setbit_key", b"\xaa\xaa"))
+        for x in range(0, 16, 2):
+            eq_(1, self.redis.getbit("setbit_key", x))
+            eq_(0, self.redis.getbit("setbit_key", x+1))
+
+        # test setting bits and getting string
+        for x in range(16, 32, 2):
+            eq_(0, self.redis.setbit("setbit_key", x, 1))
+        eq_(b"\xaa\xaa\xaa\xaa", self.redis.get("setbit_key"))
