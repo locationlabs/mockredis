@@ -1,12 +1,26 @@
+from contextlib import contextmanager
 import time
 
-from nose.tools import assert_raises, eq_
+from nose.tools import assert_less, assert_raises, eq_
 
 from mockredis.tests.fixtures import setup, teardown
 from mockredis.tests.test_constants import (
     LIST1, LIST2, VAL1, VAL2, VAL3, VAL4,
-    bLIST1, bLIST2, bVAL1, bVAL2, bVAL3, bVAL4,
+    bLIST1, bVAL1, bVAL2, bVAL3, bVAL4,
 )
+
+
+@contextmanager
+def assert_elapsed_time(expected=1.0, delta=2.0):
+    """
+    Validate that work encapsulated by this context manager
+    takes at least and is within a delta of the expected amount of time.
+    """
+    start = time.time()
+    yield
+    diff = time.time() - start
+    assert_less(expected, diff)
+    assert_less(diff, expected + delta)
 
 
 class TestRedisList(object):
@@ -62,11 +76,10 @@ class TestRedisList(object):
         eq_(1, len(self.redis.lrange(LIST1, 0, -1)))
         eq_((bLIST1, bVAL2), self.redis.blpop(LIST1))
         eq_(0, len(self.redis.lrange(LIST1, 0, -1)))
+
         timeout = 1
-        start = time.time()
-        eq_(None, self.redis.blpop(LIST1, timeout))
-        eq_(timeout, int(time.time() - start))
-        eq_([], self.redis.keys("*"))
+        with assert_elapsed_time(expected=timeout):
+            eq_(None, self.redis.blpop(LIST1, timeout))
 
     def test_lpush(self):
         """
@@ -103,10 +116,11 @@ class TestRedisList(object):
         eq_(1, len(self.redis.lrange(LIST1, 0, -1)))
         eq_((bLIST1, bVAL1), self.redis.brpop(LIST1))
         eq_(0, len(self.redis.lrange(LIST1, 0, -1)))
+
         timeout = 1
-        start = time.time()
-        eq_(None, self.redis.brpop(LIST1, timeout))
-        eq_(timeout, int(time.time() - start))
+        with assert_elapsed_time(expected=timeout):
+            eq_(None, self.redis.brpop(LIST1, timeout))
+
         eq_([], self.redis.keys("*"))
 
     def test_rpush(self):
@@ -193,10 +207,10 @@ class TestRedisList(object):
         eq_([], self.redis.lrange(LIST1, 0, -1))
         eq_([bVAL1, bVAL2, bVAL3, bVAL4],
             self.redis.lrange(LIST2, 0, -1))
+
         timeout = 1
-        start = time.time()
-        eq_(None, self.redis.brpoplpush(LIST1, LIST2, timeout))
-        eq_(timeout, int(time.time() - start))
+        with assert_elapsed_time(expected=timeout):
+            eq_(None, self.redis.brpoplpush(LIST1, LIST2, timeout))
 
     def test_rpoplpush(self):
         self.redis.rpush(LIST1, VAL1, VAL2)
