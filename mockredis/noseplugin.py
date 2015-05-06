@@ -1,8 +1,13 @@
 """
 This module includes a nose plugin that allows unit tests to be run with a real
-redis-server instance running locally (assuming redis-py) is installed. This provides
-a simple way to verify that mockredis tests are accurate (at least for a particular
-version of redis-server and redis-py).
+redis-server instance, as long as redis-py is installed.
+
+This provides a simple way to verify that mockredis tests are accurate (at least
+for a particular version of redis-server and redis-py).
+
+Usage:
+
+    nosetests --use-redis [--redis-host <localhost>] [--redis-database <db>] [args]
 
 For this plugin to work, several things need to be true:
 
