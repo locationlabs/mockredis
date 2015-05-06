@@ -30,11 +30,11 @@ class TestScript(object):
     """
 
     def setup(self):
-        self.redis = MockRedis()
+        self.redis = MockRedis(load_lua_dependencies=False)
         self.LPOP_SCRIPT_SHA = sha1(LPOP_SCRIPT.encode("utf-8")).hexdigest()
 
         try:
-            lua, lua_globals = MockRedisScript._import_lua()
+            lua, lua_globals = MockRedisScript._import_lua(load_dependencies=False)
         except RuntimeError:
             raise SkipTest("mockredispy was not installed with lua support")
 
