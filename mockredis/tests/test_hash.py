@@ -1,6 +1,6 @@
 from nose.tools import eq_, ok_
 
-from mockredis.tests.fixtures import setup
+from mockredis.tests.fixtures import setup, teardown
 
 
 class TestRedisHash(object):
@@ -8,6 +8,9 @@ class TestRedisHash(object):
 
     def setup(self):
         setup(self)
+
+    def teardown(self):
+        teardown(self)
 
     def test_hexists(self):
         hashkey = "hash"

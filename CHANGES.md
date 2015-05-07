@@ -1,3 +1,6 @@
+Version 2.9.0.11
+ - Support: `scan_iter`, `sscan_iter`, `zscan_iter`, `hscan_iter`
+
 Version 2.9.0.10
  - Return & store byte strings everywhere (unicode turns into utf-8 by default)
  - Fix *SCAN returning non-long values.

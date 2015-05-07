@@ -1,10 +1,9 @@
 from datetime import timedelta
-import sys
 
 from nose.tools import eq_, ok_
 
 from mockredis.client import get_total_milliseconds
-from mockredis.tests.fixtures import raises_response_error, setup
+from mockredis.tests.fixtures import raises_response_error, setup, teardown
 
 
 class TestRedisString(object):
@@ -12,6 +11,9 @@ class TestRedisString(object):
 
     def setup(self):
         setup(self)
+
+    def teardown(self):
+        teardown(self)
 
     def test_get(self):
         eq_(None, self.redis.get('key'))
@@ -37,8 +39,10 @@ class TestRedisString(object):
         """
         Assert conditions for setting a key on the set function.
 
-        The set function can take px, ex, nx and xx kwargs, this function asserts various conditions
-        on set depending on the combinations of kwargs: creation mode(nx,xx) and expiration(ex,px).
+        The set function can take px, ex, nx and xx kwargs, this function asserts various
+        conditions on the set depending on the combinations of kwargs: creation mode(nx,xx)
+        and expiration(ex,px).
+
         E.g. verifying that a non-existent key does not get set if xx=True or gets set with nx=True
         iff it is absent.
         """
@@ -81,81 +85,84 @@ class TestRedisString(object):
     def test_set_with_options(self):
         """Test the set function with various combinations of arguments"""
 
-        test_cases = [("1. px and ex are set, nx is always true & set on non-existing key",
-                      False,
-                      [(('key1', 'value1', None), dict(ex=20, px=70000, xx=True, nx=True)),
-                      (('key2', 'value1', True), dict(ex=20, px=70000, xx=False, nx=True)),
-                      (('key3', 'value2', True), dict(ex=20, px=70000, nx=True))]),
+        test_cases = [
+            ("1. px and ex are set, nx is always true & set on non-existing key",
+             False,
+             [(('key1', 'value1', None), dict(ex=20, px=70000, xx=True, nx=True)),
+              (('key2', 'value1', True), dict(ex=20, px=70000, xx=False, nx=True)),
+              (('key3', 'value2', True), dict(ex=20, px=70000, nx=True))]),
 
-                      ("2. px and ex are set, nx is always true & set on existing key",
-                      True,
-                      [(('key', 'value1', None), dict(ex=20, px=70000, xx=True, nx=True)),
-                      (('key', 'value1', None), dict(ex=20, px=7000, xx=False, nx=True)),
-                      (('key', 'value1', None), dict(ex=20, px=70000, nx=True))]),
+            ("2. px and ex are set, nx is always true & set on existing key",
+             True,
+             [(('key', 'value1', None), dict(ex=20, px=70000, xx=True, nx=True)),
+              (('key', 'value1', None), dict(ex=20, px=7000, xx=False, nx=True)),
+              (('key', 'value1', None), dict(ex=20, px=70000, nx=True))]),
 
-                      ("3. px and ex are set, xx is always true & set on existing key",
-                      True,
-                      [(('key', 'value1', None), dict(ex=20, px=70000, xx=True, nx=True)),
-                      (('key', 'value1', True), dict(ex=20, px=70000, xx=True, nx=False)),
-                      (('key', 'value4', True), dict(ex=20, px=70000, xx=True))]),
+            ("3. px and ex are set, xx is always true & set on existing key",
+             True,
+             [(('key', 'value1', None), dict(ex=20, px=70000, xx=True, nx=True)),
+              (('key', 'value1', True), dict(ex=20, px=70000, xx=True, nx=False)),
+              (('key', 'value4', True), dict(ex=20, px=70000, xx=True))]),
 
-                      ("4. px and ex are set, xx is always true & set on non-existing key",
-                      False,
-                      [(('key1', 'value1', None), dict(ex=20, px=70000, xx=True, nx=True)),
-                      (('key2', 'value2', None), dict(ex=20, px=70000, xx=True, nx=False)),
-                      (('key3', 'value3', None), dict(ex=20, px=70000, xx=True))]),
+            ("4. px and ex are set, xx is always true & set on non-existing key",
+             False,
+             [(('key1', 'value1', None), dict(ex=20, px=70000, xx=True, nx=True)),
+              (('key2', 'value2', None), dict(ex=20, px=70000, xx=True, nx=False)),
+              (('key3', 'value3', None), dict(ex=20, px=70000, xx=True))]),
 
-                      ("5. either nx or xx defined and set to false or none defined" +
-                       " & set on existing key",
-                      True,
-                      [(('key', 'value1', True), dict(ex=20, px=70000, xx=False)),
-                      (('key', 'value2', True), dict(ex=20, px=70000, nx=False)),
-                      (('key', 'value3', True), dict(ex=20, px=70000))]),
+            ("5. either nx or xx defined and set to false or none defined" +
+             " & set on existing key",
+             True,
+             [(('key', 'value1', True), dict(ex=20, px=70000, xx=False)),
+              (('key', 'value2', True), dict(ex=20, px=70000, nx=False)),
+              (('key', 'value3', True), dict(ex=20, px=70000))]),
 
-                      ("6. either nx or xx defined and set to false or none defined" +
-                       " & set on non-existing key",
-                      False,
-                      [(('key1', 'value1', True), dict(ex=20, px=70000, xx=False)),
-                      (('key2', 'value2', True), dict(ex=20, px=70000, nx=False)),
-                      (('key3', 'value3', True), dict(ex=20, px=70000))]),
+            ("6. either nx or xx defined and set to false or none defined" +
+             " & set on non-existing key",
+             False,
+             [(('key1', 'value1', True), dict(ex=20, px=70000, xx=False)),
+              (('key2', 'value2', True), dict(ex=20, px=70000, nx=False)),
+              (('key3', 'value3', True), dict(ex=20, px=70000))]),
 
-                      ("7: where neither px nor ex defined + set on existing key",
-                      True,
-                      [(('key', 'value2', None), dict(xx=True, nx=True)),
-                      (('key', 'value2', None), dict(xx=False, nx=True)),
-                      (('key', 'value2', True), dict(xx=True, nx=False)),
-                      (('key', 'value3', True), dict(xx=True)),
-                      (('key', 'value4', None), dict(nx=True)),
-                      (('key', 'value4', True), dict(xx=False)),
-                      (('key', 'value5', True), dict(nx=False))]),
+            ("7: where neither px nor ex defined + set on existing key",
+             True,
+             [(('key', 'value2', None), dict(xx=True, nx=True)),
+              (('key', 'value2', None), dict(xx=False, nx=True)),
+              (('key', 'value2', True), dict(xx=True, nx=False)),
+              (('key', 'value3', True), dict(xx=True)),
+              (('key', 'value4', None), dict(nx=True)),
+              (('key', 'value4', True), dict(xx=False)),
+              (('key', 'value5', True), dict(nx=False))]),
 
-                      ("8: where neither px nor ex defined + set on non-existing key",
-                      False,
-                      [(('key1', 'value1', None), dict(xx=True, nx=True)),
-                      (('key2', 'value1', True), dict(xx=False, nx=True)),
-                      (('key3', 'value2', None), dict(xx=True, nx=False)),
-                      (('key4', 'value3', None), dict(xx=True)),
-                      (('key5', 'value4', True), dict(nx=True)),
-                      (('key6', 'value4', True), dict(xx=False)),
-                      (('key7', 'value5', True), dict(nx=False))]),
+            ("8: where neither px nor ex defined + set on non-existing key",
+             False,
+             [(('key1', 'value1', None), dict(xx=True, nx=True)),
+              (('key2', 'value1', True), dict(xx=False, nx=True)),
+              (('key3', 'value2', None), dict(xx=True, nx=False)),
+              (('key4', 'value3', None), dict(xx=True)),
+              (('key5', 'value4', True), dict(nx=True)),
+              (('key6', 'value4', True), dict(xx=False)),
+              (('key7', 'value5', True), dict(nx=False))]),
 
-                      ("9: where neither nx nor xx defined + set on existing key",
-                      True,
-                      [(('key', 'value1', True), dict(ex=20, px=70000)),
-                      (('key1', 'value12', True), dict(ex=20)),
-                      (('key1', 'value11', True), dict(px=20000))]),
+            ("9: where neither nx nor xx defined + set on existing key",
+             True,
+             [(('key', 'value1', True), dict(ex=20, px=70000)),
+              (('key1', 'value12', True), dict(ex=20)),
+              (('key1', 'value11', True), dict(px=20000))]),
 
-                      ("10: where neither nx nor xx is defined + set on non-existing key",
-                      False,
-                      [(('key1', 'value1', True), dict(ex=20, px=70000)),
-                      (('key2', 'value2', True), dict(ex=20)),
-                      (('key3', 'value3', True), dict(px=20000))])]
+            ("10: where neither nx nor xx is defined + set on non-existing key",
+             False,
+             [(('key1', 'value1', True), dict(ex=20, px=70000)),
+              (('key2', 'value2', True), dict(ex=20)),
+              (('key3', 'value3', True), dict(px=20000))])]
 
         for cases in test_cases:
             yield self._assert_set_with_options, cases
 
     def _assert_set_with_timeout(self, seconds):
-        """Assert both strict and non-strict that setex sets a key with a value along with a timeout"""
+        """
+        Assert both strict and non-strict that setex sets a key with a value along with a timeout.
+        """
 
         eq_(None, self.redis_strict.get('key'))
         eq_(None, self.redis.get('key'))
@@ -277,3 +284,28 @@ class TestRedisString(object):
         eq_(None, self.redis.getset('getset_key', '1'))
         eq_(b'1', self.redis.getset('getset_key', '2'))
         eq_(b'2', self.redis.get('getset_key'))
+
+    def test_setbit(self):
+
+        # test behavior on empty keys
+        eq_(0, self.redis.getbit("setbit_key", 0))
+        eq_(0, self.redis.getbit("setbit_key", 1024))
+        eq_(None, self.redis.get("setbit_key"))
+
+        # test setting bits and getting bits
+        for x in range(64):
+            eq_(0, self.redis.setbit("setbit_key", x, 1))
+            eq_(1, self.redis.getbit("setbit_key", x))
+            eq_(1, self.redis.setbit("setbit_key", x, 0))
+            eq_(0, self.redis.getbit("setbit_key", x))
+
+        # test setting string and getting bits
+        eq_(True, self.redis.set("setbit_key", b"\xaa\xaa"))
+        for x in range(0, 16, 2):
+            eq_(1, self.redis.getbit("setbit_key", x))
+            eq_(0, self.redis.getbit("setbit_key", x+1))
+
+        # test setting bits and getting string
+        for x in range(16, 32, 2):
+            eq_(0, self.redis.setbit("setbit_key", x, 1))
+        eq_(b"\xaa\xaa\xaa\xaa", self.redis.get("setbit_key"))

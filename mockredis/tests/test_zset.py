@@ -1,6 +1,6 @@
 from nose.tools import assert_raises, eq_, ok_
 
-from mockredis.tests.fixtures import setup
+from mockredis.tests.fixtures import setup, teardown
 
 
 class TestRedisZset(object):
@@ -8,6 +8,9 @@ class TestRedisZset(object):
 
     def setup(self):
         setup(self)
+
+    def teardown(self):
+        teardown(self)
 
     def test_zadd(self):
         key = "zset"
@@ -370,7 +373,7 @@ class TestRedisZset(object):
 
         eq_([b"two", b"three", b"four", b"five"], self.redis.zrange(key, 0, -1))
 
-        eq_(2, self.redis.zremrangebyscore(key, '(2', 4))  #remove "three" & "four"
+        eq_(2, self.redis.zremrangebyscore(key, '(2', 4))  # remove "three" & "four"
         eq_([b"two", b"five"], self.redis.zrange(key, 0, -1))
 
         eq_(1, self.redis.zremrangebyscore(key, "(2.0", "inf"))

@@ -1,7 +1,7 @@
 from nose.tools import assert_raises, eq_, ok_
 
 from mockredis.exceptions import ResponseError
-from mockredis.tests.fixtures import setup
+from mockredis.tests.fixtures import setup, teardown
 
 
 class TestRedisSet(object):
@@ -9,6 +9,9 @@ class TestRedisSet(object):
 
     def setup(self):
         setup(self)
+
+    def teardown(self):
+        teardown(self)
 
     def test_sadd_empty(self):
         key = "set"
@@ -35,7 +38,7 @@ class TestRedisSet(object):
     def test_scard(self):
         key = "set"
         eq_(0, self.redis.scard(key))
-        ok_(not key in self.redis)
+        ok_(key not in self.redis)
         values = ["one", "uno", "two", "three"]
         eq_(4, self.redis.sadd(key, *values))
         eq_(4, self.redis.scard(key))
@@ -114,7 +117,7 @@ class TestRedisSet(object):
         key = "set"
         ok_(not self.redis.sismember(key, "one"))
         ok_(key not in self.redis)
-	
+
         eq_(1, self.redis.sadd(key, "one"))
         ok_(self.redis.sismember(key, "one"))
         ok_(not self.redis.sismember(key, "two"))

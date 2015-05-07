@@ -4,7 +4,7 @@ import sys
 
 from nose.tools import assert_raises, eq_, ok_
 
-from mockredis.tests.fixtures import setup
+from mockredis.tests.fixtures import setup, teardown
 
 if sys.version_info >= (3, 0):
     long = int
@@ -14,6 +14,9 @@ class TestRedis(object):
 
     def setup(self):
         setup(self)
+
+    def teardown(self):
+        teardown(self)
 
     def test_get_types(self):
         '''

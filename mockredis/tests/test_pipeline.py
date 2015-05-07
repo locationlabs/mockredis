@@ -4,13 +4,17 @@ from nose.tools import eq_
 
 from mockredis.tests.fixtures import (assert_raises_redis_error,
                                       assert_raises_watch_error,
-                                      setup)
+                                      setup,
+                                      teardown)
 
 
 class TestPipeline(object):
 
     def setup(self):
         setup(self)
+
+    def teardown(self):
+        teardown(self)
 
     def test_pipeline(self):
         """
@@ -49,7 +53,8 @@ class TestPipeline(object):
         script_content = "redis.call('PING')"
         sha = sha1(script_content.encode("utf-8")).hexdigest()
 
-        self.redis.register_script(script_content)
+        script_sha = self.redis.script_load(script_content)
+        eq_(script_sha, sha)
 
         # Script exists in mock redis
         eq_([True], self.redis.script_exists(sha))

@@ -10,10 +10,10 @@ class SortedSet(object):
     1. A multimap from score to member
     2. A dictionary from member to score.
 
-    The multimap is implemented using a sorted list of (score, member) pairs. The bisect operations
-    used to maintain the multimap are O(log N), but insertion into and removal from a list are O(N),
-    so insertion and removal O(N). It should be possible to swap in an indexable skip list to get
-    the expected O(log N) behavior.
+    The multimap is implemented using a sorted list of (score, member) pairs. The bisect
+    operations used to maintain the multimap are O(log N), but insertion into and removal
+    from a list are O(N), so insertion and removal O(N). It should be possible to swap in
+    an indexable skip list to get the expected O(log N) behavior.
     """
     def __init__(self):
         """

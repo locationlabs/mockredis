@@ -4,6 +4,7 @@ Tests for scripts don't yet support verification against redis-server.
 from hashlib import sha1
 from unittest.case import SkipTest
 import sys
+import threading
 
 from nose.tools import assert_raises, eq_, ok_
 
@@ -16,6 +17,7 @@ from mockredis.tests.test_constants import (
     VAL1, VAL2, VAL3, VAL4,
     LPOP_SCRIPT
 )
+from mockredis.tests.fixtures import raises_response_error
 
 
 if sys.version_info >= (3, 0):
@@ -28,11 +30,11 @@ class TestScript(object):
     """
 
     def setup(self):
-        self.redis = MockRedis()
+        self.redis = MockRedis(load_lua_dependencies=False)
         self.LPOP_SCRIPT_SHA = sha1(LPOP_SCRIPT.encode("utf-8")).hexdigest()
 
         try:
-            lua, lua_globals = MockRedisScript._import_lua()
+            lua, lua_globals = MockRedisScript._import_lua(load_dependencies=False)
         except RuntimeError:
             raise SkipTest("mockredispy was not installed with lua support")
 
@@ -129,7 +131,7 @@ class TestScript(object):
         script = self.redis.register_script(script_content)
         script(keys=[LIST1, LIST2])
 
-        #validate rpoplpush
+        # validate rpoplpush
         eq_([VAL1], self.redis.lrange(LIST1, 0, -1))
         eq_([VAL2, VAL3, VAL4], self.redis.lrange(LIST2, 0, -1))
 
@@ -145,7 +147,7 @@ class TestScript(object):
         script = self.redis.register_script(script_content)
         script(keys=[LIST1, LIST2])
 
-        #validate rpop and then lpush
+        # validate rpop and then lpush
         eq_([VAL1], self.redis.lrange(LIST1, 0, -1))
         eq_([VAL2, VAL3, VAL4], self.redis.lrange(LIST2, 0, -1))
 
@@ -187,6 +189,16 @@ class TestScript(object):
         # validate lpop
         eq_(VAL1, list_item)
         eq_([VAL2], self.redis.lrange(LIST1, 0, -1))
+
+    def test_eval_lrem(self):
+        self.redis.delete(LIST1)
+        self.redis.lpush(LIST1, VAL1)
+
+        # lrem one value
+        script_content = "return redis.call('LREM', KEYS[1], 0, ARGV[1])"
+        value = self.redis.eval(script_content, 1, LIST1, VAL1)
+
+        eq_(value, 1)
 
     def test_eval_zadd(self):
         # The score and member are reversed when the client is not strict.
@@ -365,3 +377,38 @@ class TestScript(object):
         lval = MockRedisScript._python_to_lua(pval)
         eq_("boolean", self.lua_globals.type(lval))
         ok_(MockRedisScript._lua_to_python(lval))
+
+    def test_lua_ok_return(self):
+        script_content = "return {ok='OK'}"
+        script = self.redis.register_script(script_content)
+        eq_('OK', script())
+
+    @raises_response_error
+    def test_lua_err_return(self):
+        script_content = "return {err='ERROR Some message'}"
+        script = self.redis.register_script(script_content)
+        script()
+
+    def test_concurrent_lua(self):
+        script_content = """
+local entry = redis.call('HGETALL', ARGV[1])
+redis.call('HSET', ARGV[1], 'kk', 'vv')
+return entry
+"""
+        script = self.redis.register_script(script_content)
+
+        for i in range(500):
+            self.redis.hmset(i, {'k1': 'v1', 'k2': 'v2', 'k3': 'v3'})
+
+        def lua_thread():
+            for i in range(500):
+                script(args=[i])
+
+        active_threads = []
+        for i in range(10):
+            thread = threading.Thread(target=lua_thread)
+            active_threads.append(thread)
+            thread.start()
+
+        for thread in active_threads:
+            thread.join()

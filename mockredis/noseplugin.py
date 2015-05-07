@@ -1,8 +1,13 @@
 """
 This module includes a nose plugin that allows unit tests to be run with a real
-redis-server instance running locally (assuming redis-py) is installed. This provides
-a simple way to verify that mockredis tests are accurate (at least for a particular
-version of redis-server and redis-py).
+redis-server instance, as long as redis-py is installed.
+
+This provides a simple way to verify that mockredis tests are accurate (at least
+for a particular version of redis-server and redis-py).
+
+Usage:
+
+    nosetests --use-redis [--redis-host <localhost>] [--redis-database <db>] [args]
 
 For this plugin to work, several things need to be true:
 
@@ -42,6 +47,10 @@ class WithRedis(Plugin):
                           action="store_true",
                           default=False,
                           help="Use a local redis instance to validate tests.")
+        parser.add_option("--redis-host",
+                          dest="redis_host",
+                          default="localhost",
+                          help="Run tests against redis database on another host")
         parser.add_option("--redis-database",
                           dest="redis_database",
                           default=15,
@@ -51,8 +60,12 @@ class WithRedis(Plugin):
         if options.use_redis:
             from redis import Redis, RedisError, ResponseError, StrictRedis, WatchError
 
-            WithRedis.Redis = partial(Redis, db=options.redis_database)
-            WithRedis.StrictRedis = partial(StrictRedis, db=options.redis_database)
+            WithRedis.Redis = partial(Redis,
+                                      db=options.redis_database,
+                                      host=options.redis_host)
+            WithRedis.StrictRedis = partial(StrictRedis,
+                                            db=options.redis_database,
+                                            host=options.redis_host)
             WithRedis.ResponseError = ResponseError
             WithRedis.RedisError = RedisError
             WithRedis.WatchError = WatchError
