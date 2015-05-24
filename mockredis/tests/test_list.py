@@ -86,15 +86,15 @@ class TestRedisList(object):
         Insertion maintains order but not uniqueness.
         """
         # lpush two values
-        self.redis.lpush(LIST1, VAL1)
-        self.redis.lpush(LIST1, VAL2)
+        eq_(1, self.redis.lpush(LIST1, VAL1))
+        eq_(2, self.redis.lpush(LIST1, VAL2))
 
         # validate insertion
         eq_(b"list", self.redis.type(LIST1))
         eq_([bVAL2, bVAL1], self.redis.lrange(LIST1, 0, -1))
 
         # insert two more values with one repeated
-        self.redis.lpush(LIST1, VAL1, VAL3)
+        eq_(4, self.redis.lpush(LIST1, VAL1, VAL3))
 
         # validate the update
         eq_(b"list", self.redis.type(LIST1))
@@ -128,15 +128,15 @@ class TestRedisList(object):
         Insertion maintains order but not uniqueness.
         """
         # rpush two values
-        self.redis.rpush(LIST1, VAL1)
-        self.redis.rpush(LIST1, VAL2)
+        eq_(1, self.redis.rpush(LIST1, VAL1))
+        eq_(2, self.redis.rpush(LIST1, VAL2))
 
         # validate insertion
         eq_(b"list", self.redis.type(LIST1))
         eq_([bVAL1, bVAL2], self.redis.lrange(LIST1, 0, -1))
 
         # insert two more values with one repeated
-        self.redis.rpush(LIST1, VAL1, VAL3)
+        eq_(4, self.redis.rpush(LIST1, VAL1, VAL3))
 
         # validate the update
         eq_(b"list", self.redis.type(LIST1))
