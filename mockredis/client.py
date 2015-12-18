@@ -123,17 +123,12 @@ class MockRedis(object):
 
     def keys(self, pattern='*'):
         """Emulate keys."""
-        # Make a regex out of pattern. The only special matching character we look for is '*'
-        regex = fnmatch.translate(pattern) # re.compile(b'^' + re.escape(self._encode(pattern)).replace(b'\\*', b'.*') + b'$')
+        # Make a regex out of glob styled pattern.
+        regex = fnmatch.translate(pattern)
         regex = re.compile(re.sub(r'(^|[^\\])\.', r'\1[^/]', regex))
 
-        result = []
         # Find every key that matches the pattern
-        for key in self.redis.keys():
-            if regex.match(key.decode()):
-                result.append(key)
-
-        return result
+        return [key for key in self.redis.keys() if regex.match(key.decode())]
 
     def delete(self, *keys):
         """Emulate delete."""
