@@ -8,6 +8,7 @@ from random import choice, sample
 import re
 import sys
 import time
+import fnmatch
 
 from mockredis.clock import SystemClock
 from mockredis.lock import MockRedisLock
@@ -123,10 +124,14 @@ class MockRedis(object):
     def keys(self, pattern='*'):
         """Emulate keys."""
         # Make a regex out of pattern. The only special matching character we look for is '*'
-        regex = re.compile(b'^' + re.escape(self._encode(pattern)).replace(b'\\*', b'.*') + b'$')
+        regex = fnmatch.translate(pattern) # re.compile(b'^' + re.escape(self._encode(pattern)).replace(b'\\*', b'.*') + b'$')
+        regex = re.compile(re.sub(r'(^|[^\\])\.', r'\1[^/]', regex))
 
+        result = []
         # Find every key that matches the pattern
-        result = [key for key in self.redis.keys() if regex.match(key)]
+        for key in self.redis.keys():
+            if regex.match(key.decode()):
+                result.append(key)
 
         return result
 
