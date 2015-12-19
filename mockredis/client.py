@@ -123,12 +123,15 @@ class MockRedis(object):
 
     def keys(self, pattern='*'):
         """Emulate keys."""
-        # making sure the pattern is in unicode
-        if type(pattern) is not unicode:
+        # making sure the pattern is unicode/str.
+        try:
             pattern = pattern.decode('utf-8')
+            # This throws an AttributeError in python 3, or an
+            # UnicodeEncodeError in python 2
+        except (AttributeError, UnicodeEncodeError):
+            pass
 
         # Make regex out of glob styled pattern.
-        print(type(pattern))
         regex = fnmatch.translate(pattern)
         regex = re.compile(re.sub(r'(^|[^\\])\.', r'\1[^/]', regex))
 
