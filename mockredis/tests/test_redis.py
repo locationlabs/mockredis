@@ -199,6 +199,7 @@ class TestRedis(object):
         self.redis.set(key, "bar")
         eq_([key_as_utf8], self.redis.keys("*"))
         eq_([key_as_utf8], self.redis.keys("eat*"))
+        eq_([key_as_utf8], self.redis.keys("[ea]at * n?[a-z]"))
 
         unicode_prefix = b'eat \xf0\x9f\x8d\xb0*'.decode('utf-8')
         eq_([key_as_utf8], self.redis.keys(unicode_prefix))
