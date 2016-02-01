@@ -1,5 +1,6 @@
 from __future__ import division
 from collections import defaultdict
+from copy import deepcopy
 from itertools import chain
 from datetime import datetime, timedelta
 from hashlib import sha1
@@ -221,7 +222,9 @@ class MockRedis(object):
         """
         Expire objects assuming now == time
         """
-        for key, value in self.timeouts.items():
+        # Deep copy to avoid RuntimeError: dictionary changed size during iteration
+        _timeouts = deepcopy(self.timeouts)
+        for key, value in _timeouts.items():
             if value - self.clock.now() < timedelta(0):
                 del self.timeouts[key]
                 # removing the expired key
