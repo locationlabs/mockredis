@@ -8,6 +8,7 @@ from random import choice, sample
 import re
 import sys
 import time
+import fnmatch
 
 from mockredis.clock import SystemClock
 from mockredis.lock import MockRedisLock
@@ -122,13 +123,20 @@ class MockRedis(object):
 
     def keys(self, pattern='*'):
         """Emulate keys."""
-        # Make a regex out of pattern. The only special matching character we look for is '*'
-        regex = re.compile(b'^' + re.escape(self._encode(pattern)).replace(b'\\*', b'.*') + b'$')
+        # making sure the pattern is unicode/str.
+        try:
+            pattern = pattern.decode('utf-8')
+            # This throws an AttributeError in python 3, or an
+            # UnicodeEncodeError in python 2
+        except (AttributeError, UnicodeEncodeError):
+            pass
+
+        # Make regex out of glob styled pattern.
+        regex = fnmatch.translate(pattern)
+        regex = re.compile(re.sub(r'(^|[^\\])\.', r'\1[^/]', regex))
 
         # Find every key that matches the pattern
-        result = [key for key in self.redis.keys() if regex.match(key)]
-
-        return result
+        return [key for key in self.redis.keys() if regex.match(key.decode('utf-8'))]
 
     def delete(self, *keys):
         """Emulate delete."""
