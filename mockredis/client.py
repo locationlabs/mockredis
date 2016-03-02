@@ -255,6 +255,9 @@ class MockRedis(object):
             return True
         return False
 
+    def dbsize(self):
+        return len(self.redis.keys())
+
     # String Functions #
 
     def get(self, key):

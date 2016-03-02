@@ -246,3 +246,9 @@ class TestRedis(object):
         eq_(b"bar2", self.redis.get("foo2"))
         eq_(self.redis.renamenx("foo", "foo3"), 1)
         eq_(b"bar", self.redis.get("foo3"))
+
+    def test_dbsize(self):
+        self.redis["foo"] = "bar"
+        eq_(1, self.redis.dbsize())
+        del self.redis["foo"]
+        eq_(0, self.redis.dbsize())
