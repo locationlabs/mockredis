@@ -199,6 +199,7 @@ class TestRedis(object):
         self.redis.set(key, "bar")
         eq_([key_as_utf8], self.redis.keys("*"))
         eq_([key_as_utf8], self.redis.keys("eat*"))
+        eq_([key_as_utf8], self.redis.keys("[ea]at * n?[a-z]"))
 
         unicode_prefix = b'eat \xf0\x9f\x8d\xb0*'.decode('utf-8')
         eq_([key_as_utf8], self.redis.keys(unicode_prefix))
@@ -245,3 +246,9 @@ class TestRedis(object):
         eq_(b"bar2", self.redis.get("foo2"))
         eq_(self.redis.renamenx("foo", "foo3"), 1)
         eq_(b"bar", self.redis.get("foo3"))
+
+    def test_dbsize(self):
+        self.redis["foo"] = "bar"
+        eq_(1, self.redis.dbsize())
+        del self.redis["foo"]
+        eq_(0, self.redis.dbsize())
