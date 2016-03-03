@@ -1,3 +1,6 @@
+Version 2.9.0.12
+ - Support: `dbsize`
+
 Version 2.9.0.11
  - Support: `scan_iter`, `sscan_iter`, `zscan_iter`, `hscan_iter`
 
