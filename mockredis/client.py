@@ -13,7 +13,7 @@ import fnmatch
 
 from mockredis.clock import SystemClock
 from mockredis.lock import MockRedisLock
-from mockredis.exceptions import RedisError, ResponseError
+from mockredis.exceptions import RedisError, ResponseError, WatchError
 from mockredis.pipeline import MockRedisPipeline
 from mockredis.script import Script
 from mockredis.sortedset import SortedSet
@@ -76,6 +76,30 @@ class MockRedis(object):
     def pipeline(self, transaction=True, shard_hint=None):
         """Emulate a redis-python pipeline."""
         return MockRedisPipeline(self, transaction, shard_hint)
+
+    def transaction(self, func, *watches, **kwargs):
+        """
+        Convenience method for executing the callable `func` as a transaction
+        while watching all keys specified in `watches`. The 'func' callable
+        should expect a single argument which is a Pipeline object.
+
+        Copied directly from redis-py.
+        """
+        shard_hint = kwargs.pop('shard_hint', None)
+        value_from_callable = kwargs.pop('value_from_callable', False)
+        watch_delay = kwargs.pop('watch_delay', None)
+        with self.pipeline(True, shard_hint) as pipe:
+            while 1:
+                try:
+                    if watches:
+                        pipe.watch(*watches)
+                    func_value = func(pipe)
+                    exec_value = pipe.execute()
+                    return func_value if value_from_callable else exec_value
+                except WatchError:
+                    if watch_delay is not None and watch_delay > 0:
+                        time.sleep(watch_delay)
+                    continue
 
     def watch(self, *argv, **kwargs):
         """

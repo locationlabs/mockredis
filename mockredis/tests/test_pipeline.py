@@ -33,6 +33,30 @@ class TestPipeline(object):
         with self.redis.pipeline(transaction=False, shard_hint=None):
             pass
 
+    def test_transaction(self):
+        self.redis["a"] = 1
+        self.redis["b"] = 2
+        has_run = []
+
+        def my_transaction(pipe):
+            a_value = pipe.get("a")
+            assert a_value in (b"1", b"2")
+            b_value = pipe.get("b")
+            assert b_value == b"2"
+
+            # silly run-once code... incr's "a" so WatchError should be raised
+            # forcing this all to run again. this should incr "a" once to "2"
+            if not has_run:
+                self.redis.incr("a")
+                has_run.append(True)
+
+            pipe.multi()
+            pipe.set("c", int(a_value) + int(b_value))
+
+        result = self.redis.transaction(my_transaction, "a", "b")
+        eq_([True], result)
+        eq_(b"4", self.redis["c"])
+
     def test_set_and_get(self):
         """
         Pipeline execution returns the pipeline, not the intermediate value.
