@@ -58,6 +58,10 @@ class MockRedis(object):
         # Dictionary from script to sha ''Script''
         self.shas = dict()
 
+    @classmethod
+    def from_url(cls, url, db=None, **kwargs):
+        return cls(**kwargs)
+
     # Connection Functions #
 
     def echo(self, msg):
@@ -1509,6 +1513,8 @@ def mock_redis_client(**kwargs):
     """
     return MockRedis()
 
+mock_redis_client.from_url = mock_redis_client
+
 
 def mock_strict_redis_client(**kwargs):
     """
@@ -1517,3 +1523,5 @@ def mock_strict_redis_client(**kwargs):
     instead of a StrictRedis object.
     """
     return MockRedis(strict=True)
+
+mock_strict_redis_client.from_url = mock_strict_redis_client
