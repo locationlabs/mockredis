@@ -12,7 +12,7 @@ deploy:
   provider: pypi
   user: github-ll
   password:
-    secure: a64VGzyBWpg9qNv6NnURDwuDxDKYeIvWnfjTctM+BgNurPfbJ9ohYiCbJIEGR9KnA4el3RPNe8AiaOJhiP7xo2x4fqvT2HRWHnarl6jpgz0Fe+0LOcop8sknxz5ePDSFZSaQYpIWJTGkDaBBHMtt7CMNr3UbV7G/HT8hyl5r69Y=
+    secure: DPz0VuHjZp/586ImakwtjqQzEIq6crQLMv1/Z4OKD1C1XY/KQ7uEgYTGSEDR4e2m5K8id3ZXkAEQSuopyrQ0on6KuwTmfT9U7dsk3ijCkHc2XSwfC5uU7eWgrbn62wVWo3kchBerAWOvOmXiXBdTiIOIfJ7MvvxcfAkz/1zRYx8=
   on:
     tags: true
     repo: locationlabs/mockredis
