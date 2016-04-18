@@ -1,3 +1,6 @@
+Version 2.9.2
+ - Fixed the versioning issue.
+
 Version 2.9.1
  - Support for `from_url`
  - Support for `transaction`
