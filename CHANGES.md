@@ -1,3 +1,8 @@
+Version 2.9.1
+ - Support for `from_url`
+ - Support for `transaction`
+ - Fix `do_expire` method in Python 3  
+ 
 Version 2.9.0.12
  - Support: `dbsize`
 
