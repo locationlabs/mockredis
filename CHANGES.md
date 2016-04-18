@@ -1,8 +1,11 @@
+Version 2.9.3
+ - Support for `from_url`
+ - Going to remove develop and use master following github flow model.
+ 
 Version 2.9.2
  - Fixed the versioning issue.
 
 Version 2.9.1
- - Support for `from_url`
  - Support for `transaction`
  - Fix `do_expire` method in Python 3  
  

@@ -10,9 +10,9 @@ install: pip install . --use-mirrors
 script: python setup.py nosetests
 deploy:
   provider: pypi
-  user: jessemyers
+  user: github-ll
   password:
-    secure: f7wqGCuSP6dJZ7GwdpQwMc9J0GU8oCK8tydUnvgLNass0U57Eg+PaQURPWxg0T1f5nYACzfche3YHTFeXtk1x7HV6WYWYddin/gv94m7u9+ZQpsrygGizv7eO3lU/vR3K86GrLdTR3z7ii50XDlM0W8XyqHDX1+GGHPWFGLxOHo=
+    secure: Ol3Gxz2iQEh7Oz64FZJfwLJK/r8QLlnE3aFKv6TkTxn8DedXK+mLUTC0PwueBSOIRGpnxlHwQyzrzxZWs2QOUoyB+Nbx6L1wU+NsgviNKJjAln4/tV4dAeI7GRJD2cDkRH9w2QihWnRFRh7BbmhfsD4WrsELP5k6onbVrQwU/Ao=
   on:
     tags: true
     repo: locationlabs/mockredis
