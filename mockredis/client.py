@@ -53,6 +53,7 @@ class MockRedis(object):
         self.blocking_sleep_interval = blocking_sleep_interval
         # The 'Redis' store
         self.redis = defaultdict(dict)
+        self.redis_config = defaultdict(dict)
         self.timeouts = defaultdict(dict)
         # The 'PubSub' store
         self.pubsub = defaultdict(list)
@@ -1395,6 +1396,27 @@ class MockRedis(object):
                 return [value for tpl in response for value in tpl]
 
         return response
+
+    # Config Set/Get commands #
+
+    def config_set(self, name, value):
+        """
+        Set a configuration parameter.
+        """
+        self.redis_config[name] = value
+
+    def config_get(self, pattern='*'):
+        """
+        Get one or more configuration parameters.
+        """
+        result = {}
+        for name, value in self.redis_config.items():
+            if fnmatch.fnmatch(name, pattern):
+                try:
+                    result[name] = int(value)
+                except ValueError:
+                    result[name] = value
+        return result
 
     # PubSub commands #
 
