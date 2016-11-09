@@ -691,7 +691,11 @@ class MockRedis(object):
         # Creates the list at this key if it doesn't exist, and appends args to its beginning
         args_reversed = [self._encode(arg) for arg in args]
         args_reversed.reverse()
-        self.redis[self._encode(key)] = args_reversed + redis_list
+        updated_list = args_reversed + redis_list
+        self.redis[self._encode(key)] = updated_list
+
+        # Return the length of the list after the push operation
+        return len(updated_list)
 
     def rpop(self, key):
         """Emulate lpop."""
@@ -715,6 +719,9 @@ class MockRedis(object):
 
         # Creates the list at this key if it doesn't exist, and appends args to it
         redis_list.extend(map(self._encode, args))
+
+        # Return the length of the list after the push operation
+        return len(redis_list)
 
     def lrem(self, key, value, count=0):
         """Emulate lrem."""
