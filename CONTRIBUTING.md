@@ -9,7 +9,7 @@ We ask that contributors to this project please:
  
  3. Treat documentation and unit tests as an essential part of any change.
  
- 4. Folow existing style, contributions should look as part of the project.
+ 4. Follow existing style, contributions should look as part of the project.
 
 Thank you!
 
