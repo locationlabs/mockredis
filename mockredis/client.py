@@ -380,16 +380,16 @@ class MockRedis(object):
         # for all other cases, return true
         return True
 
-    def setex(self, key, time, value):
+    def setex(self, name, time, value):
         """
-        Set the value of ``key`` to ``value`` that expires in ``time``
+        Set the value of ``name`` to ``value`` that expires in ``time``
         seconds. ``time`` can be represented by an integer or a Python
         timedelta object.
         """
         if not self.strict:
             # when not strict mode swap value and time args order
             time, value = value, time
-        return self.set(key, value, ex=time)
+        return self.set(name, value, ex=time)
 
     def psetex(self, key, time, value):
         """
