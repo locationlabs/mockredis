@@ -3,7 +3,11 @@ from datetime import timedelta
 from nose.tools import eq_, ok_
 
 from mockredis.client import get_total_milliseconds
-from mockredis.tests.fixtures import raises_response_error, setup, teardown
+from mockredis.tests.fixtures import (
+    raises_response_error,
+    setup,
+    teardown,
+)
 
 
 class TestRedisString(object):
@@ -203,7 +207,21 @@ class TestRedisString(object):
     def test_mset(self):
         ok_(self.redis.mset({"key1": "hello", "key2": ""}))
         ok_(self.redis.mset(**{"key3": "world", "key2": "there"}))
-        eq_([b"hello", b"there", b"world"], self.redis.mget("key1", "key2", "key3"))
+        ok_(self.redis.mset(
+            {"key4": "ican"}, **{"key4": "haz", "key5": "cheezburger"})
+        )
+        eq_(
+            [b"hello", b"there", b"world", b"ican", b"cheezburger"],
+            self.redis.mget("key1", "key2", "key3", "key4", "key5")
+        )
+
+    @raises_response_error
+    def test_mset_empty_kwargs(self):
+        self.redis.mset(**{})
+
+    @raises_response_error
+    def test_mset_empty_args(self):
+        self.redis.mset({})
 
     def test_msetnx(self):
         ok_(self.redis.msetnx({"key1": "hello", "key2": "there"}))

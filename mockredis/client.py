@@ -408,12 +408,15 @@ class MockRedis(object):
         Sets key/values based on a mapping. Mapping can be supplied as a single
         dictionary argument or as kwargs.
         """
+        mapping = kwargs
         if args:
             if len(args) != 1 or not isinstance(args[0], dict):
                 raise RedisError('MSET requires **kwargs or a single dict arg')
-            mapping = args[0]
-        else:
-            mapping = kwargs
+            mapping.update(args[0])
+
+        if len(mapping) == 0:
+            raise ResponseError("wrong number of arguments for 'mset' command")
+
         for key, value in mapping.items():
             self.set(key, value)
         return True
