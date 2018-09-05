@@ -434,6 +434,9 @@ class MockRedis(object):
         else:
             mapping = kwargs
 
+        if len(mapping) == 0:
+            raise ResponseError("wrong number of arguments for 'msetnx' command")
+
         for key in mapping.keys():
             if self._encode(key) in self.redis:
                 return False

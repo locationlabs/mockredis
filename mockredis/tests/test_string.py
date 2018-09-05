@@ -228,6 +228,10 @@ class TestRedisString(object):
         ok_(not self.redis.msetnx(**{"key3": "world", "key2": "there"}))
         eq_([b"hello", b"there", None], self.redis.mget("key1", "key2", "key3"))
 
+    @raises_response_error
+    def test_msetnx_empty_args(self):
+        self.redis.msetnx({})
+
     def test_psetex(self):
         test_cases = [200, timedelta(milliseconds=250)]
         for case in test_cases:
