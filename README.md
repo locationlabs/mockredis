@@ -1,3 +1,5 @@
+THIS REPO IS NO LONGER SUPPORTED. IF YOU ARE LOOKING FOR A SIMILAR SOLUTION, WE WOULD RECOMMEND LOOKING AT https://github.com/jamesls/fakeredis
+
 # Mock for the redis-py client library
 
 Supports writing tests for code using the [redis-py][redis-py] library
